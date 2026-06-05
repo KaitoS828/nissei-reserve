@@ -31,15 +31,22 @@ if (!appToken || !botToken) {
 const web = new WebClient(botToken);
 const socket = new SocketModeClient({ appToken });
 
+// スレッドごとの会話履歴（確認ステップの文脈保持用）。プロセスが生きている間だけ保持。
+type History = Awaited<ReturnType<typeof runAgent>>["messages"];
+const threadHistory = new Map<string, History>();
+
 socket.on("app_mention", async ({ event, ack }: { event: { text?: string; channel: string; ts: string; thread_ts?: string }; ack: () => Promise<void> }) => {
   await ack();
   const text = String(event.text ?? "").replace(/<@[^>]+>/g, "").trim();
+  const threadKey = event.thread_ts ?? event.ts;
   console.log("[mention]", text);
   try {
-    const reply = await runAgent(text);
-    await web.chat.postMessage({ channel: event.channel, thread_ts: event.thread_ts ?? event.ts, text: reply });
+    const history = threadHistory.get(threadKey) ?? [];
+    const { reply, messages } = await runAgent(text, history);
+    threadHistory.set(threadKey, messages.slice(-24));
+    await web.chat.postMessage({ channel: event.channel, thread_ts: threadKey, text: reply });
   } catch (e) {
-    await web.chat.postMessage({ channel: event.channel, thread_ts: event.thread_ts ?? event.ts, text: `エラー: ${e instanceof Error ? e.message : String(e)}` });
+    await web.chat.postMessage({ channel: event.channel, thread_ts: threadKey, text: `エラー: ${e instanceof Error ? e.message : String(e)}` });
   }
 });
 

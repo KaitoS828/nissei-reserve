@@ -77,6 +77,25 @@ const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<stri
     return formatResv(data as unknown as Record<string, unknown>);
   },
 
+  async quote_cancellation(input) {
+    const code = String(input.code);
+    const supabase = createAdminClient();
+    const { data: resv } = await supabase
+      .from("reservations")
+      .select("code, check_in, amount, status")
+      .eq("code", code)
+      .maybeSingle();
+    if (!resv) return `予約番号 ${code} は見つかりません。`;
+    if (resv.status === "cancelled") return `予約 ${code} はすでにキャンセル済みです。`;
+    const { data: facility } = await supabase.from("facility").select("cancel_policy").limit(1).single();
+    const { refundAmount, feeAmount, chargeRate, daysBefore } = computeRefund(
+      resv.amount as number,
+      resv.check_in as string,
+      (facility?.cancel_policy ?? null) as Record<string, number> | null,
+    );
+    return `【試算】予約 ${code} を今キャンセルした場合：チェックインまで${daysBefore}日 / キャンセル料 ¥${feeAmount.toLocaleString()}（${Math.round(chargeRate * 100)}%）/ 返金 ¥${refundAmount.toLocaleString()}。※まだ実行していません。`;
+  },
+
   async cancel_reservation(input) {
     const code = String(input.code);
     const reason = input.reason ? String(input.reason) : "";
@@ -168,7 +187,8 @@ const TOOLS: Anthropic.Tool[] = [
   { name: "check_availability", description: "指定期間の空室状況を確認する。", input_schema: { type: "object", properties: { from: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, to: { type: "string", description: "チェックアウト日 YYYY-MM-DD" } }, required: ["from", "to"] } },
   { name: "list_reservations", description: "予約の一覧を取得する。scope=today(本日), upcoming(今後), all(直近)。queryで氏名・予約番号・メールで絞り込み可。", input_schema: { type: "object", properties: { scope: { type: "string", enum: ["today", "upcoming", "all"] }, query: { type: "string" } }, required: [] } },
   { name: "get_reservation", description: "予約番号で1件の予約詳細を取得する。", input_schema: { type: "object", properties: { code: { type: "string" } }, required: ["code"] } },
-  { name: "cancel_reservation", description: "予約をキャンセルする。キャンセルポリシーに従いStripe返金も行う。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
+  { name: "quote_cancellation", description: "キャンセルした場合の返金額・キャンセル料を試算する（DBは変更しない）。キャンセルを実行する前に必ずこれで金額を提示し、確認を取ること。", input_schema: { type: "object", properties: { code: { type: "string" } }, required: ["code"] } },
+  { name: "cancel_reservation", description: "予約をキャンセルする（取り消し不可）。キャンセルポリシーに従いStripe返金も行う。実行前にユーザーの明確な同意が必要。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
   { name: "block_dates", description: "休業日（予約不可日）を設定する。公開カレンダーがグレーになる。", input_schema: { type: "object", properties: { start: { type: "string", description: "開始日 YYYY-MM-DD" }, end: { type: "string", description: "終了日 YYYY-MM-DD（省略時は1日）" }, reason: { type: "string" } }, required: ["start"] } },
   { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
@@ -179,16 +199,19 @@ const SYSTEM = `あなたは一棟貸し宿「日靜」の予約システムの�
 - 本日の日付は ${todayStr()} です（依頼時に最新化されます）。
 - 簡潔に、日本語で、Slack向けに読みやすく返答してください。
 - 予約番号は R-YYYYMMDD-XXXX 形式です。
-- キャンセルや日程変更など取り消せない操作は、対象を取り違えないよう、必要なら先に get_reservation / list_reservations で確認してから実行してください。
+- 【重要・確認ステップ】キャンセル・休業日設定/解除・予約変更など「取り消せない操作」は、いきなり実行しないこと。まず対象予約を特定し（必要なら get_reservation / list_reservations）、影響を提示する。キャンセルの場合は必ず quote_cancellation で返金額・キャンセル料を試算して提示し、「実行してよろしいですか？」と確認する。ユーザーが同じスレッドで明確に同意（「はい」「OK」「お願いします」等）した場合に限り、対応する実行ツール（cancel_reservation / block_dates / unblock_dates / update_reservation）を呼ぶ。会話はスレッド単位で文脈が保持されるので、前のメッセージの対象を引き継いでよい。
+- 同意が曖昧な場合（「どうしよう」等）は実行せず、再確認する。
 - 返金額やポリシーはツールが自動計算します。憶測で金額を答えないこと。`;
 
-// Slackからの1メッセージを処理して返信テキストを返す
-export async function runAgent(userText: string): Promise<string> {
+export type AgentTurn = { reply: string; messages: Anthropic.MessageParam[] };
+
+// Slackからの1メッセージを処理。history はスレッドの過去会話（確認ステップの文脈保持用）。
+export async function runAgent(userText: string, history: Anthropic.MessageParam[] = []): Promise<AgentTurn> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return "（ANTHROPIC_API_KEY が未設定のため、AIエージェントは無効です）";
+  if (!apiKey) return { reply: "（ANTHROPIC_API_KEY が未設定のため、AIエージェントは無効です）", messages: history };
   const client = new Anthropic({ apiKey });
 
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userText }];
+  const messages: Anthropic.MessageParam[] = [...history, { role: "user", content: userText }];
 
   for (let step = 0; step < 8; step++) {
     const res = await client.messages.create({
@@ -200,12 +223,13 @@ export async function runAgent(userText: string): Promise<string> {
       messages,
     });
 
+    messages.push({ role: "assistant", content: res.content });
+
     if (res.stop_reason !== "tool_use") {
       const text = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
-      return text || "（応答がありませんでした）";
+      return { reply: text || "（応答がありませんでした）", messages };
     }
 
-    messages.push({ role: "assistant", content: res.content });
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     for (const block of res.content) {
       if (block.type === "tool_use") {
@@ -221,5 +245,5 @@ export async function runAgent(userText: string): Promise<string> {
     }
     messages.push({ role: "user", content: toolResults });
   }
-  return "処理が長くなりすぎたため中断しました。もう一度具体的に指示してください。";
+  return { reply: "処理が長くなりすぎたため中断しました。もう一度具体的に指示してください。", messages };
 }
