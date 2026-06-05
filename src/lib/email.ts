@@ -7,17 +7,28 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolea
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
   if (!key) return false;
-  if (Array.isArray(to) && to.length === 0) return false;
+  const recipients = (Array.isArray(to) ? to : [to]).map((s) => s.trim()).filter(Boolean);
+  if (recipients.length === 0) return false;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: `一棟貸し宿「日靜」 <${from}>`, to, subject, html }),
-  });
-  return res.ok;
+  // 宛先ごとに個別送信。1件が拒否されても他には届く（Resendテストモード等への耐性）。
+  const results = await Promise.all(
+    recipients.map(async (addr) => {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ from: `一棟貸し宿「日靜」 <${from}>`, to: addr, subject, html }),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }),
+  );
+  return results.some(Boolean);
 }
 
 // オーナー通知の宛先（カンマ区切り）
