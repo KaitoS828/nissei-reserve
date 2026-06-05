@@ -1,0 +1,225 @@
+import Anthropic from "@anthropic-ai/sdk";
+import { createAdminClient } from "./supabase/admin";
+import { getTypeAvailability, canBook } from "./reservations";
+import { eachNight } from "./availability";
+import { computeRefund } from "./cancel";
+import { getStripe } from "./stripe";
+import { gcalDeleteEvent } from "./gcal";
+
+// コスト重視で Sonnet（現行は 4.6。「4.7」は存在しないため 4.6 を使用）
+const MODEL = "claude-sonnet-4-6";
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+async function activeRoomTypeId(): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("room_types")
+    .select("id")
+    .eq("is_active", true)
+    .order("sort_order")
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+const RESV_SELECT =
+  "code, check_in, check_out, nights, num_guests, amount, status, payment_status, room_type_id, customers(last_name, first_name, email, phone), plans(name)";
+
+// ---- ツール実装 ----
+const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<string>> = {
+  async check_availability(input) {
+    const from = String(input.from);
+    const to = String(input.to);
+    const rt = await activeRoomTypeId();
+    if (!rt) return "客室タイプが未登録です。";
+    const avail = await getTypeAvailability(rt, from, to);
+    const lines = eachNight(from, to).map(
+      (n) => `${n}: ${(avail[n] ?? 0) > 0 ? "空室あり" : "満室"}`,
+    );
+    return `空室状況（${from}〜${to}）\n${lines.join("\n")}`;
+  },
+
+  async list_reservations(input) {
+    const scope = String(input.scope ?? "upcoming");
+    const query = input.query ? String(input.query) : null;
+    const supabase = createAdminClient();
+    const today = todayStr();
+    let q = supabase.from("reservations").select(RESV_SELECT);
+    if (scope === "today") {
+      q = q.or(`check_in.eq.${today},check_out.eq.${today}`);
+    } else if (scope === "upcoming") {
+      q = q.gte("check_in", today).in("status", ["pending", "confirmed"]);
+    }
+    q = q.order("check_in").limit(30);
+    const { data } = await q;
+    let rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    if (query) {
+      const t = query.toLowerCase();
+      rows = rows.filter((r) => {
+        const c = r.customers as { last_name?: string; first_name?: string; email?: string } | null;
+        const name = `${c?.last_name ?? ""}${c?.first_name ?? ""}`.toLowerCase();
+        return String(r.code).toLowerCase().includes(t) || name.includes(t) || (c?.email ?? "").toLowerCase().includes(t);
+      });
+    }
+    if (rows.length === 0) return "該当する予約はありません。";
+    return rows.map((r) => formatResv(r)).join("\n");
+  },
+
+  async get_reservation(input) {
+    const code = String(input.code);
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("reservations").select(RESV_SELECT).eq("code", code).maybeSingle();
+    if (!data) return `予約番号 ${code} は見つかりません。`;
+    return formatResv(data as unknown as Record<string, unknown>);
+  },
+
+  async cancel_reservation(input) {
+    const code = String(input.code);
+    const reason = input.reason ? String(input.reason) : "";
+    const supabase = createAdminClient();
+    const { data: resv } = await supabase
+      .from("reservations")
+      .select("id, check_in, amount, status, payment_status, gcal_event_id")
+      .eq("code", code)
+      .maybeSingle();
+    if (!resv) return `予約番号 ${code} は見つかりません。`;
+    if (resv.status === "cancelled") return `予約 ${code} はすでにキャンセル済みです。`;
+
+    const { data: facility } = await supabase.from("facility").select("cancel_policy").limit(1).single();
+    const { refundAmount } = computeRefund(
+      resv.amount as number,
+      resv.check_in as string,
+      (facility?.cancel_policy ?? null) as Record<string, number> | null,
+    );
+    // Stripe返金
+    if (refundAmount > 0) {
+      const { data: payment } = await supabase
+        .from("payments")
+        .select("id, stripe_payment_intent_id")
+        .eq("reservation_id", resv.id)
+        .maybeSingle();
+      if (payment?.stripe_payment_intent_id) {
+        try {
+          await getStripe().refunds.create({ payment_intent: payment.stripe_payment_intent_id, amount: refundAmount });
+          await supabase.from("payments").update({ refunded_amount: refundAmount, status: refundAmount >= (resv.amount as number) ? "refunded" : "partially_refunded" }).eq("id", payment.id);
+        } catch {
+          return "Stripe返金に失敗しました。手動で確認してください。";
+        }
+      }
+    }
+    const payStatus = refundAmount >= (resv.amount as number) ? "refunded" : refundAmount > 0 ? "partially_refunded" : (resv.payment_status as string);
+    await supabase.from("reservations").update({ status: "cancelled", payment_status: payStatus, cancel_category: "オーナー操作", cancel_reason: reason || null, cancelled_at: new Date().toISOString() }).eq("id", resv.id);
+    if (resv.gcal_event_id) await gcalDeleteEvent(resv.gcal_event_id as string).catch(() => {});
+    return `予約 ${code} をキャンセルしました。返金額: ¥${refundAmount.toLocaleString()}`;
+  },
+
+  async block_dates(input) {
+    const start = String(input.start);
+    const end = String(input.end ?? start);
+    const reason = input.reason ? String(input.reason) : "休業";
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("blocked_dates").insert({ start_date: start, end_date: end, reason });
+    if (error) return `休業日の設定に失敗しました: ${error.message}`;
+    return `${start}〜${end} を予約不可（${reason}）に設定しました。公開カレンダーに反映されます。`;
+  },
+
+  async unblock_dates(input) {
+    const start = String(input.start);
+    const supabase = createAdminClient();
+    await supabase.from("blocked_dates").delete().eq("start_date", start);
+    return `${start} 開始の休業日設定を解除しました。`;
+  },
+
+  async update_reservation(input) {
+    const code = String(input.code);
+    const supabase = createAdminClient();
+    const { data: resv } = await supabase.from("reservations").select("id, room_type_id, check_in, check_out").eq("code", code).maybeSingle();
+    if (!resv) return `予約番号 ${code} は見つかりません。`;
+    const patch: Record<string, unknown> = {};
+    const newIn = input.check_in ? String(input.check_in) : (resv.check_in as string);
+    const newOut = input.check_out ? String(input.check_out) : (resv.check_out as string);
+    if (input.check_in || input.check_out) {
+      if (eachNight(newIn, newOut).length < 1) return "チェックアウトはチェックインの翌日以降にしてください。";
+      const ok = await canBook(resv.room_type_id as string, newIn, newOut, { excludeReservationId: resv.id as string });
+      if (!ok) return `${newIn}〜${newOut} は空きがないため変更できません。`;
+      patch.check_in = newIn;
+      patch.check_out = newOut;
+    }
+    if (input.num_guests != null) patch.num_guests = Number(input.num_guests);
+    if (input.status) patch.status = String(input.status);
+    if (Object.keys(patch).length === 0) return "変更内容がありません。";
+    await supabase.from("reservations").update(patch).eq("id", resv.id);
+    return `予約 ${code} を更新しました（${Object.keys(patch).join(", ")}）。`;
+  },
+};
+
+function formatResv(r: Record<string, unknown>): string {
+  const c = r.customers as { last_name?: string; first_name?: string; phone?: string } | null;
+  const p = r.plans as { name?: string } | null;
+  const name = [c?.last_name, c?.first_name].filter(Boolean).join(" ") || "（無名）";
+  return `・${r.code} | ${name} | ${r.check_in}〜${r.check_out}（${r.nights}泊/${r.num_guests}名） | ${p?.name ?? "—"} | ¥${Number(r.amount).toLocaleString()} | ${r.status}`;
+}
+
+const TOOLS: Anthropic.Tool[] = [
+  { name: "check_availability", description: "指定期間の空室状況を確認する。", input_schema: { type: "object", properties: { from: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, to: { type: "string", description: "チェックアウト日 YYYY-MM-DD" } }, required: ["from", "to"] } },
+  { name: "list_reservations", description: "予約の一覧を取得する。scope=today(本日), upcoming(今後), all(直近)。queryで氏名・予約番号・メールで絞り込み可。", input_schema: { type: "object", properties: { scope: { type: "string", enum: ["today", "upcoming", "all"] }, query: { type: "string" } }, required: [] } },
+  { name: "get_reservation", description: "予約番号で1件の予約詳細を取得する。", input_schema: { type: "object", properties: { code: { type: "string" } }, required: ["code"] } },
+  { name: "cancel_reservation", description: "予約をキャンセルする。キャンセルポリシーに従いStripe返金も行う。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
+  { name: "block_dates", description: "休業日（予約不可日）を設定する。公開カレンダーがグレーになる。", input_schema: { type: "object", properties: { start: { type: "string", description: "開始日 YYYY-MM-DD" }, end: { type: "string", description: "終了日 YYYY-MM-DD（省略時は1日）" }, reason: { type: "string" } }, required: ["start"] } },
+  { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
+  { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
+];
+
+const SYSTEM = `あなたは一棟貸し宿「日靜」の予約システムの運用アシスタントです。Slackでオーナーからの依頼を受け、ツールを使って予約状況の確認・予約の変更/キャンセル・休業日設定などを行います。
+
+- 本日の日付は ${todayStr()} です（依頼時に最新化されます）。
+- 簡潔に、日本語で、Slack向けに読みやすく返答してください。
+- 予約番号は R-YYYYMMDD-XXXX 形式です。
+- キャンセルや日程変更など取り消せない操作は、対象を取り違えないよう、必要なら先に get_reservation / list_reservations で確認してから実行してください。
+- 返金額やポリシーはツールが自動計算します。憶測で金額を答えないこと。`;
+
+// Slackからの1メッセージを処理して返信テキストを返す
+export async function runAgent(userText: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return "（ANTHROPIC_API_KEY が未設定のため、AIエージェントは無効です）";
+  const client = new Anthropic({ apiKey });
+
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userText }];
+
+  for (let step = 0; step < 8; step++) {
+    const res = await client.messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      thinking: { type: "adaptive" },
+      system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+      tools: TOOLS,
+      messages,
+    });
+
+    if (res.stop_reason !== "tool_use") {
+      const text = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
+      return text || "（応答がありませんでした）";
+    }
+
+    messages.push({ role: "assistant", content: res.content });
+    const toolResults: Anthropic.ToolResultBlockParam[] = [];
+    for (const block of res.content) {
+      if (block.type === "tool_use") {
+        let out: string;
+        try {
+          const impl = toolImpls[block.name];
+          out = impl ? await impl(block.input as Record<string, unknown>) : `不明なツール: ${block.name}`;
+        } catch (e) {
+          out = `ツール実行エラー: ${e instanceof Error ? e.message : String(e)}`;
+        }
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: out });
+      }
+    }
+    messages.push({ role: "user", content: toolResults });
+  }
+  return "処理が長くなりすぎたため中断しました。もう一度具体的に指示してください。";
+}

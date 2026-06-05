@@ -1,0 +1,106 @@
+// Resend でメール送信（パッケージ不要、REST API を fetch）
+// 未設定・失敗しても予約フローを止めないよう、呼び出し側で握りつぶす。
+
+type SendArgs = { to: string | string[]; subject: string; html: string };
+
+export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  if (!key) return false;
+  if (Array.isArray(to) && to.length === 0) return false;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: `一棟貸し宿「日靜」 <${from}>`, to, subject, html }),
+  });
+  return res.ok;
+}
+
+// オーナー通知の宛先（カンマ区切り）
+export function ownerEmails(): string[] {
+  return (process.env.OWNER_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const wrap = (inner: string) => `
+  <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1f2937">
+    <div style="border-bottom:2px solid #0d9488;padding:16px 0">
+      <strong style="font-size:18px">一棟貸し宿「日靜」</strong>
+    </div>
+    <div style="padding:20px 0">${inner}</div>
+    <div style="border-top:1px solid #e5e7eb;padding:12px 0;color:#9ca3af;font-size:12px">
+      北海道広尾郡広尾町音調津733番地 日靜 / ☎ 070-1251-6275
+    </div>
+  </div>`;
+
+const row = (k: string, v: string) =>
+  `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td style="padding:4px 0;font-weight:600">${v}</td></tr>`;
+
+export function bookingConfirmedHtml(p: {
+  name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number;
+}): string {
+  return wrap(`
+    <p>${p.name} 様</p>
+    <p>ご予約ありがとうございます。下記の内容で予約が確定しました。</p>
+    <table style="margin:12px 0;font-size:14px">
+      ${row("予約番号", p.code)}
+      ${row("プラン", p.plan)}
+      ${row("日程", `${p.checkIn} 〜 ${p.checkOut}（${p.nights}泊）`)}
+      ${row("人数", `${p.guests}名`)}
+      ${row("お支払い金額", `¥${p.amount.toLocaleString()}`)}
+    </table>
+    <p>当日のご来館を心よりお待ちしております。</p>
+    <div style="margin-top:16px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:13px">
+      <p style="margin:0 0 6px"><strong>📌 予約番号は必ず保存してください。</strong>確認・変更・キャンセルに必要です。</p>
+      <p style="margin:0 0 6px">🔑 会員（マイページ）の方は、マイページからいつでも確認・<strong>キャンセル</strong>が可能です。</p>
+      <p style="margin:0">📞 ご不明点は <strong>070-1251-6275</strong> までお問い合わせください。</p>
+    </div>`);
+}
+
+// オーナー宛（新規予約）
+export function ownerBookingHtml(p: {
+  name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number; email?: string; phone?: string;
+}): string {
+  return wrap(`
+    <p><strong>🆕 新規予約が入りました</strong></p>
+    <table style="margin:12px 0;font-size:14px">
+      ${row("予約番号", p.code)}
+      ${row("お客様", `${p.name} 様（${p.guests}名）`)}
+      ${row("連絡先", `${p.email ?? "—"} / ${p.phone ?? "—"}`)}
+      ${row("プラン", p.plan)}
+      ${row("日程", `${p.checkIn} 〜 ${p.checkOut}（${p.nights}泊）`)}
+      ${row("金額", `¥${p.amount.toLocaleString()}`)}
+    </table>`);
+}
+
+// オーナー宛（キャンセル）
+export function ownerCancellationHtml(p: {
+  name: string; code: string; category: string; reason: string; refund: number;
+}): string {
+  return wrap(`
+    <p><strong>❌ 予約がキャンセルされました</strong></p>
+    <table style="margin:12px 0;font-size:14px">
+      ${row("予約番号", p.code)}
+      ${row("お客様", `${p.name} 様`)}
+      ${row("理由", `${p.category}${p.reason ? ` / ${p.reason}` : ""}`)}
+      ${row("返金額", `¥${p.refund.toLocaleString()}`)}
+    </table>`);
+}
+
+export function cancellationHtml(p: {
+  name: string; code: string; refund: number;
+}): string {
+  return wrap(`
+    <p>${p.name} 様</p>
+    <p>ご予約（予約番号 ${p.code}）のキャンセルを承りました。</p>
+    <table style="margin:12px 0;font-size:14px">
+      ${row("返金額", `¥${p.refund.toLocaleString()}`)}
+    </table>
+    <p>返金は Stripe を通じて数日内に処理されます。またのご利用をお待ちしております。</p>`);
+}
