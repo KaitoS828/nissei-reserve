@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
-import { calcPrice, type Discount } from "@/lib/pricing";
+import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 
 function fail(planId: string, msg: string): never {
   const q = new URLSearchParams({ error: msg });
@@ -47,7 +47,7 @@ export async function startCheckout(formData: FormData) {
   // プラン・料金・客室タイプ
   const { data: plan } = await supabase
     .from("plans")
-    .select("*, plan_prices(price_per_night, room_type_id)")
+    .select("*, plan_prices(price_per_night, guest_prices, room_type_id)")
     .eq("id", planId)
     .single();
   if (!plan) fail(planId, "プランが見つかりません");
@@ -58,8 +58,9 @@ export async function startCheckout(formData: FormData) {
   // 空室再チェック（サーバ側）
   if (!(await canBook(roomTypeId, from, to))) fail(planId, "満室のため予約できません");
 
-  // 料金はサーバ側で再計算
-  const price = calcPrice(from, to, pp.price_per_night, (plan.discounts ?? []) as Discount[]);
+  // 料金はサーバ側で再計算（人数別単価 × 泊数 → 長期割引）
+  const nightly = nightlyRateForGuests(adults, pp.guest_prices as GuestPrices, pp.price_per_night);
+  const price = calcPrice(from, to, nightly, (plan.discounts ?? []) as Discount[]);
 
   // 顧客 upsert（メール一致で再利用）
   let customerId: string;

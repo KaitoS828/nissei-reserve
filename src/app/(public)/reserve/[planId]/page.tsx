@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTypeAvailability } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
-import { calcPrice } from "@/lib/pricing";
+import { calcPrice, nightlyRateForGuests, type GuestPrices } from "@/lib/pricing";
 import type { Plan, RoomType } from "@/types/db";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 type PlanDetail = Plan & {
   plan_prices: {
     price_per_night: number;
+    guest_prices: Record<string, number> | null;
     room_type_id: string;
     room_types: Pick<RoomType, "id" | "name" | "amenities" | "capacity"> | null;
   }[];
@@ -31,7 +32,7 @@ export default async function PlanDetailPage({
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("plans")
-    .select("*, plan_prices(price_per_night, room_type_id, room_types(id,name,amenities,capacity))")
+    .select("*, plan_prices(price_per_night, guest_prices, room_type_id, room_types(id,name,amenities,capacity))")
     .eq("id", planId)
     .eq("is_active", true)
     .single();
@@ -42,6 +43,7 @@ export default async function PlanDetailPage({
   const pricePerNight = pp?.price_per_night ?? 0;
   const roomType = pp?.room_types ?? null;
   const amenities = (roomType?.amenities ?? []) as string[];
+  const numGuests = Math.max(1, Number(guests ?? 1) || 1);
 
   // 日程が指定されていれば空室・料金を算出
   let available: boolean | null = null;
@@ -50,7 +52,8 @@ export default async function PlanDetailPage({
   if (validDates && roomType) {
     const avail = await getTypeAvailability(roomType.id, from!, to!);
     available = eachNight(from!, to!).every((n) => (avail[n] ?? 0) > 0);
-    price = calcPrice(from!, to!, pricePerNight, plan.discounts);
+    const nightly = nightlyRateForGuests(numGuests, pp?.guest_prices as GuestPrices, pricePerNight);
+    price = calcPrice(from!, to!, nightly, plan.discounts);
   }
 
   const formQuery = new URLSearchParams();

@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 type PlanRow = Plan & {
   plan_prices: {
     price_per_night: number;
+    guest_prices: Record<string, number> | null;
     room_type_id: string;
     room_types: { capacity: number } | null;
   }[];
@@ -17,7 +18,7 @@ export default async function ReservePage() {
   const [{ data: planData }, { data: facilityData }] = await Promise.all([
     supabase
       .from("plans")
-      .select("*, plan_prices(price_per_night, room_type_id, room_types(capacity))")
+      .select("*, plan_prices(price_per_night, guest_prices, room_type_id, room_types(capacity))")
       .eq("is_active", true)
       .order("sort_order"),
     supabase.from("facility").select("*").limit(1).single(),
@@ -33,6 +34,7 @@ export default async function ReservePage() {
     name: p.name,
     tags: (p.tags ?? []) as string[],
     pricePerNight: p.plan_prices[0]?.price_per_night ?? 0,
+    guestPrices: p.plan_prices[0]?.guest_prices ?? null,
     discounts: (p.discounts ?? []) as Discount[],
   }));
 

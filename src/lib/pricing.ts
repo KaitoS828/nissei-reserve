@@ -2,6 +2,33 @@ import { eachNight, type DateStr } from "./availability";
 
 export type Discount = { min: number; max: number | null; rate: number };
 
+// 人数別料金マップ（キー=人数の文字列, 値=その人数のときの1泊料金）
+export type GuestPrices = Record<string, number> | null | undefined;
+
+// 人数に応じた1泊単価を求める。guestPrices があればそれを優先し、
+// 該当人数のキーが無ければ「その人数を超えない最大キー」、それも無ければ fallback。
+export function nightlyRateForGuests(
+  guests: number,
+  guestPrices: GuestPrices,
+  fallbackPerNight: number,
+): number {
+  if (guestPrices) {
+    const exact = guestPrices[String(guests)];
+    if (typeof exact === "number" && exact > 0) return exact;
+    const keys = Object.keys(guestPrices)
+      .map(Number)
+      .filter((n) => !Number.isNaN(n))
+      .sort((a, b) => a - b);
+    if (keys.length) {
+      const le = keys.filter((k) => k <= guests);
+      const pick = le.length ? le[le.length - 1] : keys[0];
+      const v = guestPrices[String(pick)];
+      if (typeof v === "number" && v > 0) return v;
+    }
+  }
+  return fallbackPerNight;
+}
+
 export type PriceBreakdown = {
   nights: number;
   pricePerNight: number;

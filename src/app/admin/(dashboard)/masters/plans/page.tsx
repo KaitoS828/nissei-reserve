@@ -18,21 +18,29 @@ const MEAL = [
 const mealLabel = (v: string | null) =>
   MEAL.find((m) => m.value === v)?.label ?? "—";
 
-type RoomType = { id: string; name: string };
-type PlanPrice = { plan_id: string; room_type_id: string; price_per_night: number };
+type RoomType = { id: string; name: string; capacity: number | null };
+type PlanPrice = {
+  plan_id: string;
+  room_type_id: string;
+  price_per_night: number;
+  guest_prices: Record<string, number> | null;
+};
 
 export default async function PlansPage() {
   const supabase = createAdminClient();
   const [{ data: planData }, { data: rtData }, { data: priceData }] = await Promise.all([
     supabase.from("plans").select("*").order("sort_order", { ascending: true }),
-    supabase.from("room_types").select("id, name").eq("is_active", true).order("sort_order"),
-    supabase.from("plan_prices").select("plan_id, room_type_id, price_per_night"),
+    supabase.from("room_types").select("id, name, capacity").eq("is_active", true).order("sort_order"),
+    supabase.from("plan_prices").select("plan_id, room_type_id, price_per_night, guest_prices"),
   ]);
   const plans = (planData ?? []) as Plan[];
   const roomTypes = (rtData ?? []) as RoomType[];
   const prices = (priceData ?? []) as PlanPrice[];
-  const priceOf = (planId: string, rtId: string) =>
-    prices.find((p) => p.plan_id === planId && p.room_type_id === rtId)?.price_per_night ?? "";
+  const rowOf = (planId: string, rtId: string) =>
+    prices.find((p) => p.plan_id === planId && p.room_type_id === rtId);
+  const priceOf = (planId: string, rtId: string) => rowOf(planId, rtId)?.price_per_night ?? "";
+  const guestPriceOf = (planId: string, rtId: string, n: number) =>
+    rowOf(planId, rtId)?.guest_prices?.[String(n)] ?? "";
 
   return (
     <div className="space-y-8">
@@ -99,7 +107,7 @@ export default async function PlansPage() {
                 <input name="description" defaultValue={plan.description ?? ""} placeholder="説明" className={`${field} md:col-span-5`} />
               </form>
 
-              <div className="space-y-2 rounded-xl border border-gray-800 bg-gray-950/40 p-4">
+              <div className="space-y-3 rounded-xl border border-gray-800 bg-gray-950/40 p-4">
                 <p className="text-xs font-medium text-gray-400">1泊あたりの料金（客室タイプ別）</p>
                 {roomTypes.length === 0 && (
                   <p className="text-sm text-gray-500">客室タイプが未登録です。</p>
@@ -108,26 +116,51 @@ export default async function PlansPage() {
                   <form
                     key={rt.id}
                     action={setPlanPrice}
-                    className="flex flex-wrap items-center gap-2"
+                    className="space-y-3 rounded-lg border border-gray-800 p-3"
                   >
                     <input type="hidden" name="plan_id" value={plan.id} />
                     <input type="hidden" name="room_type_id" value={rt.id} />
-                    <span className="min-w-24 text-sm text-gray-300">{rt.name}</span>
-                    <span className="text-sm text-gray-500">¥</span>
-                    <input
-                      name="price_per_night"
-                      type="number"
-                      min={0}
-                      step={100}
-                      defaultValue={priceOf(plan.id, rt.id)}
-                      placeholder="未設定"
-                      required
-                      className={`${field} w-36`}
-                    />
-                    <span className="text-sm text-gray-500">/ 泊</span>
-                    <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">
-                      料金を保存
-                    </button>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="min-w-20 text-sm font-medium text-gray-200">{rt.name}</span>
+                      <span className="text-xs text-gray-500">設定料金</span>
+                      <span className="text-sm text-gray-500">¥</span>
+                      <input
+                        name="price_per_night"
+                        type="number"
+                        min={0}
+                        step={100}
+                        defaultValue={priceOf(plan.id, rt.id)}
+                        placeholder="未設定"
+                        required
+                        className={`${field} w-32`}
+                      />
+                      <span className="text-xs text-gray-500">/泊（人数別が空の人数のフォールバック）</span>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-xs text-gray-400">
+                        人数別料金（1泊・空欄なら設定料金を使用）
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                        {Array.from({ length: rt.capacity ?? 6 }, (_, i) => i + 1).map((n) => (
+                          <label key={n} className="flex items-center gap-1.5">
+                            <span className="w-8 shrink-0 text-xs text-gray-400">{n}名</span>
+                            <input
+                              name={`guest_${n}`}
+                              type="number"
+                              min={0}
+                              step={100}
+                              defaultValue={guestPriceOf(plan.id, rt.id, n)}
+                              placeholder="¥"
+                              className={`${field} w-full`}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button className={btnPrimary}>料金を保存</button>
                   </form>
                 ))}
               </div>

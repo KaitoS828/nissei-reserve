@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { calcPrice, type Discount } from "@/lib/pricing";
+import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 
 type Plan = {
   id: string;
   name: string;
   tags: string[];
   pricePerNight: number;
+  guestPrices: GuestPrices;
   discounts: Discount[];
 };
 
@@ -234,7 +235,8 @@ export function ReserveCalendar({
       {/* プラン */}
       <div className="space-y-4">
         {plans.map((p) => {
-          const price = from && to ? calcPrice(from, to, p.pricePerNight, p.discounts) : null;
+          const nightly = nightlyRateForGuests(guests, p.guestPrices, p.pricePerNight);
+          const price = from && to ? calcPrice(from, to, nightly, p.discounts) : null;
           return (
             <div key={p.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm">
               <div className="space-y-2 border-b border-gray-100 pb-4">
@@ -265,8 +267,8 @@ export function ReserveCalendar({
                     </>
                   ) : (
                     <>
-                      <p className="mt-1 text-xs text-gray-500">1室1泊</p>
-                      <p className="text-xl font-bold text-gray-900">¥ {p.pricePerNight.toLocaleString()}〜</p>
+                      <p className="mt-1 text-xs text-gray-500">{guests}名・1泊</p>
+                      <p className="text-xl font-bold text-gray-900">¥ {nightly.toLocaleString()}〜</p>
                     </>
                   )}
                 </div>
