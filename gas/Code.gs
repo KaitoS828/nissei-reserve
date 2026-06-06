@@ -109,6 +109,71 @@ function fmtDate(d) {
   return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }
 
+// ---- 初回セットアップ：台帳を作成し Sheets/Drive 権限を承認する ----
+// GASエディタで関数選択 → setupLedger を実行 → 「権限を確認」→「許可」をクリック。
+// 実行後、実行ログに台帳のURLが出る。
+function setupLedger() {
+  const props = PropertiesService.getScriptProperties();
+  let sid = props.getProperty('SPREADSHEET_ID');
+  let ss;
+  if (sid) {
+    ss = SpreadsheetApp.openById(sid);
+  } else {
+    ss = SpreadsheetApp.create('日靜 宿泊者台帳');
+    props.setProperty('SPREADSHEET_ID', ss.getId());
+    ss.getActiveSheet().appendRow([
+      '受付日時', '予約番号', '氏名', 'メール', '電話',
+      'プラン', 'チェックイン', 'チェックアウト', '泊数', '人数', '金額',
+    ]);
+  }
+  Logger.log('台帳スプレッドシート: ' + ss.getUrl());
+  return ss.getUrl();
+}
+
+// ---- 既存の確定予約を台帳に取り込む（任意・一度だけ実行）----
+// すでに台帳にある予約番号はスキップするので重複しない。
+function backfillLedger() {
+  setupLedger();
+  const sid = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  const sheet = SpreadsheetApp.openById(sid).getActiveSheet();
+
+  const existing = {};
+  const last = sheet.getLastRow();
+  if (last >= 2) {
+    sheet.getRange(2, 2, last - 1, 1).getValues().forEach(function (r) {
+      if (r[0]) existing[String(r[0])] = true;
+    });
+  }
+
+  const url = prop('SUPABASE_URL') +
+    '/rest/v1/reservations?status=eq.confirmed' +
+    '&select=code,check_in,check_out,num_guests,amount,plans(name),customers(last_name,first_name,email,phone)' +
+    '&order=check_in';
+  const res = UrlFetchApp.fetch(url, {
+    headers: {
+      apikey: prop('SUPABASE_SERVICE_KEY'),
+      Authorization: 'Bearer ' + prop('SUPABASE_SERVICE_KEY'),
+    },
+    muteHttpExceptions: true,
+  });
+  const rows = JSON.parse(res.getContentText());
+  let added = 0;
+  rows.forEach(function (r) {
+    if (existing[String(r.code)]) return;
+    const c = r.customers || {};
+    const nights = Math.round((new Date(r.check_out) - new Date(r.check_in)) / 86400000);
+    sheet.appendRow([
+      new Date(), r.code,
+      ((c.last_name || '') + ' ' + (c.first_name || '')).trim(),
+      c.email || '', c.phone || '',
+      (r.plans && r.plans.name) || '',
+      r.check_in, r.check_out, nights, r.num_guests, r.amount,
+    ]);
+    added++;
+  });
+  Logger.log('取り込み件数: ' + added + ' / 確定予約: ' + rows.length);
+}
+
 // ---- 宿泊者台帳スプレッドシートに自動追記 ----
 // SPREADSHEET_ID が未設定なら「日靜 宿泊者台帳」を自動作成して ID を保存する。
 function appendToSheet(body) {
