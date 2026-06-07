@@ -77,10 +77,10 @@ export default async function ReserveFormPage({
             </div>
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
-            <span className={label}>氏名（カナ）</span>
+            <span className={label}>氏名（カナ） <span className="text-red-500">*</span></span>
             <div className="flex gap-2">
-              <input name="last_name_kana" placeholder="セイ" className={field} />
-              <input name="first_name_kana" placeholder="メイ" className={field} />
+              <input name="last_name_kana" placeholder="セイ" required className={field} />
+              <input name="first_name_kana" placeholder="メイ" required className={field} />
             </div>
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
@@ -96,16 +96,16 @@ export default async function ReserveFormPage({
             <input name="phone" placeholder="0312345678" required className={field} />
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
-            <span className={label}>都道府県（自宅）</span>
-            <input name="prefecture" placeholder="北海道" className={field} />
+            <span className={label}>都道府県（自宅） <span className="text-red-500">*</span></span>
+            <input name="prefecture" placeholder="北海道" required className={field} />
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
-            <span className={label}>市区町村（自宅）</span>
-            <input name="city" placeholder="広尾郡広尾町" className={field} />
+            <span className={label}>市区町村（自宅） <span className="text-red-500">*</span></span>
+            <input name="city" placeholder="広尾郡広尾町" required className={field} />
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
-            <span className={label}>番地（自宅）</span>
-            <input name="address" placeholder="山海谷町1-3-11" className={field} />
+            <span className={label}>番地（自宅） <span className="text-red-500">*</span></span>
+            <input name="address" placeholder="山海谷町1-3-11" required className={field} />
           </div>
           <div className="grid gap-2 md:grid-cols-[160px_1fr] md:items-center">
             <span className={label}>建物名（自宅）</span>

@@ -38,7 +38,30 @@ export async function startCheckout(formData: FormData) {
 
   if (!planId || !from || !to) fail(planId, "プラン・日程が不正です");
   if (!lastName || !firstName || !email) fail(planId, "氏名・メールは必須です");
+  if (!lastKana || !firstKana) fail(planId, "氏名（カナ）は必須です");
+  if (!prefecture || !city || !address) fail(planId, "住所（都道府県・市区町村・番地）は必須です");
   if (email !== email2) fail(planId, "メールアドレスが一致しません");
+  // メール形式（サーバ側でも検証。HTMLのrequiredは直POSTでバイパス可能なため）
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    fail(planId, "メールアドレスの形式が正しくありません");
+  }
+  // 日付形式（YYYY-MM-DD のみ許可。不正な値での処理を防ぐ）
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    fail(planId, "日程が不正です");
+  }
+  // 文字数上限（過大入力・不正データ・DoS的ペイロード防止）
+  const over =
+    lastName.length > 50 || firstName.length > 50 ||
+    lastKana.length > 50 || firstKana.length > 50 ||
+    phone.length > 30 || (prefecture?.length ?? 0) > 20 ||
+    (city?.length ?? 0) > 100 || (address?.length ?? 0) > 200 ||
+    (building?.length ?? 0) > 100 || (survey?.length ?? 0) > 2000 ||
+    (contact?.length ?? 0) > 2000;
+  if (over) fail(planId, "入力内容が長すぎます");
+  // 人数の範囲チェック（負数・極端な値を弾く）
+  if (!Number.isInteger(adults) || adults < 1 || adults > 20) {
+    fail(planId, "人数が不正です");
+  }
   const nights = eachNight(from, to);
   if (nights.length < 1) fail(planId, "日程が不正です");
 
