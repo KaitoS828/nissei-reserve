@@ -39,6 +39,16 @@ export function ownerEmails(): string[] {
     .filter(Boolean);
 }
 
+// HTMLエスケープ（顧客名・自由記述などのユーザー入力をメールHTMLに安全に埋め込む）
+function esc(s: string | number | null | undefined): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const wrap = (inner: string) => `
   <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1f2937">
     <div style="border-bottom:2px solid #0d9488;padding:16px 0">
@@ -57,12 +67,12 @@ export function bookingConfirmedHtml(p: {
   name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number;
 }): string {
   return wrap(`
-    <p>${p.name} 様</p>
+    <p>${esc(p.name)} 様</p>
     <p>ご予約ありがとうございます。下記の内容で予約が確定しました。</p>
     <table style="margin:12px 0;font-size:14px">
-      ${row("予約番号", p.code)}
-      ${row("プラン", p.plan)}
-      ${row("日程", `${p.checkIn} 〜 ${p.checkOut}（${p.nights}泊）`)}
+      ${row("予約番号", esc(p.code))}
+      ${row("プラン", esc(p.plan))}
+      ${row("日程", `${esc(p.checkIn)} 〜 ${esc(p.checkOut)}（${p.nights}泊）`)}
       ${row("人数", `${p.guests}名`)}
       ${row("お支払い金額", `¥${p.amount.toLocaleString()}`)}
     </table>
@@ -81,11 +91,11 @@ export function ownerBookingHtml(p: {
   return wrap(`
     <p><strong>🆕 新規予約が入りました</strong></p>
     <table style="margin:12px 0;font-size:14px">
-      ${row("予約番号", p.code)}
-      ${row("お客様", `${p.name} 様（${p.guests}名）`)}
-      ${row("連絡先", `${p.email ?? "—"} / ${p.phone ?? "—"}`)}
-      ${row("プラン", p.plan)}
-      ${row("日程", `${p.checkIn} 〜 ${p.checkOut}（${p.nights}泊）`)}
+      ${row("予約番号", esc(p.code))}
+      ${row("お客様", `${esc(p.name)} 様（${p.guests}名）`)}
+      ${row("連絡先", `${esc(p.email ?? "—")} / ${esc(p.phone ?? "—")}`)}
+      ${row("プラン", esc(p.plan))}
+      ${row("日程", `${esc(p.checkIn)} 〜 ${esc(p.checkOut)}（${p.nights}泊）`)}
       ${row("金額", `¥${p.amount.toLocaleString()}`)}
     </table>`);
 }
@@ -97,9 +107,9 @@ export function ownerCancellationHtml(p: {
   return wrap(`
     <p><strong>❌ 予約がキャンセルされました</strong></p>
     <table style="margin:12px 0;font-size:14px">
-      ${row("予約番号", p.code)}
-      ${row("お客様", `${p.name} 様`)}
-      ${row("理由", `${p.category}${p.reason ? ` / ${p.reason}` : ""}`)}
+      ${row("予約番号", esc(p.code))}
+      ${row("お客様", `${esc(p.name)} 様`)}
+      ${row("理由", `${esc(p.category)}${p.reason ? ` / ${esc(p.reason)}` : ""}`)}
       ${row("返金額", `¥${p.refund.toLocaleString()}`)}
     </table>`);
 }
@@ -108,8 +118,8 @@ export function cancellationHtml(p: {
   name: string; code: string; refund: number;
 }): string {
   return wrap(`
-    <p>${p.name} 様</p>
-    <p>ご予約（予約番号 ${p.code}）のキャンセルを承りました。</p>
+    <p>${esc(p.name)} 様</p>
+    <p>ご予約（予約番号 ${esc(p.code)}）のキャンセルを承りました。</p>
     <table style="margin:12px 0;font-size:14px">
       ${row("返金額", `¥${p.refund.toLocaleString()}`)}
     </table>
