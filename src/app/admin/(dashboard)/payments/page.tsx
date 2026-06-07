@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { refundPayment } from "./actions";
+import { RefundForm } from "./RefundForm";
 
 export const dynamic = "force-dynamic";
 
@@ -91,11 +91,11 @@ export default async function PaymentsPage({
               <div className="mt-3 flex items-center justify-between border-t border-gray-800 pt-3">
                 <span className="font-mono text-xs text-gray-600">{p.stripe_payment_intent_id ?? "—"}</span>
                 {remaining > 0 && p.status !== "failed" && (
-                  <form action={refundPayment} className="flex items-end gap-2">
-                    <input type="hidden" name="payment_id" value={p.id} />
-                    <input name="amount" type="number" min={1} max={remaining} placeholder={`全額 ¥${remaining.toLocaleString()}`} className="w-36 rounded-lg border border-gray-700 bg-gray-950 px-3 py-1.5 text-sm text-white outline-none focus:border-cyan-400" />
-                    <button className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950/40">返金する</button>
-                  </form>
+                  <RefundForm
+                    paymentId={p.id}
+                    remaining={remaining}
+                    code={p.reservations?.code ?? "—"}
+                  />
                 )}
               </div>
             </div>
