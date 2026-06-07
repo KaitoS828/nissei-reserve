@@ -132,7 +132,10 @@ export async function startCheckout(formData: FormData) {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    payment_method_types: ["card"],
+    // payment_method_types は指定しない＝Stripeダッシュボードで有効化した支払い方法を
+    // 自動表示（dynamic payment methods）。カード/PayPay 等のON/OFFはダッシュボード側で管理。
+    // 注意: コンビニ/銀行振込など非同期決済を有効化する場合は、別途 async_payment_*
+    // Webバックの処理が必要（未対応のまま有効化しないこと）。
     customer_email: email,
     line_items: [
       {
