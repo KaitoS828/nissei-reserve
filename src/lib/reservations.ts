@@ -33,6 +33,7 @@ export async function getTypeAvailability(
       .select("id, check_in, check_out")
       .eq("room_type_id", roomTypeId)
       .in("status", OCCUPYING_STATUSES as unknown as string[])
+      .is("archived_at", null)
       .lt("check_in", to)
       .gt("check_out", from),
     supabase

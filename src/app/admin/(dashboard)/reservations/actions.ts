@@ -18,7 +18,7 @@ export async function createReservation(formData: FormData) {
   const roomTypeId = String(formData.get("room_type_id") ?? "");
   const checkIn = String(formData.get("check_in") ?? "");
   const checkOut = String(formData.get("check_out") ?? "");
-  const customerId = String(formData.get("customer_id") ?? "") || null;
+  let customerId = String(formData.get("customer_id") ?? "") || null;
   const planId = String(formData.get("plan_id") ?? "") || null;
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
@@ -37,6 +37,43 @@ export async function createReservation(formData: FormData) {
   const ok = await canBook(roomTypeId, checkIn, checkOut);
   if (!ok) {
     redirectError("指定期間に空きがありません");
+  }
+
+  // 顧客が手入力（新規）の場合は顧客レコードを作成
+  if (!customerId) {
+    const lastName = String(formData.get("cust_last_name") ?? "").trim();
+    const firstName = String(formData.get("cust_first_name") ?? "").trim();
+    const email = String(formData.get("cust_email") ?? "").trim() || null;
+    const phone = String(formData.get("cust_phone") ?? "").trim() || null;
+    if (lastName || firstName) {
+      const fields = {
+        last_name: lastName,
+        first_name: firstName,
+        ...(email ? { email } : {}),
+        ...(phone ? { phone } : {}),
+      };
+      if (email) {
+        const { data: existing } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("email", email)
+          .limit(1)
+          .maybeSingle();
+        if (existing) {
+          customerId = existing.id;
+          await supabase.from("customers").update(fields).eq("id", customerId);
+        }
+      }
+      if (!customerId) {
+        const { data: created, error: custErr } = await supabase
+          .from("customers")
+          .insert(fields)
+          .select("id")
+          .single();
+        if (custErr || !created) redirectError(`顧客情報の保存に失敗しました: ${custErr?.message ?? ""}`);
+        customerId = created!.id;
+      }
+    }
   }
 
   // 金額: 入力があればそれを、無ければ客室タイプの基本料金×泊数
@@ -67,6 +104,9 @@ export async function createReservation(formData: FormData) {
   if (error) redirectError(error.message);
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
+
+  const redirectTo = String(formData.get("redirect_to") ?? "");
+  if (redirectTo) redirect(redirectTo);
 }
 
 export async function updateReservationStatus(formData: FormData) {
@@ -94,11 +134,30 @@ export async function assignRoom(formData: FormData) {
   revalidatePath(PATH);
 }
 
-export async function deleteReservation(formData: FormData) {
+export async function archiveReservation(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = createAdminClient();
-  const { error } = await supabase.from("reservations").delete().eq("id", id);
+  const { error } = await supabase
+    .from("reservations")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) redirectError(error.message);
+  revalidatePath(PATH);
+  revalidatePath("/admin/reservations/archive");
+  revalidatePath("/admin/calendar");
+}
+
+export async function unarchiveReservation(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("reservations")
+    .update({ archived_at: null })
+    .eq("id", id);
+  if (error) {
+    redirect(`/admin/reservations/archive?error=${encodeURIComponent(error.message)}`);
+  }
+  revalidatePath("/admin/reservations/archive");
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
 }

@@ -1,10 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { randomUUID } from "crypto";
 import { createAdminClient } from "./supabase/admin";
-import { getTypeAvailability, canBook } from "./reservations";
+import { getTypeAvailability, canBook, generateReservationCode } from "./reservations";
 import { eachNight } from "./availability";
+import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "./pricing";
 import { computeRefund } from "./cancel";
 import { getStripe } from "./stripe";
-import { gcalDeleteEvent } from "./gcal";
+import { gcalCreateEvent, gcalDeleteEvent } from "./gcal";
 
 // コスト重視で Sonnet（現行は 4.6。「4.7」は存在しないため 4.6 を使用）
 const MODEL = "claude-sonnet-4-6";
@@ -153,6 +155,106 @@ const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<stri
     return `${start} 開始の休業日設定を解除しました。`;
   },
 
+  async create_reservation(input) {
+    const last_name = String(input.last_name ?? "").trim();
+    const first_name = String(input.first_name ?? "").trim();
+    const email = input.email ? String(input.email).trim() : null;
+    const phone = input.phone ? String(input.phone).trim() : null;
+    const check_in = String(input.check_in);
+    const check_out = String(input.check_out);
+    const num_guests = Number(input.num_guests ?? 1);
+    const plan_query = input.plan ? String(input.plan) : null;
+    const amount_override = input.amount != null ? Number(input.amount) : null;
+    const payment_status = input.payment_status ? String(input.payment_status) : "unpaid";
+    const note = input.note ? String(input.note) : null;
+
+    if (!last_name || !first_name) return "氏名（姓・名）は必須です。";
+
+    const supabase = createAdminClient();
+
+    type PlanRow = { id: string; name: string; discounts: unknown; plan_prices: Array<{ price_per_night: number; guest_prices: GuestPrices; room_type_id: string }> };
+    let planData: PlanRow | null = null;
+    if (plan_query) {
+      const { data } = await supabase
+        .from("plans")
+        .select("id, name, discounts, plan_prices(price_per_night, guest_prices, room_type_id)")
+        .ilike("name", `%${plan_query}%`)
+        .limit(1)
+        .maybeSingle();
+      planData = data as PlanRow | null;
+    }
+    if (!planData) {
+      const { data } = await supabase
+        .from("plans")
+        .select("id, name, discounts, plan_prices(price_per_night, guest_prices, room_type_id)")
+        .eq("is_active", true)
+        .order("sort_order")
+        .limit(1)
+        .maybeSingle();
+      planData = data as PlanRow | null;
+    }
+    if (!planData) return "有効なプランが見つかりません。";
+
+    const pp = (planData.plan_prices ?? [])[0];
+    if (!pp) return `プラン「${planData.name}」に料金が設定されていません。`;
+    const roomTypeId = pp.room_type_id;
+
+    const ok = await canBook(roomTypeId, check_in, check_out);
+    if (!ok) return `${check_in}〜${check_out} は満室のため予約できません。`;
+
+    const nightly = nightlyRateForGuests(num_guests, pp.guest_prices, pp.price_per_night);
+    const price = calcPrice(check_in, check_out, nightly, (planData.discounts ?? []) as Discount[]);
+    const amount = amount_override ?? price.total;
+
+    const custFields = { last_name, first_name, ...(email ? { email } : {}), ...(phone ? { phone } : {}) };
+    let customerId: string;
+    if (email) {
+      const { data: existing } = await supabase.from("customers").select("id").eq("email", email).limit(1).maybeSingle();
+      if (existing) {
+        customerId = existing.id;
+        await supabase.from("customers").update(custFields).eq("id", customerId);
+      } else {
+        const { data: created, error } = await supabase.from("customers").insert(custFields).select("id").single();
+        if (error || !created) return `顧客情報の保存に失敗しました: ${error?.message}`;
+        customerId = created.id;
+      }
+    } else {
+      const { data: created, error } = await supabase.from("customers").insert(custFields).select("id").single();
+      if (error || !created) return `顧客情報の保存に失敗しました: ${error?.message}`;
+      customerId = created.id;
+    }
+
+    const code = generateReservationCode(check_in);
+    const { data: resv, error: resErr } = await supabase
+      .from("reservations")
+      .insert({
+        code, customer_id: customerId, plan_id: planData.id, room_type_id: roomTypeId,
+        check_in, check_out, nights: price.nights, num_guests, num_children: 0,
+        amount, status: "confirmed", payment_status, source: "admin",
+        ...(note ? { note } : {}),
+        lookup_token: randomUUID(),
+      })
+      .select("id, code")
+      .single();
+    if (resErr || !resv) return `予約の作成に失敗しました: ${resErr?.message}`;
+
+    const gcalEventId = await gcalCreateEvent({
+      code: resv.code,
+      customer: `${last_name} ${first_name}`,
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
+      plan: planData.name,
+      check_in, check_out,
+      guests: num_guests,
+      amount,
+    });
+    if (gcalEventId) {
+      await supabase.from("reservations").update({ gcal_event_id: gcalEventId }).eq("id", resv.id);
+    }
+
+    return `✅ 予約を登録しました\n・予約番号: ${resv.code}\n・${last_name} ${first_name}様 / ${check_in}〜${check_out}（${price.nights}泊 / ${num_guests}名）\n・プラン: ${planData.name} / ¥${amount.toLocaleString()}（${payment_status === "paid" ? "支払済" : "未払い"}）`;
+  },
+
   async update_reservation(input) {
     const code = String(input.code);
     const supabase = createAdminClient();
@@ -191,6 +293,7 @@ const TOOLS: Anthropic.Tool[] = [
   { name: "cancel_reservation", description: "予約をキャンセルする（取り消し不可）。キャンセルポリシーに従いStripe返金も行う。実行前にユーザーの明確な同意が必要。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
   { name: "block_dates", description: "休業日（予約不可日）を設定する。公開カレンダーがグレーになる。", input_schema: { type: "object", properties: { start: { type: "string", description: "開始日 YYYY-MM-DD" }, end: { type: "string", description: "終了日 YYYY-MM-DD（省略時は1日）" }, reason: { type: "string" } }, required: ["start"] } },
   { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
+  { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
 ];
 

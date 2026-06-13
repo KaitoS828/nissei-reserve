@@ -11,8 +11,10 @@ import {
   createReservation,
   updateReservationStatus,
   assignRoom,
-  deleteReservation,
+  archiveReservation,
 } from "./actions";
+import { CustomerPicker } from "./CustomerPicker";
+import { DateField } from "./DateField";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +49,7 @@ export default async function ReservationsPage({
     .select(
       "*, customers(id,last_name,first_name), room_types(id,name), rooms(id,name), plans(id,name)",
     )
+    .is("archived_at", null)
     .order("check_in", { ascending: false });
   if (status) q = q.eq("status", status);
 
@@ -67,9 +70,12 @@ export default async function ReservationsPage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">予約</h1>
-        <p className="mt-1 text-sm text-gray-400">予約の登録・ステータス管理・客室割当</p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">予約</h1>
+          <p className="mt-1 text-sm text-gray-400">予約の登録・ステータス管理・客室割当</p>
+        </div>
+        <a href="/admin/reservations/archive" className="shrink-0 rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">アーカイブ一覧</a>
       </header>
 
       {error && (
@@ -80,17 +86,12 @@ export default async function ReservationsPage({
       <details className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5" open={reservations.length === 0}>
         <summary className="cursor-pointer font-medium text-white">＋ 新規予約を登録</summary>
         <form action={createReservation} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <label className="space-y-1 md:col-span-2">
-            <span className="text-xs text-gray-400">顧客</span>
-            <select name="customer_id" className={field} defaultValue="">
-              <option value="">（未指定）</option>
-              {customerList.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {[c.last_name, c.first_name].filter(Boolean).join(" ") || c.email || c.id.slice(0, 8)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CustomerPicker
+            customers={customerList.map((c) => ({
+              id: c.id,
+              label: [c.last_name, c.first_name].filter(Boolean).join(" ") || c.email || c.id.slice(0, 8),
+            }))}
+          />
           <label className="space-y-1">
             <span className="text-xs text-gray-400">客室タイプ *</span>
             <select name="room_type_id" required className={field}>
@@ -108,14 +109,8 @@ export default async function ReservationsPage({
               ))}
             </select>
           </label>
-          <label className="space-y-1">
-            <span className="text-xs text-gray-400">チェックイン *</span>
-            <input type="date" name="check_in" required className={field} />
-          </label>
-          <label className="space-y-1">
-            <span className="text-xs text-gray-400">チェックアウト *</span>
-            <input type="date" name="check_out" required className={field} />
-          </label>
+          <DateField name="check_in" label="チェックイン *" />
+          <DateField name="check_out" label="チェックアウト *" />
           <label className="space-y-1">
             <span className="text-xs text-gray-400">人数</span>
             <input type="number" name="num_guests" min={1} defaultValue={1} className={field} />
@@ -208,9 +203,9 @@ export default async function ReservationsPage({
                     <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">客室割当</button>
                   </form>
 
-                  <form action={deleteReservation}>
+                  <form action={archiveReservation}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950/40">削除</button>
+                    <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">アーカイブに移動</button>
                   </form>
                 </div>
               </div>

@@ -12,6 +12,10 @@ const threadHistory = new Map<string, History>();
 // 本番(Vercel)用 Slack Event Subscriptions エンドポイント。
 // ローカルでは Socket Mode（scripts/slack-agent.ts）を使う。
 
+// AIエージェントは最大8ステップのClaude呼び出しを行うため、デフォルト(10秒)では
+// バックグラウンド処理(waitUntil)が完了前に強制終了され、Slackへ無返信になる。
+export const maxDuration = 60;
+
 function verify(rawBody: string, ts: string | null, sig: string | null): boolean {
   const secret = process.env.SLACK_SIGNING_SECRET;
   if (!secret || !ts || !sig) return false;
