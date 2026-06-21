@@ -44,9 +44,19 @@ export default async function PaymentsPage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">決済</h1>
-        <p className="mt-1 text-sm text-gray-400">カード決済履歴・返金</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">決済</h1>
+          <p className="mt-1 text-sm text-gray-400">カード決済履歴・返金</p>
+        </div>
+        <a
+          href="https://dashboard.stripe.com/acct_1TeG8bB3ojaPmd5j/dashboard"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900/40 px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-800 hover:text-white"
+        >
+          Stripeダッシュボード ↗
+        </a>
       </header>
 
       {error && <p className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-300">{error}</p>}
