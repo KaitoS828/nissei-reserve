@@ -42,9 +42,9 @@ export default function PublicLayout({
           <span className="text-gray-300">|</span>
           <Link href="/reserve/lookup" className="hover:text-gray-800">予約照会</Link>
           <span className="text-gray-300">|</span>
-          <span>利用規約</span>
+          <Link href="/terms" className="hover:text-gray-800">利用規約</Link>
           <span className="text-gray-300">|</span>
-          <span>プライバシーポリシー</span>
+          <Link href="/privacy" className="hover:text-gray-800">プライバシーポリシー</Link>
         </div>
         <p className="mt-3 text-center text-xs text-gray-400">
           © {new Date().getFullYear()} 一棟貸し宿「日靜」
