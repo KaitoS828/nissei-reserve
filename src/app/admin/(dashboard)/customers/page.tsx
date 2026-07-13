@@ -6,6 +6,7 @@ import {
   toggleBlacklist,
   deleteCustomer,
 } from "./actions";
+import { DeleteForm } from "../_components/DeleteForm";
 
 export const dynamic = "force-dynamic";
 
@@ -121,12 +122,11 @@ export default async function CustomersPage({
                     {c.is_blacklisted ? "ブラックリスト解除" : "ブラックリストに追加"}
                   </button>
                 </form>
-                <form action={deleteCustomer}>
-                  <input type="hidden" name="id" value={c.id} />
-                  <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-400 transition hover:bg-gray-800">
-                    削除
-                  </button>
-                </form>
+                <DeleteForm
+                  action={deleteCustomer}
+                  id={c.id}
+                  confirmMessage={`${fullName(c)} を削除します。\n過去の予約は残りますが、予約者名は表示されなくなります。よろしいですか？`}
+                />
               </div>
             </div>
           </details>

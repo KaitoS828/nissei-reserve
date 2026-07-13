@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RefundForm } from "./RefundForm";
+import { DeleteForm } from "../_components/DeleteForm";
+import { deletePayment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -98,15 +100,22 @@ export default async function PaymentsPage({
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-gray-800 pt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 pt-3">
                 <span className="font-mono text-xs text-gray-600">{p.stripe_payment_intent_id ?? "—"}</span>
-                {remaining > 0 && p.status !== "failed" && (
-                  <RefundForm
-                    paymentId={p.id}
-                    remaining={remaining}
-                    code={p.reservations?.code ?? "—"}
+                <div className="flex flex-wrap items-end gap-2">
+                  {remaining > 0 && p.status !== "failed" && (
+                    <RefundForm
+                      paymentId={p.id}
+                      remaining={remaining}
+                      code={p.reservations?.code ?? "—"}
+                    />
+                  )}
+                  <DeleteForm
+                    action={deletePayment}
+                    id={p.id}
+                    confirmMessage={`予約 ${p.reservations?.code ?? "—"} の決済記録 ¥${p.amount.toLocaleString()} を削除します。\n管理画面の履歴から消えるだけで、Stripe 上の決済・返金は取り消されません。よろしいですか？`}
                   />
-                )}
+                </div>
               </div>
             </div>
           );

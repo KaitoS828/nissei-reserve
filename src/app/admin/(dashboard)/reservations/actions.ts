@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
-import type { ReservationStatus } from "@/types/db";
+import type { ReservationStatus, PaymentStatus } from "@/types/db";
 
 const PATH = "/admin/reservations";
 
@@ -110,6 +110,7 @@ export async function createReservation(formData: FormData) {
     num_guests: numGuests,
     amount,
     status: "confirmed", // 管理者手動登録は確定扱い
+    payment_status: (String(formData.get("payment_status") ?? "unpaid") || "unpaid") as PaymentStatus,
     source: "admin",
     note,
   });
@@ -129,6 +130,7 @@ export async function updateReservation(formData: FormData) {
   const checkIn = String(formData.get("check_in") ?? "");
   const checkOut = String(formData.get("check_out") ?? "");
   const status = String(formData.get("status")) as ReservationStatus;
+  const paymentStatus = String(formData.get("payment_status")) as PaymentStatus;
   const planId = String(formData.get("plan_id") ?? "") || null;
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
@@ -165,6 +167,7 @@ export async function updateReservation(formData: FormData) {
       num_guests: numGuests,
       amount,
       status,
+      payment_status: paymentStatus,
       note,
     })
     .eq("id", id);
@@ -184,6 +187,24 @@ export async function archiveReservation(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/reservations/archive");
   revalidatePath("/admin/calendar");
+}
+
+// アーカイブ済み予約の完全削除。紐づく決済記録・アンケートも消える（Stripe 上の決済は残る）
+export async function deleteReservation(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+
+  await supabase.from("payments").delete().eq("reservation_id", id);
+  await supabase.from("surveys").delete().eq("reservation_id", id);
+
+  const { error } = await supabase.from("reservations").delete().eq("id", id);
+  if (error) {
+    redirect(`/admin/reservations/archive?error=${encodeURIComponent(error.message)}`);
+  }
+  revalidatePath("/admin/reservations/archive");
+  revalidatePath(PATH);
+  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/payments");
 }
 
 export async function unarchiveReservation(formData: FormData) {

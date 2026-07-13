@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, ReservationStatus } from "@/types/db";
-import { unarchiveReservation } from "../actions";
+import { unarchiveReservation, deleteReservation } from "../actions";
+import { DeleteForm } from "../../_components/DeleteForm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,18 @@ export default async function ArchivePage({
                   {r.check_in} → {r.check_out}（{r.nights}泊） / {r.room_types?.name ?? "—"} / ¥{r.amount.toLocaleString()}
                 </span>
               </span>
-              <form action={unarchiveReservation}>
-                <input type="hidden" name="id" value={r.id} />
-                <button className="rounded-lg border border-cyan-800 px-3 py-1.5 text-sm text-cyan-300 transition hover:bg-cyan-950/40">復元</button>
-              </form>
+              <span className="flex items-center gap-2">
+                <form action={unarchiveReservation}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <button className="rounded-lg border border-cyan-800 px-3 py-1.5 text-sm text-cyan-300 transition hover:bg-cyan-950/40">復元</button>
+                </form>
+                <DeleteForm
+                  action={deleteReservation}
+                  id={r.id}
+                  label="完全削除"
+                  confirmMessage={`予約 ${r.code}（${custName(r.customers)}）を完全に削除します。\n紐づく決済記録も消え、元に戻せません。よろしいですか？`}
+                />
+              </span>
             </div>
           );
         })}

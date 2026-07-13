@@ -7,6 +7,15 @@ import { getStripe } from "@/lib/stripe";
 
 const PATH = "/admin/payments";
 
+// 決済記録の削除（管理画面の履歴から消すだけ。Stripe 上の決済は残る）
+export async function deletePayment(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("payments").delete().eq("id", id);
+  if (error) redirect(`${PATH}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(PATH);
+}
+
 // 管理者による返金（全額 or 一部）
 export async function refundPayment(formData: FormData) {
   const paymentId = String(formData.get("payment_id"));

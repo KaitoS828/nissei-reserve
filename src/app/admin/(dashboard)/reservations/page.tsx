@@ -6,6 +6,7 @@ import type {
   Plan,
   Customer,
   ReservationStatus,
+  PaymentStatus,
 } from "@/types/db";
 import {
   createReservation,
@@ -33,6 +34,17 @@ const STATUS: { value: ReservationStatus; label: string; cls: string }[] = [
 ];
 const statusMeta = (s: ReservationStatus) =>
   STATUS.find((x) => x.value === s) ?? STATUS[0];
+
+const PAYMENT: { value: PaymentStatus; label: string }[] = [
+  { value: "unpaid", label: "未回収" },
+  { value: "paid", label: "回収済み" },
+  { value: "authorized", label: "オーソリ済み" },
+  { value: "partially_refunded", label: "一部返金" },
+  { value: "refunded", label: "返金済み" },
+  { value: "failed", label: "決済失敗" },
+];
+const paymentLabel = (s: PaymentStatus) =>
+  PAYMENT.find((x) => x.value === s)?.label ?? s;
 const custName = (c: ReservationWithRefs["customers"]) =>
   c ? [c.last_name, c.first_name].filter(Boolean).join(" ") || "（無名）" : "—";
 
@@ -120,6 +132,14 @@ export default async function ReservationsPage({
             <input type="number" name="amount" min={0} placeholder="基本料金×泊数" className={field} />
           </label>
           <label className="space-y-1">
+            <span className="text-xs text-gray-400">支払</span>
+            <select name="payment_status" className={field} defaultValue="unpaid">
+              {PAYMENT.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
             <span className="text-xs text-gray-400">客室割当（任意）</span>
             <select name="room_id" className={field} defaultValue="">
               <option value="">（後で割当）</option>
@@ -169,7 +189,7 @@ export default async function ReservationsPage({
                   <span>人数: {r.num_guests}名</span>
                   <span>プラン: {r.plans?.name ?? "—"}</span>
                   <span>経路: {r.source}</span>
-                  <span>支払: {r.payment_status}</span>
+                  <span>支払: {paymentLabel(r.payment_status)}</span>
                 </div>
                 {r.note && <p className="text-sm text-gray-300">メモ: {r.note}</p>}
                 {r.status === "cancelled" && (r.cancel_category || r.cancel_reason) && (
@@ -187,7 +207,8 @@ export default async function ReservationsPage({
                     </form>
                   }
                 >
-                  <form action={updateReservation} className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  {/* 保存後に最新値でフォームを作り直す（defaultValue は再レンダーでは更新されないため） */}
+                  <form key={r.updated_at} action={updateReservation} className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <input type="hidden" name="id" value={r.id} />
                     <CustomerPicker
                       customers={customerList.map((c) => ({
@@ -201,6 +222,14 @@ export default async function ReservationsPage({
                       <select name="status" defaultValue={r.status} className={field}>
                         {STATUS.map((s) => (
                           <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">支払</span>
+                      <select name="payment_status" defaultValue={r.payment_status} className={field}>
+                        {PAYMENT.map((p) => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
                         ))}
                       </select>
                     </label>
