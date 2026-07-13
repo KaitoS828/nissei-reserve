@@ -8,7 +8,13 @@ export type CustomerOption = { id: string; label: string };
 const field =
   "w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400";
 
-export function CustomerPicker({ customers }: { customers: CustomerOption[] }) {
+export function CustomerPicker({
+  customers,
+  defaultCustomerId,
+}: {
+  customers: CustomerOption[];
+  defaultCustomerId?: string | null;
+}) {
   const [mode, setMode] = useState<"existing" | "manual">("existing");
 
   return (
@@ -40,7 +46,7 @@ export function CustomerPicker({ customers }: { customers: CustomerOption[] }) {
       </div>
 
       {mode === "existing" ? (
-        <select name="customer_id" className={field} defaultValue="">
+        <select name="customer_id" className={field} defaultValue={defaultCustomerId ?? ""}>
           <option value="">（未指定）</option>
           {customers.map((c) => (
             <option key={c.id} value={c.id}>

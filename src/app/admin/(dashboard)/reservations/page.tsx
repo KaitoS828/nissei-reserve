@@ -9,12 +9,12 @@ import type {
 } from "@/types/db";
 import {
   createReservation,
-  updateReservationStatus,
-  assignRoom,
+  updateReservation,
   archiveReservation,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
+import { EditToggle } from "./EditToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -179,35 +179,71 @@ export default async function ReservationsPage({
                   </p>
                 )}
 
-                <div className="flex flex-wrap items-end gap-3">
-                  {/* ステータス変更 */}
-                  <form action={updateReservationStatus} className="flex items-end gap-2">
+                <EditToggle
+                  actions={
+                    <form action={archiveReservation}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">アーカイブに移動</button>
+                    </form>
+                  }
+                >
+                  <form action={updateReservation} className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <input type="hidden" name="id" value={r.id} />
-                    <select name="status" defaultValue={r.status} className={`${field} w-40`}>
-                      {STATUS.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                    <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">状態変更</button>
+                    <CustomerPicker
+                      customers={customerList.map((c) => ({
+                        id: c.id,
+                        label: [c.last_name, c.first_name].filter(Boolean).join(" ") || c.email || c.id.slice(0, 8),
+                      }))}
+                      defaultCustomerId={r.customer_id}
+                    />
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">ステータス</span>
+                      <select name="status" defaultValue={r.status} className={field}>
+                        {STATUS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">客室タイプ *</span>
+                      <select name="room_type_id" required defaultValue={r.room_type_id ?? ""} className={field}>
+                        {roomTypes.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">プラン</span>
+                      <select name="plan_id" defaultValue={r.plan_id ?? ""} className={field}>
+                        <option value="">（未指定）</option>
+                        {planList.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">客室割当</span>
+                      <select name="room_id" defaultValue={r.room_id ?? ""} className={field}>
+                        <option value="">未割当</option>
+                        {roomList.map((rm) => (
+                          <option key={rm.id} value={rm.id}>{rm.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <DateField name="check_in" label="チェックイン *" defaultValue={r.check_in} />
+                    <DateField name="check_out" label="チェックアウト *" defaultValue={r.check_out} />
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">人数</span>
+                      <input type="number" name="num_guests" min={1} defaultValue={r.num_guests} className={field} />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-400">金額</span>
+                      <input type="number" name="amount" min={0} defaultValue={r.amount} className={field} />
+                    </label>
+                    <input name="note" defaultValue={r.note ?? ""} placeholder="メモ（任意）" className={`${field} md:col-span-3`} />
+                    <button className={btnPrimary}>保存</button>
                   </form>
-
-                  {/* 客室割当 */}
-                  <form action={assignRoom} className="flex items-end gap-2">
-                    <input type="hidden" name="id" value={r.id} />
-                    <select name="room_id" defaultValue={r.room_id ?? ""} className={`${field} w-32`}>
-                      <option value="">未割当</option>
-                      {roomList.map((rm) => (
-                        <option key={rm.id} value={rm.id}>{rm.name}</option>
-                      ))}
-                    </select>
-                    <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">客室割当</button>
-                  </form>
-
-                  <form action={archiveReservation}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <button className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">アーカイブに移動</button>
-                  </form>
-                </div>
+                </EditToggle>
               </div>
             </details>
           );
