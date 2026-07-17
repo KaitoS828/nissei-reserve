@@ -237,7 +237,9 @@ export function ReserveCalendar({
         {plans.map((p) => {
           const { min: planMin } = guestRange(p.guestPrices, maxGuests);
           const belowMin = guests < planMin;
-          const nightly = nightlyRateForGuests(Math.max(guests, planMin), p.guestPrices, p.pricePerNight);
+          const effGuests = Math.max(guests, planMin);
+          const nightly = nightlyRateForGuests(effGuests, p.guestPrices, p.pricePerNight);
+          const perPerson = Math.round(nightly / effGuests);
           const price = from && to && !belowMin ? calcPrice(from, to, nightly, p.discounts) : null;
           return (
             <div key={p.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm">
@@ -255,7 +257,7 @@ export function ReserveCalendar({
                   {belowMin ? (
                     <>
                       <p className="mt-1 text-xs text-gray-500">{planMin}名〜{maxGuests}名でご利用可</p>
-                      <p className="text-xl font-bold text-gray-900">¥ {nightly.toLocaleString()}〜</p>
+                      <p className="text-xl font-bold text-gray-900">¥{perPerson.toLocaleString()}/人〜</p>
                       <p className="mt-0.5 text-xs text-amber-600">このプランは最低{planMin}名からです</p>
                     </>
                   ) : price ? (
@@ -275,8 +277,8 @@ export function ReserveCalendar({
                     </>
                   ) : (
                     <>
-                      <p className="mt-1 text-xs text-gray-500">{guests}名・1泊</p>
-                      <p className="text-xl font-bold text-gray-900">¥ {nightly.toLocaleString()}〜</p>
+                      <p className="mt-1 text-xs text-gray-500">{guests}名・1泊 合計 ¥{nightly.toLocaleString()}</p>
+                      <p className="text-xl font-bold text-gray-900">¥{perPerson.toLocaleString()}/人〜</p>
                     </>
                   )}
                 </div>
