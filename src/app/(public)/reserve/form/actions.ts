@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
-import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
+import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 
 function fail(planId: string, msg: string): never {
   const q = new URLSearchParams({ error: msg });
@@ -77,6 +77,10 @@ export async function startCheckout(formData: FormData) {
   const pp = (plan.plan_prices ?? [])[0];
   if (!pp) fail(planId, "料金が設定されていません");
   const roomTypeId: string = pp.room_type_id;
+
+  // プラン別の最低人数チェック（guest_prices の最小キー。例: サウナ付きは2名から）
+  const { min: minGuests } = guestRange(pp.guest_prices as GuestPrices, 0);
+  if (adults < minGuests) fail(planId, `このプランは${minGuests}名以上でご予約ください`);
 
   // 空室再チェック（サーバ側）
   if (!(await canBook(roomTypeId, from, to))) fail(planId, "満室のため予約できません");

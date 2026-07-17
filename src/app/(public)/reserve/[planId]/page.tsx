@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTypeAvailability } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
-import { calcPrice, nightlyRateForGuests, type GuestPrices } from "@/lib/pricing";
+import { calcPrice, guestRange, nightlyRateForGuests, type GuestPrices } from "@/lib/pricing";
 import type { Plan, RoomType } from "@/types/db";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,11 @@ export default async function PlanDetailPage({
   const pricePerNight = pp?.price_per_night ?? 0;
   const roomType = pp?.room_types ?? null;
   const amenities = (roomType?.amenities ?? []) as string[];
-  const numGuests = Math.max(1, Number(guests ?? 1) || 1);
+  const { min: minGuests, max: maxGuests } = guestRange(
+    pp?.guest_prices as GuestPrices,
+    roomType?.capacity ?? 6,
+  );
+  const numGuests = Math.min(maxGuests, Math.max(minGuests, Number(guests ?? minGuests) || minGuests));
 
   // 日程が指定されていれば空室・料金を算出
   let available: boolean | null = null;
@@ -60,7 +64,7 @@ export default async function PlanDetailPage({
   formQuery.set("plan", plan.id);
   if (from) formQuery.set("from", from);
   if (to) formQuery.set("to", to);
-  if (guests) formQuery.set("guests", guests);
+  formQuery.set("guests", String(numGuests));
 
   return (
     <div className="space-y-6">
@@ -90,8 +94,8 @@ export default async function PlanDetailPage({
             <input type="date" name="to" defaultValue={to} className="block rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </label>
           <label className="space-y-1">
-            <span className="text-xs text-gray-500">人数（最大{roomType?.capacity ?? 6}）</span>
-            <input type="number" name="guests" min={1} max={roomType?.capacity ?? 6} defaultValue={guests ?? "1"} className="block w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <span className="text-xs text-gray-500">人数（{minGuests}〜{maxGuests}名）</span>
+            <input type="number" name="guests" min={minGuests} max={maxGuests} defaultValue={String(numGuests)} className="block w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </label>
           <button className="rounded-full border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50">
             空室・料金を確認

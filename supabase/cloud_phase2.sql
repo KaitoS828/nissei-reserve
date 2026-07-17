@@ -53,7 +53,7 @@ with rt as (
   values (
     '日靜（1日1組限定）',
     '広尾町の大自然に囲まれた一棟貸しのゲストハウス。1日1組限定の貸切。',
-    4,
+    6,
     28000,
     '["無料WiFi","洗浄機付トイレ","エアコン","冷蔵庫","電気ポット","コーヒーメーカー/お茶セット","ドライヤー","洗濯機","乾燥機","電子レンジ","バス","トイレ","タオル","バスタオル","ボディーソープ","シャンプー","コンディショナー","ハミガキセット","スリッパ","敷地内無料駐車場"]'::jsonb,
     1
@@ -86,7 +86,11 @@ values
 );
 
 -- プラン料金（プラン×客室タイプ）
-insert into plan_prices (plan_id, room_type_id, price_per_night)
+insert into plan_prices (plan_id, room_type_id, price_per_night, guest_prices)
 select p.id, rt.id,
-  case when p.name like '%KOBU%' then 40000 else 28000 end
+  case when p.name like '%KOBU%' then 10000 else 7000 end,
+  case
+    when p.name like '%KOBU%' then '{"2":20000,"3":30000,"4":40000,"5":50000,"6":60000}'::jsonb
+    else '{"1":7000,"2":14000,"3":21000,"4":28000,"5":35000,"6":42000}'::jsonb
+  end
 from plans p cross join room_types rt;

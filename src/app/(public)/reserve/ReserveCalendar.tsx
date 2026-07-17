@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
+import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 
 type Plan = {
   id: string;
@@ -235,8 +235,10 @@ export function ReserveCalendar({
       {/* プラン */}
       <div className="space-y-4">
         {plans.map((p) => {
-          const nightly = nightlyRateForGuests(guests, p.guestPrices, p.pricePerNight);
-          const price = from && to ? calcPrice(from, to, nightly, p.discounts) : null;
+          const { min: planMin } = guestRange(p.guestPrices, maxGuests);
+          const belowMin = guests < planMin;
+          const nightly = nightlyRateForGuests(Math.max(guests, planMin), p.guestPrices, p.pricePerNight);
+          const price = from && to && !belowMin ? calcPrice(from, to, nightly, p.discounts) : null;
           return (
             <div key={p.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm">
               <div className="space-y-2 border-b border-gray-100 pb-4">
@@ -250,7 +252,13 @@ export function ReserveCalendar({
               <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">日靜（1日1組限定）</p>
-                  {price ? (
+                  {belowMin ? (
+                    <>
+                      <p className="mt-1 text-xs text-gray-500">{planMin}名〜{maxGuests}名でご利用可</p>
+                      <p className="text-xl font-bold text-gray-900">¥ {nightly.toLocaleString()}〜</p>
+                      <p className="mt-0.5 text-xs text-amber-600">このプランは最低{planMin}名からです</p>
+                    </>
+                  ) : price ? (
                     <>
                       <p className="mt-1 text-xs text-gray-500">
                         {price.nights}泊・税サービス料込
@@ -272,7 +280,11 @@ export function ReserveCalendar({
                     </>
                   )}
                 </div>
-                {from && to ? (
+                {belowMin ? (
+                  <span className="rounded-full bg-gray-200 px-6 py-2.5 text-center text-sm font-medium text-gray-500">
+                    最低{planMin}名から
+                  </span>
+                ) : from && to ? (
                   <Link
                     href={`/reserve/${p.id}?${query.toString()}`}
                     className="rounded-full bg-teal-600 px-6 py-2.5 text-center text-sm font-medium text-white transition hover:bg-teal-500"

@@ -29,6 +29,23 @@ export function nightlyRateForGuests(
   return fallbackPerNight;
 }
 
+// guest_prices のキーから予約可能な人数レンジを求める。
+// 最低人数 = 最小キー（例: サウナ付きは "2" 始まりなら最低2名）。
+// 最大人数 = 客室定員（capacity）。キーが無ければ 1〜capacity にフォールバック。
+export function guestRange(
+  guestPrices: GuestPrices,
+  capacity: number,
+): { min: number; max: number } {
+  const keys = guestPrices
+    ? Object.keys(guestPrices)
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0)
+    : [];
+  const max = capacity > 0 ? capacity : keys.length ? Math.max(...keys) : 1;
+  const min = keys.length ? Math.min(...keys) : 1;
+  return { min, max: Math.max(min, max) };
+}
+
 export type PriceBreakdown = {
   nights: number;
   pricePerNight: number;
