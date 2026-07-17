@@ -58,7 +58,7 @@
 | メッセージ | **LINE Messaging API**（Push）+ メール（Resend or Supabase SMTP） |
 | 定期実行 | Vercel Cron もしくは Supabase Scheduled Functions / GASトリガー |
 | ホスティング | Vercel（フロント+API）、Supabase（マネージドDB） |
-| ポート（ローカル） | フロント 3030 想定（既存規約に合わせる） |
+| ポート（ローカル） | フロント 3033（3030 は nissei-reserve-integrated と衝突するため変更） |
 
 > 別バックエンド（FastAPI）は立てない。Next.js の Route Handlers + Supabase で完結させ、個人運用の保守コストを最小化する。
 

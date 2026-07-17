@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS=--max-http-header-size=65536 next dev -p 3030",
+    "dev": "NODE_OPTIONS=--max-http-header-size=65536 next dev -p 3033",
     "build": "next build",
-    "start": "NODE_OPTIONS=--max-http-header-size=65536 next start -p 3030",
+    "start": "NODE_OPTIONS=--max-http-header-size=65536 next start -p 3033",
     "lint": "eslint"
   },
   "dependencies": {
