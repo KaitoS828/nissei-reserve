@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, RoomType, Plan, Customer } from "@/types/db";
 import { OCCUPYING_STATUSES } from "@/lib/availability";
 import { createReservation } from "../reservations/actions";
+import { toggleBlockedDate } from "../blocked/actions";
 import { CustomerPicker } from "../reservations/CustomerPicker";
 import { DateField } from "../reservations/DateField";
 
@@ -60,7 +61,7 @@ export default async function CalendarPage({
         .gt("check_out", rangeFrom),
       supabase
         .from("blocked_dates")
-        .select("start_date, end_date, room_type_id")
+        .select("start_date, end_date, room_type_id, reason")
         .lte("start_date", rangeTo)
         .gte("end_date", rangeFrom),
     ]);
@@ -86,18 +87,33 @@ export default async function CalendarPage({
   }
 
   // 各日のデータを作る
-  type DayCell = { date: string; day: number; resv: ReservationWithRefs[]; avail: number; isBlocked: boolean };
+  type DayCell = {
+    date: string;
+    day: number;
+    resv: ReservationWithRefs[];
+    avail: number;
+    isBlocked: boolean;
+    blockReason: string | null;
+  };
   const cells: (DayCell | null)[] = [];
   for (let i = 0; i < leadingBlanks; i++) cells.push(null);
   for (let day = 1; day <= daysInMonth; day++) {
     const date = ymd(new Date(year, month0, day));
     const resv = reservations.filter((r) => r.check_in <= date && date < r.check_out);
     const dayBlocked = blocked.filter((b) => b.start_date <= date && date <= b.end_date);
-    const globalBlocked = dayBlocked.some((b) => b.room_type_id === null);
+    const globalBlock = dayBlocked.find((b) => b.room_type_id === null);
+    const globalBlocked = !!globalBlock;
     const avail = globalBlocked
       ? 0
       : Math.max(0, totalRooms - resv.length - dayBlocked.length);
-    cells.push({ date, day, resv, avail, isBlocked: globalBlocked });
+    cells.push({
+      date,
+      day,
+      resv,
+      avail,
+      isBlocked: globalBlocked,
+      blockReason: globalBlock?.reason ?? null,
+    });
   }
   while (cells.length % 7 !== 0) cells.push(null);
 
@@ -111,7 +127,9 @@ export default async function CalendarPage({
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">予約カレンダー</h1>
-          <p className="mt-1 text-sm text-gray-600">各日の予約と空き室数（全{totalRooms}室）</p>
+          <p className="mt-1 text-sm text-gray-600">
+            各日の予約と空き室数（全{totalRooms}室）／右上の「空n・休」をクリックで予約不可を切り替え
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href={`/admin/calendar?month=${monthStr(prev.year, prev.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">← 前月</Link>
@@ -185,11 +203,24 @@ export default async function CalendarPage({
             <div key={i} className={`min-h-28 space-y-1 bg-white p-1.5 ${isToday ? "ring-1 ring-inset ring-cyan-500" : ""}`}>
               <div className="flex items-center justify-between">
                 <span className={`text-xs ${isToday ? "font-bold text-cyan-700" : "text-gray-600"}`}>{cell.day}</span>
-                {cell.isBlocked ? (
-                  <span className="rounded bg-red-50 px-1 text-[10px] text-red-600">休</span>
-                ) : (
-                  <span className={`rounded px-1 text-[10px] ${cell.avail === 0 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-600"}`}>空{cell.avail}</span>
-                )}
+                <form action={toggleBlockedDate}>
+                  <input type="hidden" name="date" value={cell.date} />
+                  <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
+                  <SubmitButton
+                    className={`rounded px-1 text-[10px] transition ${
+                      cell.isBlocked
+                        ? "bg-red-50 text-red-600 hover:bg-red-100"
+                        : cell.avail === 0
+                          ? "bg-red-50 text-red-600 hover:bg-red-100"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                    pendingLabel=""
+                  >
+                    <span title={cell.isBlocked ? `${cell.blockReason ?? "休業"}（クリックで解除）` : "クリックで予約不可にする"}>
+                      {cell.isBlocked ? "休" : `空${cell.avail}`}
+                    </span>
+                  </SubmitButton>
+                </form>
               </div>
               {cell.resv.slice(0, 3).map((r) => (
                 <Link key={r.id} href="/admin/reservations" className="block truncate rounded bg-cyan-50 px-1 py-0.5 text-[10px] text-cyan-800 hover:bg-cyan-100">
