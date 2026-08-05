@@ -85,13 +85,13 @@ export default async function PlanDetailPage({
       {/* 予約バー */}
       <form method="get" className="rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="space-y-1">
+          <label className="min-w-[8.5rem] flex-1 space-y-1 sm:flex-none">
             <span className="text-xs text-gray-500">チェックイン</span>
-            <input type="date" name="from" defaultValue={from} className="block rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input type="date" name="from" defaultValue={from} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </label>
-          <label className="space-y-1">
+          <label className="min-w-[8.5rem] flex-1 space-y-1 sm:flex-none">
             <span className="text-xs text-gray-500">チェックアウト</span>
-            <input type="date" name="to" defaultValue={to} className="block rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input type="date" name="to" defaultValue={to} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </label>
           <label className="space-y-1">
             <span className="text-xs text-gray-500">人数（{minGuests}〜{maxGuests}名）</span>
@@ -101,7 +101,7 @@ export default async function PlanDetailPage({
             空室・料金を確認
           </button>
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="flex w-full items-center justify-between gap-4 sm:ml-auto sm:w-auto sm:justify-end">
             {price && (
               <div className="text-right">
                 <p className="text-xl font-bold text-gray-900">¥{price.total.toLocaleString()}</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteHeader } from "./_components/SiteHeader";
 
 export default function PublicLayout({
   children,
@@ -7,37 +8,12 @@ export default function PublicLayout({
 }) {
   return (
     <div className="min-h-screen bg-white text-gray-800">
-      <header className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur print:hidden">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/reserve" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 text-[10px] leading-tight text-gray-600">
-              日靜
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-gray-900">
-              一棟貸し宿「日靜」
-            </span>
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/reserve" className="font-medium text-teal-700">
-              予約
-            </Link>
-            <Link href="/reserve/lookup" className="text-gray-500 hover:text-gray-800">
-              予約照会
-            </Link>
-            <Link href="/account" className="text-gray-500 hover:text-gray-800">
-              マイページ
-            </Link>
-            <Link href="/account/login" className="text-gray-500 hover:text-gray-800">
-              ログイン
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
 
-      <footer className="mt-16 border-t border-gray-200 py-8 print:hidden">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-4 px-4 text-sm text-gray-500">
+      <footer className="mt-12 border-t border-gray-200 py-8 sm:mt-16 print:hidden">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 text-sm text-gray-500">
           <span>About Us</span>
           <span className="text-gray-300">|</span>
           <Link href="/reserve/lookup" className="hover:text-gray-800">予約照会</Link>
