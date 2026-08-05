@@ -77,6 +77,7 @@ export async function startCheckout(formData: FormData) {
   const pp = (plan.plan_prices ?? [])[0];
   if (!pp) fail(planId, "料金が設定されていません");
   const roomTypeId: string = pp.room_type_id;
+  const facilityId = (plan as { facility_id?: string | null }).facility_id ?? null;
 
   // プラン別の最低人数チェック（guest_prices の最小キー。例: サウナ付きは2名から）
   const { min: minGuests } = guestRange(pp.guest_prices as GuestPrices, 0);
@@ -91,17 +92,19 @@ export async function startCheckout(formData: FormData) {
 
   // 顧客 upsert（メール一致で再利用）
   let customerId: string;
-  const { data: existing } = await supabase
+  let existingCustomerQuery = supabase
     .from("customers")
     .select("id")
     .eq("email", email)
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (facilityId) existingCustomerQuery = existingCustomerQuery.eq("facility_id", facilityId);
+  const { data: existing } = await existingCustomerQuery.maybeSingle();
   const custFields = {
     last_name: lastName, first_name: firstName,
     last_name_kana: lastKana || null, first_name_kana: firstKana || null,
     email, phone: phone || null,
     prefecture, city, address, building,
+    facility_id: facilityId,
   };
   if (existing) {
     customerId = existing.id;
@@ -120,7 +123,7 @@ export async function startCheckout(formData: FormData) {
   const { data: resv, error: resErr } = await supabase
     .from("reservations")
     .insert({
-      code, customer_id: customerId, plan_id: planId, room_type_id: roomTypeId,
+      code, facility_id: facilityId, customer_id: customerId, plan_id: planId, room_type_id: roomTypeId,
       check_in: from, check_out: to, num_guests: adults, num_children: 0,
       amount: price.total, status: "pending", payment_status: "unpaid",
       source: "web", check_in_time: checkInTime, survey, note: contact,

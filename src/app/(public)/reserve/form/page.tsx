@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calcPrice, type Discount } from "@/lib/pricing";
+import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 import { eachNight } from "@/lib/availability";
 import { startCheckout } from "./actions";
 
@@ -25,14 +25,17 @@ export default async function ReserveFormPage({
   const supabase = createAdminClient();
   const { data: plan } = await supabase
     .from("plans")
-    .select("*, plan_prices(price_per_night)")
+    .select("*, plan_prices(price_per_night, guest_prices)")
     .eq("id", planId)
     .single();
   if (!plan) notFound();
 
-  const pricePerNight = (plan.plan_prices ?? [])[0]?.price_per_night ?? 0;
+  const pp = (plan.plan_prices ?? [])[0];
+  const pricePerNight = pp?.price_per_night ?? 0;
+  const numGuests = Math.max(1, Number(guests ?? 1) || 1);
+  const nightly = nightlyRateForGuests(numGuests, pp?.guest_prices as GuestPrices, pricePerNight);
   const hasDates = from && to && eachNight(from, to).length >= 1;
-  const price = hasDates ? calcPrice(from!, to!, pricePerNight, (plan.discounts ?? []) as Discount[]) : null;
+  const price = hasDates ? calcPrice(from!, to!, nightly, (plan.discounts ?? []) as Discount[]) : null;
 
   return (
     <div className="space-y-6">
@@ -45,9 +48,9 @@ export default async function ReserveFormPage({
         <h1 className="text-lg font-semibold text-gray-900">{plan.name}</h1>
         <p className="mt-1 text-sm text-gray-600">日靜（1日1組限定）</p>
         {price && (
-          <div className="mt-3 flex items-end justify-between border-t border-gray-200 pt-3">
-            <p className="text-sm text-gray-600">{from} 〜 {to}（{price.nights}泊）/ {guests ?? 1}名</p>
-            <div className="text-right">
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-gray-200 pt-3">
+            <p className="text-sm text-gray-600">{from} 〜 {to}（{price.nights}泊）/ {numGuests}名</p>
+            <div className="ml-auto text-right">
               {price.discountRate > 0 && (
                 <p className="text-xs text-gray-500 line-through">¥{price.subtotal.toLocaleString()}</p>
               )}

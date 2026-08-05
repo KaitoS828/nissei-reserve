@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDefaultFacilityId } from "@/lib/facility";
 
 const PATH = "/admin/masters/plans";
 
 export async function createPlan(formData: FormData) {
   const supabase = createAdminClient();
+  const facilityId = await getDefaultFacilityId(supabase);
   const { error } = await supabase.from("plans").insert({
+    facility_id: facilityId,
     name: String(formData.get("name") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
     meal_type: String(formData.get("meal_type") ?? "none"),

@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/app/admin/_components/SubmitButton";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, RoomType, Plan, Customer } from "@/types/db";
@@ -9,7 +10,7 @@ import { DateField } from "../reservations/DateField";
 export const dynamic = "force-dynamic";
 
 const field =
-  "w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400";
+  "w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-cyan-600";
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -109,25 +110,25 @@ export default async function CalendarPage({
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">予約カレンダー</h1>
-          <p className="mt-1 text-sm text-gray-400">各日の予約と空き室数（全{totalRooms}室）</p>
+          <h1 className="text-2xl font-semibold text-gray-900">予約カレンダー</h1>
+          <p className="mt-1 text-sm text-gray-600">各日の予約と空き室数（全{totalRooms}室）</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/admin/calendar?month=${monthStr(prev.year, prev.month0)}`} className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-800">← 前月</Link>
-          <span className="min-w-28 text-center font-medium text-white">{year}年{month0 + 1}月</span>
-          <Link href={`/admin/calendar?month=${monthStr(next.year, next.month0)}`} className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-800">翌月 →</Link>
+          <Link href={`/admin/calendar?month=${monthStr(prev.year, prev.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">← 前月</Link>
+          <span className="min-w-28 text-center font-medium text-gray-900">{year}年{month0 + 1}月</span>
+          <Link href={`/admin/calendar?month=${monthStr(next.year, next.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">翌月 →</Link>
         </div>
       </header>
 
       {error && (
-        <p className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-300">{error}</p>
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
       {showNewForm && (
-        <div className="rounded-2xl border border-cyan-900/60 bg-gray-900/40 p-5">
+        <div className="rounded-2xl border border-cyan-200 bg-white p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-medium text-white">＋ {newDate} の予約を登録</h2>
-            <Link href={`/admin/calendar?month=${monthStr(year, month0)}`} className="text-sm text-gray-400 hover:text-gray-200">閉じる</Link>
+            <h2 className="font-medium text-gray-900">＋ {newDate} の予約を登録</h2>
+            <Link href={`/admin/calendar?month=${monthStr(year, month0)}`} className="text-sm text-gray-600 hover:text-gray-800">閉じる</Link>
           </div>
           <form action={createReservation} className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
@@ -138,7 +139,7 @@ export default async function CalendarPage({
               }))}
             />
             <label className="space-y-1">
-              <span className="text-xs text-gray-400">客室タイプ *</span>
+              <span className="text-xs text-gray-600">客室タイプ *</span>
               <select name="room_type_id" required className={field}>
                 {roomTypes.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -146,7 +147,7 @@ export default async function CalendarPage({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="text-xs text-gray-400">プラン</span>
+              <span className="text-xs text-gray-600">プラン</span>
               <select name="plan_id" className={field} defaultValue="">
                 <option value="">（未指定）</option>
                 {planList.map((p) => (
@@ -157,40 +158,41 @@ export default async function CalendarPage({
             <DateField name="check_in" label="チェックイン *" defaultValue={newDate} />
             <DateField name="check_out" label="チェックアウト *" defaultValue={nextDay(newDate!)} />
             <label className="space-y-1">
-              <span className="text-xs text-gray-400">人数</span>
+              <span className="text-xs text-gray-600">人数</span>
               <input type="number" name="num_guests" min={1} defaultValue={1} className={field} />
             </label>
             <label className="space-y-1">
-              <span className="text-xs text-gray-400">金額（空欄=自動計算）</span>
+              <span className="text-xs text-gray-600">金額（空欄=自動計算）</span>
               <input type="number" name="amount" min={0} placeholder="基本料金×泊数" className={field} />
             </label>
             <input name="note" placeholder="メモ（任意）" className={`${field} md:col-span-3`} />
-            <button className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-gray-950 transition hover:bg-cyan-400">登録</button>
+            <SubmitButton className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-700">登録</SubmitButton>
           </form>
         </div>
       )}
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-gray-800 bg-gray-800">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="grid min-w-[42rem] grid-cols-7 gap-px overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
         {WEEK.map((w, i) => (
-          <div key={w} className={`bg-gray-900 px-2 py-2 text-center text-xs font-medium ${i === 0 ? "text-red-400" : i === 6 ? "text-cyan-400" : "text-gray-400"}`}>
+          <div key={w} className={`bg-white px-2 py-2 text-center text-xs font-medium ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-600"}`}>
             {w}
           </div>
         ))}
         {cells.map((cell, i) => {
-          if (!cell) return <div key={i} className="min-h-28 bg-gray-950/40" />;
+          if (!cell) return <div key={i} className="min-h-28 bg-gray-100" />;
           const isToday = cell.date === todayStr;
           return (
-            <div key={i} className={`min-h-28 space-y-1 bg-gray-900/60 p-1.5 ${isToday ? "ring-1 ring-inset ring-cyan-400" : ""}`}>
+            <div key={i} className={`min-h-28 space-y-1 bg-white p-1.5 ${isToday ? "ring-1 ring-inset ring-cyan-500" : ""}`}>
               <div className="flex items-center justify-between">
-                <span className={`text-xs ${isToday ? "font-bold text-cyan-400" : "text-gray-400"}`}>{cell.day}</span>
+                <span className={`text-xs ${isToday ? "font-bold text-cyan-700" : "text-gray-600"}`}>{cell.day}</span>
                 {cell.isBlocked ? (
-                  <span className="rounded bg-red-950 px-1 text-[10px] text-red-400">休</span>
+                  <span className="rounded bg-red-50 px-1 text-[10px] text-red-600">休</span>
                 ) : (
-                  <span className={`rounded px-1 text-[10px] ${cell.avail === 0 ? "bg-red-950 text-red-400" : "bg-gray-800 text-gray-400"}`}>空{cell.avail}</span>
+                  <span className={`rounded px-1 text-[10px] ${cell.avail === 0 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-600"}`}>空{cell.avail}</span>
                 )}
               </div>
               {cell.resv.slice(0, 3).map((r) => (
-                <Link key={r.id} href="/admin/reservations" className="block truncate rounded bg-cyan-950/60 px-1 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-900/60">
+                <Link key={r.id} href="/admin/reservations" className="block truncate rounded bg-cyan-50 px-1 py-0.5 text-[10px] text-cyan-800 hover:bg-cyan-100">
                   {r.rooms?.name ? `${r.rooms.name} ` : ""}
                   {r.customers ? [r.customers.last_name, r.customers.first_name].filter(Boolean).join("") || "予約" : "予約"}
                 </Link>
@@ -198,10 +200,11 @@ export default async function CalendarPage({
               {cell.resv.length > 3 && (
                 <span className="text-[10px] text-gray-500">+{cell.resv.length - 3}件</span>
               )}
-              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1 py-0.5 text-[10px] text-gray-500 transition hover:bg-gray-800 hover:text-cyan-300">＋ 予約</Link>
+              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1 py-0.5 text-[10px] text-gray-500 transition hover:bg-gray-100 hover:text-cyan-700">＋ 予約</Link>
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

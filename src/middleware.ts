@@ -58,8 +58,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // admin ロール検証
-    if (user.app_metadata?.role !== "admin") {
+    // 本部ロールは個人情報を含まない /admin/hq のみ許可。
+    const role = user.app_metadata?.role;
+    const isHq = pathname.startsWith("/admin/hq");
+    if (isHq) {
+      if (!["admin", "hq_admin"].includes(String(role))) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+      return response;
+    }
+
+    // 宿管理画面は施設オペレーション担当のみ。
+    if (role !== "admin") {
       return new NextResponse("Forbidden", { status: 403 });
     }
   }

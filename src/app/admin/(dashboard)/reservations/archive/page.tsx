@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { SubmitButton } from "@/app/admin/_components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, ReservationStatus } from "@/types/db";
 import { unarchiveReservation, deleteReservation } from "../actions";
@@ -6,12 +8,12 @@ import { DeleteForm } from "../../_components/DeleteForm";
 export const dynamic = "force-dynamic";
 
 const STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
-  pending: { label: "仮予約", cls: "bg-gray-800 text-gray-300" },
-  confirmed: { label: "確定", cls: "bg-cyan-950 text-cyan-400" },
-  checked_in: { label: "チェックイン", cls: "bg-emerald-950 text-emerald-400" },
-  checked_out: { label: "チェックアウト", cls: "bg-gray-800 text-gray-400" },
-  cancelled: { label: "キャンセル", cls: "bg-red-950 text-red-400" },
-  no_show: { label: "ノーショー", cls: "bg-amber-950 text-amber-400" },
+  pending: { label: "仮予約", cls: "bg-gray-100 text-gray-700" },
+  confirmed: { label: "確定", cls: "bg-cyan-50 text-cyan-700" },
+  checked_in: { label: "チェックイン", cls: "bg-emerald-50 text-emerald-700" },
+  checked_out: { label: "チェックアウト", cls: "bg-gray-100 text-gray-600" },
+  cancelled: { label: "キャンセル", cls: "bg-red-50 text-red-600" },
+  no_show: { label: "ノーショー", cls: "bg-amber-50 text-amber-700" },
 };
 const custName = (c: ReservationWithRefs["customers"]) =>
   c ? [c.last_name, c.first_name].filter(Boolean).join(" ") || "（無名）" : "—";
@@ -38,14 +40,14 @@ export default async function ArchivePage({
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-white">アーカイブ</h1>
-          <p className="mt-1 text-sm text-gray-400">アーカイブした予約の一覧・復元</p>
+          <h1 className="text-2xl font-semibold text-gray-900">アーカイブ</h1>
+          <p className="mt-1 text-sm text-gray-600">アーカイブした予約の一覧・復元</p>
         </div>
-        <a href="/admin/reservations" className="shrink-0 rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800">← 予約一覧へ</a>
+        <Link href="/admin/reservations" className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100">← 予約一覧へ</Link>
       </header>
 
       {error && (
-        <p className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-300">{error}</p>
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
       <div className="space-y-3">
@@ -55,19 +57,19 @@ export default async function ArchivePage({
         {reservations.map((r) => {
           const meta = STATUS[r.status] ?? STATUS.pending;
           return (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-5">
               <span className="flex flex-wrap items-center gap-3">
                 <span className={`rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
                 <span className="font-mono text-xs text-gray-500">{r.code}</span>
-                <span className="font-medium text-white">{custName(r.customers)}</span>
-                <span className="text-sm text-gray-400">
+                <span className="font-medium text-gray-900">{custName(r.customers)}</span>
+                <span className="text-sm text-gray-600">
                   {r.check_in} → {r.check_out}（{r.nights}泊） / {r.room_types?.name ?? "—"} / ¥{r.amount.toLocaleString()}
                 </span>
               </span>
               <span className="flex items-center gap-2">
                 <form action={unarchiveReservation}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button className="rounded-lg border border-cyan-800 px-3 py-1.5 text-sm text-cyan-300 transition hover:bg-cyan-950/40">復元</button>
+                  <SubmitButton className="rounded-lg border border-cyan-300 px-3 py-1.5 text-sm text-cyan-700 transition hover:bg-cyan-100">復元</SubmitButton>
                 </form>
                 <DeleteForm
                   action={deleteReservation}

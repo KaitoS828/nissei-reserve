@@ -13,6 +13,13 @@ export function generateReservationCode(checkIn: DateStr): string {
   return `R-${ymd}-${rand}`;
 }
 
+// DB の time 型（"15:00:00"）を表示用の "15:00" に整える
+export function formatCheckInTime(t: string | null): string {
+  if (!t) return "—";
+  const [h, m] = t.split(":");
+  return `${h}:${m}`;
+}
+
 // 指定 room_type の [from, to) 各泊の空き室数を返す
 export async function getTypeAvailability(
   roomTypeId: string,

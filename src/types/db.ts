@@ -3,6 +3,7 @@
 
 export type RoomType = {
   id: string;
+  facility_id: string | null;
   name: string;
   description: string | null;
   capacity: number;
@@ -26,6 +27,7 @@ export type Room = {
 
 export type Customer = {
   id: string;
+  facility_id: string | null;
   auth_user_id: string | null;
   last_name: string | null;
   first_name: string | null;
@@ -42,8 +44,18 @@ export type Customer = {
 
 export type Discount = { min: number; max: number | null; rate: number };
 
+export type PricingRule = {
+  type?: "fixed" | "per_person";
+  amount_per_person?: number;
+  fixed_amount?: number;
+  min_guests?: number;
+  max_guests?: number;
+  minimum_charge?: number;
+};
+
 export type Plan = {
   id: string;
+  facility_id: string | null;
   name: string;
   description: string | null;
   long_description: string | null;
@@ -76,16 +88,35 @@ export type PlanPrice = {
   plan_id: string;
   room_type_id: string;
   price_per_night: number;
+  guest_prices?: Record<string, number> | null;
+  pricing_rule?: PricingRule;
 };
 
 export type Facility = {
   id: string;
+  organization_id: string | null;
+  slug: string | null;
   name: string;
   address: string | null;
   phone: string | null;
   check_in_time: string | null;
   check_out_time: string | null;
   cancel_policy: Record<string, number> | null;
+  status?: "draft" | "active" | "paused" | "archived";
+  public_site_enabled?: boolean;
+  stripe_connect_account_id?: string | null;
+  admin_note?: string | null;
+};
+
+export type Organization = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "trial" | "active" | "paused" | "cancelled";
+  plan: string;
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ReservationStatus =
@@ -106,6 +137,7 @@ export type PaymentStatus =
 
 export type Reservation = {
   id: string;
+  facility_id: string | null;
   code: string;
   customer_id: string | null;
   plan_id: string | null;
@@ -113,14 +145,18 @@ export type Reservation = {
   room_id: string | null;
   check_in: string;
   check_out: string;
+  check_in_time: string | null;
   nights: number;
   num_guests: number;
+  num_children: number;
   amount: number;
   status: ReservationStatus;
   payment_status: PaymentStatus;
   source: string;
   gcal_event_id: string | null;
   note: string | null;
+  survey: Record<string, unknown> | null;
+  lookup_token: string | null;
   cancel_category: string | null;
   cancel_reason: string | null;
   cancelled_at: string | null;

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 const field =
-  "w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400";
+  "w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-cyan-600";
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -50,27 +50,27 @@ export function DateField({
 
   return (
     <div className="relative space-y-1" ref={ref}>
-      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-xs text-gray-600">{label}</span>
       <input type="hidden" name={name} value={value} />
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={`${field} flex items-center justify-between text-left`}
       >
-        <span className={value ? "text-white" : "text-gray-500"}>{value || "日付を選択"}</span>
-        <span className="text-gray-400">📅</span>
+        <span className={value ? "text-gray-900" : "text-gray-500"}>{value || "日付を選択"}</span>
+        <span className="text-gray-600">📅</span>
       </button>
 
       {open && (
-        <div className="absolute left-0 z-30 mt-1 w-64 rounded-xl border border-gray-700 bg-gray-900 p-3 shadow-xl">
+        <div className="absolute left-0 z-30 mt-1 w-64 rounded-xl border border-gray-300 bg-white p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between">
-            <button type="button" onClick={() => shiftMonth(-1)} className="rounded px-2 py-1 text-gray-300 hover:bg-gray-800">←</button>
-            <span className="text-sm font-medium text-white">{year}年{month0 + 1}月</span>
-            <button type="button" onClick={() => shiftMonth(1)} className="rounded px-2 py-1 text-gray-300 hover:bg-gray-800">→</button>
+            <button type="button" onClick={() => shiftMonth(-1)} className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100">←</button>
+            <span className="text-sm font-medium text-gray-900">{year}年{month0 + 1}月</span>
+            <button type="button" onClick={() => shiftMonth(1)} className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100">→</button>
           </div>
           <div className="grid grid-cols-7 gap-0.5">
             {WEEK.map((w, i) => (
-              <div key={w} className={`py-1 text-center text-[10px] ${i === 0 ? "text-red-400" : i === 6 ? "text-cyan-400" : "text-gray-500"}`}>{w}</div>
+              <div key={w} className={`py-1 text-center text-[10px] ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-500"}`}>{w}</div>
             ))}
             {cells.map((d, i) => {
               if (d === null) return <div key={i} />;
@@ -85,7 +85,7 @@ export function DateField({
                     setOpen(false);
                   }}
                   className={`rounded py-1 text-center text-xs transition ${
-                    selected ? "bg-cyan-500 text-gray-950" : "text-gray-200 hover:bg-gray-800"
+                    selected ? "bg-cyan-600 text-white" : "text-gray-800 hover:bg-gray-100"
                   }`}
                 >
                   {d}

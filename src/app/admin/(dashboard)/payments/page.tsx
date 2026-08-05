@@ -15,10 +15,10 @@ type PaymentRow = {
 };
 
 const STATUS_CLS: Record<string, string> = {
-  paid: "bg-cyan-950 text-cyan-400",
-  refunded: "bg-gray-800 text-gray-400",
-  partially_refunded: "bg-amber-950 text-amber-400",
-  failed: "bg-red-950 text-red-400",
+  paid: "bg-cyan-50 text-cyan-700",
+  refunded: "bg-gray-100 text-gray-600",
+  partially_refunded: "bg-amber-50 text-amber-700",
+  failed: "bg-red-50 text-red-600",
 };
 const STATUS_LABEL: Record<string, string> = {
   paid: "支払済", refunded: "返金済", partially_refunded: "一部返金", failed: "失敗",
@@ -48,34 +48,34 @@ export default async function PaymentsPage({
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-white">決済</h1>
-          <p className="mt-1 text-sm text-gray-400">カード決済履歴・返金</p>
+          <h1 className="text-2xl font-semibold text-gray-900">決済</h1>
+          <p className="mt-1 text-sm text-gray-600">カード決済履歴・返金</p>
         </div>
         <a
           href="https://dashboard.stripe.com/acct_1TeG8bB3ojaPmd5j/dashboard"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900/40 px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-800 hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
         >
           Stripeダッシュボード ↗
         </a>
       </header>
 
-      {error && <p className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-300">{error}</p>}
-      {ok && <p className="rounded-lg bg-cyan-950/60 px-3 py-2 text-sm text-cyan-300">返金を処理しました。</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {ok && <p className="rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-700">返金を処理しました。</p>}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-          <p className="text-sm text-gray-400">決済総額</p>
-          <p className="mt-2 text-2xl font-semibold text-cyan-400">¥{totalPaid.toLocaleString()}</p>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <p className="text-sm text-gray-600">決済総額</p>
+          <p className="mt-2 text-2xl font-semibold text-cyan-700">¥{totalPaid.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-          <p className="text-sm text-gray-400">返金総額</p>
-          <p className="mt-2 text-2xl font-semibold text-amber-400">¥{totalRefunded.toLocaleString()}</p>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <p className="text-sm text-gray-600">返金総額</p>
+          <p className="mt-2 text-2xl font-semibold text-amber-700">¥{totalRefunded.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-          <p className="text-sm text-gray-400">純売上</p>
-          <p className="mt-2 text-2xl font-semibold text-white">¥{(totalPaid - totalRefunded).toLocaleString()}</p>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <p className="text-sm text-gray-600">純売上</p>
+          <p className="mt-2 text-2xl font-semibold text-gray-900">¥{(totalPaid - totalRefunded).toLocaleString()}</p>
         </div>
       </section>
 
@@ -84,23 +84,23 @@ export default async function PaymentsPage({
         {payments.map((p) => {
           const remaining = p.amount - (p.refunded_amount ?? 0);
           return (
-            <div key={p.id} className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
+            <div key={p.id} className="rounded-2xl border border-gray-200 bg-white p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className={`rounded px-2 py-0.5 text-xs ${STATUS_CLS[p.status] ?? "bg-gray-800 text-gray-400"}`}>
+                  <span className={`rounded px-2 py-0.5 text-xs ${STATUS_CLS[p.status] ?? "bg-gray-100 text-gray-600"}`}>
                     {STATUS_LABEL[p.status] ?? p.status}
                   </span>
                   <span className="font-mono text-xs text-gray-500">{p.reservations?.code ?? "—"}</span>
-                  <span className="text-sm text-white">{custName(p.reservations)}</span>
+                  <span className="text-sm text-gray-900">{custName(p.reservations)}</span>
                 </div>
                 <div className="text-right text-sm">
-                  <span className="font-semibold text-white">¥{p.amount.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">¥{p.amount.toLocaleString()}</span>
                   {p.refunded_amount > 0 && (
-                    <span className="ml-2 text-amber-400">（返金 ¥{p.refunded_amount.toLocaleString()}）</span>
+                    <span className="ml-2 text-amber-700">（返金 ¥{p.refunded_amount.toLocaleString()}）</span>
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-800 pt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3">
                 <span className="font-mono text-xs text-gray-600">{p.stripe_payment_intent_id ?? "—"}</span>
                 <div className="flex flex-wrap items-end gap-2">
                   {remaining > 0 && p.status !== "failed" && (

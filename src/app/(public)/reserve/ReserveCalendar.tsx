@@ -44,10 +44,12 @@ export function ReserveCalendar({
   plans,
   roomTypeId,
   maxGuests = 6,
+  roomLabel = "日靜（1日1組限定）",
 }: {
   plans: Plan[];
   roomTypeId: string;
   maxGuests?: number;
+  roomLabel?: string;
 }) {
   const today = todayStr();
   const now = new Date();
@@ -253,7 +255,7 @@ export function ReserveCalendar({
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-700">日靜（1日1組限定）</p>
+                  <p className="text-sm text-gray-700">{roomLabel}</p>
                   {belowMin ? (
                     <>
                       <p className="mt-1 text-xs text-gray-500">{planMin}名〜{maxGuests}名でご利用可</p>

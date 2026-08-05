@@ -1,5 +1,7 @@
 "use client";
 
+import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+
 export function DeleteForm({
   action,
   id,
@@ -19,9 +21,9 @@ export function DeleteForm({
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <button className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950/40">
+      <SubmitButton className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-100">
         {label}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

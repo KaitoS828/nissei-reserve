@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDefaultFacilityId } from "@/lib/facility";
 
 const PATH = "/admin/customers";
 
 export async function createCustomer(formData: FormData) {
   const supabase = createAdminClient();
+  const facilityId = await getDefaultFacilityId(supabase);
   const { error } = await supabase.from("customers").insert({
+    facility_id: facilityId,
     last_name: String(formData.get("last_name") ?? "").trim() || null,
     first_name: String(formData.get("first_name") ?? "").trim() || null,
     email: String(formData.get("email") ?? "").trim() || null,

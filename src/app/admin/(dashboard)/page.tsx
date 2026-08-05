@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formatCheckInTime } from "@/lib/reservations";
 import type { ReservationWithRefs } from "@/types/db";
 
 export const dynamic = "force-dynamic";
@@ -64,43 +65,45 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-white">ダッシュボード</h1>
-          <p className="mt-1 text-sm text-gray-400">{today}・{user?.email}</p>
+          <h1 className="text-2xl font-semibold text-gray-900">ダッシュボード</h1>
+          <p className="mt-1 text-sm text-gray-600">{today}・{user?.email}</p>
         </div>
-        <Link href="/admin/reservations" className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-gray-950 hover:bg-cyan-400">
+        <Link href="/admin/reservations" className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700">
           ＋ 予約を登録
         </Link>
       </header>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
-          <Link key={c.label} href={c.href} className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5 transition hover:border-gray-700">
-            <p className="text-sm text-gray-400">{c.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-cyan-400">{c.value}</p>
+          <Link key={c.label} href={c.href} className="rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-gray-300">
+            <p className="text-sm text-gray-600">{c.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-cyan-700">{c.value}</p>
           </Link>
         ))}
       </section>
 
       {/* 予定しているチェックイン */}
-      <section className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
+      <section className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium text-white">予定しているチェックイン</h2>
-          <Link href="/admin/calendar" className="text-xs text-cyan-400 hover:underline">カレンダーで見る →</Link>
+          <h2 className="font-medium text-gray-900">予定しているチェックイン</h2>
+          <Link href="/admin/calendar" className="text-xs text-cyan-700 hover:underline">カレンダーで見る →</Link>
         </div>
         {upcoming.length === 0 ? (
           <p className="text-sm text-gray-500">今後の予約はありません</p>
         ) : (
-          <ul className="divide-y divide-gray-800">
+          <ul className="divide-y divide-gray-200">
             {upcoming.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                 <div className="flex items-center gap-3">
-                  <span className="rounded-lg bg-cyan-950 px-2 py-1 font-mono text-xs text-cyan-300">{r.check_in}</span>
-                  <span className="font-medium text-gray-100">{custName(r.customers)}</span>
+                  <span className="rounded-lg bg-cyan-50 px-2 py-1 font-mono text-xs text-cyan-700">
+                    {r.check_in} {formatCheckInTime(r.check_in_time)}
+                  </span>
+                  <span className="font-medium text-gray-900">{custName(r.customers)}</span>
                   {r.status === "pending" && (
-                    <span className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-400">仮予約</span>
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">仮予約</span>
                   )}
                 </div>
-                <span className="text-gray-400">
+                <span className="text-gray-600">
                   {r.nights}泊 / {r.num_guests}名 / {r.plans?.name ?? "—"}
                   {r.rooms ? ` / ${r.rooms.name}` : ""}
                 </span>
@@ -111,31 +114,34 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-          <h2 className="mb-3 font-medium text-white">本日チェックイン</h2>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-medium text-gray-900">本日チェックイン</h2>
           {checkIns.length === 0 ? (
             <p className="text-sm text-gray-500">予定なし</p>
           ) : (
             <ul className="space-y-2">
               {checkIns.map((r) => (
                 <li key={r.id} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-200">{custName(r.customers)}</span>
-                  <span className="text-gray-400">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""} / {r.num_guests}名</span>
+                  <span className="flex items-center gap-2">
+                    <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-mono text-xs text-cyan-700">{formatCheckInTime(r.check_in_time)}</span>
+                    <span className="text-gray-800">{custName(r.customers)}</span>
+                  </span>
+                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""} / {r.num_guests}名</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-          <h2 className="mb-3 font-medium text-white">本日チェックアウト</h2>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-medium text-gray-900">本日チェックアウト</h2>
           {checkOuts.length === 0 ? (
             <p className="text-sm text-gray-500">予定なし</p>
           ) : (
             <ul className="space-y-2">
               {checkOuts.map((r) => (
                 <li key={r.id} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-200">{custName(r.customers)}</span>
-                  <span className="text-gray-400">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""}</span>
+                  <span className="text-gray-800">{custName(r.customers)}</span>
+                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""}</span>
                 </li>
               ))}
             </ul>

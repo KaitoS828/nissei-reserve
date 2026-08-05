@@ -1,5 +1,6 @@
 "use client";
 
+import { SubmitButton } from "@/app/admin/_components/SubmitButton";
 import { refundPayment } from "./actions";
 
 export function RefundForm({
@@ -32,11 +33,11 @@ export function RefundForm({
         min={1}
         max={remaining}
         placeholder={`全額 ¥${remaining.toLocaleString()}`}
-        className="w-36 rounded-lg border border-gray-700 bg-gray-950 px-3 py-1.5 text-sm text-white outline-none focus:border-cyan-400"
+        className="w-36 rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-cyan-600"
       />
-      <button className="rounded-lg border border-red-900 px-3 py-1.5 text-sm text-red-400 transition hover:bg-red-950/40">
+      <SubmitButton className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 transition hover:bg-red-100">
         返金する
-      </button>
+      </SubmitButton>
     </form>
   );
 }

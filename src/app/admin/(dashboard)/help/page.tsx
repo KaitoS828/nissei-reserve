@@ -98,20 +98,20 @@ export default function HelpPage() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold text-white">使い方・FAQ</h1>
-        <p className="mt-1 text-sm text-gray-400">
+        <h1 className="text-2xl font-semibold text-gray-900">使い方・FAQ</h1>
+        <p className="mt-1 text-sm text-gray-600">
           nissei予約システムの管理画面ガイド
         </p>
       </header>
 
       {/* 機能ガイド */}
       <section className="space-y-4">
-        <h2 className="text-lg font-medium text-white">機能ガイド</h2>
+        <h2 className="text-lg font-medium text-gray-900">機能ガイド</h2>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {SECTIONS.map((s) => (
-            <div key={s.title} className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-              <h3 className="mb-2 font-medium text-cyan-400">{s.title}</h3>
-              <ul className="space-y-1.5 text-sm text-gray-300">
+            <div key={s.title} className="rounded-2xl border border-gray-200 bg-white p-5">
+              <h3 className="mb-2 font-medium text-cyan-700">{s.title}</h3>
+              <ul className="space-y-1.5 text-sm text-gray-700">
                 {s.items.map((it, i) => (
                   <li key={i} className="flex gap-2">
                     <span className="text-gray-600">•</span>
@@ -126,21 +126,21 @@ export default function HelpPage() {
 
       {/* FAQ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-white">よくある質問</h2>
+        <h2 className="text-lg font-medium text-gray-900">よくある質問</h2>
         <div className="space-y-2">
           {FAQ.map((f, i) => (
-            <details key={i} className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5">
-              <summary className="cursor-pointer font-medium text-gray-100">Q. {f.q}</summary>
-              <p className="mt-2 text-sm text-gray-300">A. {f.a}</p>
+            <details key={i} className="rounded-2xl border border-gray-200 bg-white p-5">
+              <summary className="cursor-pointer font-medium text-gray-900">Q. {f.q}</summary>
+              <p className="mt-2 text-sm text-gray-700">A. {f.a}</p>
             </details>
           ))}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-800 bg-gray-900/40 p-5 text-sm text-gray-400">
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 text-sm text-gray-600">
         <p>
           お困りの際は、開発者までお問い合わせください。公開サイトは{" "}
-          <Link href="/reserve" className="text-cyan-400 hover:underline">こちら</Link> から確認できます。
+          <Link href="/reserve" className="text-cyan-700 hover:underline">こちら</Link> から確認できます。
         </p>
       </section>
     </div>

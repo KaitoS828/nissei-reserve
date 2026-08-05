@@ -40,7 +40,7 @@ export default async function ReservePage() {
 
   return (
     <div className="grid gap-6 md:grid-cols-[200px_1fr]">
-      <aside className="space-y-3 text-sm">
+      <aside className="order-last space-y-3 text-sm md:order-none">
         <div>
           <p className="font-semibold text-gray-900">所在地</p>
           <p className="text-gray-600">{facility?.address ?? "—"}</p>

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 
 const btn =
-  "rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-gray-800";
+  "rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100";
 
 export function EditToggle({
   children,

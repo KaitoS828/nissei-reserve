@@ -19,6 +19,7 @@ function redirectError(msg: string): never {
 async function resolveCustomerId(
   supabase: AdminClient,
   formData: FormData,
+  facilityId: string | null,
 ): Promise<string | null> {
   const selected = String(formData.get("customer_id") ?? "") || null;
   if (selected) return selected;
@@ -30,6 +31,7 @@ async function resolveCustomerId(
   const email = String(formData.get("cust_email") ?? "").trim() || null;
   const phone = String(formData.get("cust_phone") ?? "").trim() || null;
   const fields = {
+    facility_id: facilityId,
     last_name: lastName,
     first_name: firstName,
     ...(email ? { email } : {}),
@@ -37,12 +39,13 @@ async function resolveCustomerId(
   };
 
   if (email) {
-    const { data: existing } = await supabase
+    let existingCustomerQuery = supabase
       .from("customers")
       .select("id")
       .eq("email", email)
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (facilityId) existingCustomerQuery = existingCustomerQuery.eq("facility_id", facilityId);
+    const { data: existing } = await existingCustomerQuery.maybeSingle();
     if (existing) {
       await supabase.from("customers").update(fields).eq("id", existing.id);
       return existing.id;
@@ -86,21 +89,24 @@ export async function createReservation(formData: FormData) {
     redirectError("指定期間に空きがありません");
   }
 
-  const customerId = await resolveCustomerId(supabase, formData);
+  const { data: roomType } = await supabase
+    .from("room_types")
+    .select("facility_id, base_price")
+    .eq("id", roomTypeId)
+    .single();
+  const facilityId = (roomType as { facility_id?: string | null } | null)?.facility_id ?? null;
+
+  const customerId = await resolveCustomerId(supabase, formData, facilityId);
 
   // 金額: 入力があればそれを、無ければ客室タイプの基本料金×泊数
   let amount = amountInput;
   if (!amount || amount <= 0) {
-    const { data: rt } = await supabase
-      .from("room_types")
-      .select("base_price")
-      .eq("id", roomTypeId)
-      .single();
-    amount = (rt?.base_price ?? 0) * nights.length;
+    amount = (roomType?.base_price ?? 0) * nights.length;
   }
 
   const { error } = await supabase.from("reservations").insert({
     code: generateReservationCode(checkIn),
+    facility_id: facilityId,
     customer_id: customerId,
     plan_id: planId,
     room_type_id: roomTypeId,
@@ -153,12 +159,19 @@ export async function updateReservation(formData: FormData) {
     if (!ok) redirectError("指定期間に空きがありません");
   }
 
-  const customerId = await resolveCustomerId(supabase, formData);
+  const { data: roomType } = await supabase
+    .from("room_types")
+    .select("facility_id")
+    .eq("id", roomTypeId)
+    .single();
+  const facilityId = (roomType as { facility_id?: string | null } | null)?.facility_id ?? null;
+  const customerId = await resolveCustomerId(supabase, formData, facilityId);
 
   const { error } = await supabase
     .from("reservations")
     .update({
       customer_id: customerId,
+      facility_id: facilityId,
       plan_id: planId,
       room_type_id: roomTypeId,
       room_id: roomId,
