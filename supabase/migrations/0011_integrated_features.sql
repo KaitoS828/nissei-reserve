@@ -141,7 +141,6 @@ alter table site_links enable row level security;
 
 -- 公開側でも「宿のリンク集」として読めるようにする（書き込みは service_role のみ）
 drop policy if exists site_links_public_read on site_links;
-drop policy if exists site_links_public_read on site_links;
 create policy site_links_public_read on site_links
   for select using (is_active = true);
 
@@ -366,19 +365,19 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists site_images_public_read on storage;
+drop policy if exists site_images_public_read on storage.objects;
 create policy site_images_public_read on storage.objects
   for select using (bucket_id = 'site-images');
 
-drop policy if exists site_images_admin_insert on storage;
+drop policy if exists site_images_admin_insert on storage.objects;
 create policy site_images_admin_insert on storage.objects
   for insert with check (bucket_id = 'site-images' and is_admin());
 
-drop policy if exists site_images_admin_update on storage;
+drop policy if exists site_images_admin_update on storage.objects;
 create policy site_images_admin_update on storage.objects
   for update using (bucket_id = 'site-images' and is_admin()) with check (bucket_id = 'site-images' and is_admin());
 
-drop policy if exists site_images_admin_delete on storage;
+drop policy if exists site_images_admin_delete on storage.objects;
 create policy site_images_admin_delete on storage.objects
   for delete using (bucket_id = 'site-images' and is_admin());
 
@@ -532,7 +531,6 @@ create trigger trg_integration_settings_updated_at before update on integration_
 alter table integration_settings enable row level security;
 
 drop policy if exists integration_settings_admin_all on integration_settings;
-drop policy if exists integration_settings_admin_all on integration_settings;
 create policy integration_settings_admin_all on integration_settings
   for all using (is_admin()) with check (is_admin());
 
@@ -615,7 +613,6 @@ create trigger trg_operational_tasks_updated_at before update on operational_tas
 
 alter table operational_tasks enable row level security;
 
-drop policy if exists operational_tasks_admin_all on operational_tasks;
 drop policy if exists operational_tasks_admin_all on operational_tasks;
 create policy operational_tasks_admin_all on operational_tasks
   for all using (is_admin()) with check (is_admin());
