@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDefaultFacilityId } from "@/lib/facility";
+import { auditLog } from "@/lib/audit";
 
 const PATH = "/admin/blocked";
 
@@ -24,6 +25,12 @@ export async function createBlocked(formData: FormData) {
     reason,
   });
   if (error) redirect(`${PATH}?error=${encodeURIComponent(error.message)}`);
+  await auditLog(supabase, {
+    action: "blocked.create",
+    entityType: "blocked_dates",
+    summary: `${start}〜${end} を予約不可に設定（${reason}）`,
+    metadata: { start, end, reason },
+  });
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
 }
@@ -31,7 +38,22 @@ export async function createBlocked(formData: FormData) {
 export async function deleteBlocked(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = createAdminClient();
+  // 何を消したか残すため、削除前に対象を控える
+  const { data: target } = await supabase
+    .from("blocked_dates")
+    .select("start_date, end_date, reason")
+    .eq("id", id)
+    .maybeSingle();
   await supabase.from("blocked_dates").delete().eq("id", id);
+  await auditLog(supabase, {
+    action: "blocked.delete",
+    entityType: "blocked_dates",
+    entityId: id,
+    summary: target
+      ? `${target.start_date}〜${target.end_date} の予約不可を解除`
+      : "予約不可を解除",
+    metadata: target ?? {},
+  });
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
 }
@@ -113,6 +135,13 @@ export async function toggleBlockedDate(formData: FormData) {
   if (error) {
     redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
   }
+  const blocked = covering.length === 0;
+  await auditLog(supabase, {
+    action: blocked ? "blocked.create" : "blocked.delete",
+    entityType: "blocked_dates",
+    summary: `${date} を${blocked ? "予約不可に設定" : "予約可に戻した"}（カレンダー）`,
+    metadata: { date },
+  });
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
   redirect(back);

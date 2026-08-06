@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
+import { auditLog } from "@/lib/audit";
 
 const PATH = "/admin/payments";
 
@@ -67,6 +68,19 @@ export async function refundPayment(formData: FormData) {
       })
       .eq("id", payment!.reservation_id);
   }
+
+  await auditLog(supabase, {
+    action: "payment.refund",
+    entityType: "payments",
+    entityId: paymentId,
+    summary: `¥${refundAmount.toLocaleString()} を返金（${fullyRefunded ? "全額" : "一部"}）`,
+    metadata: {
+      refundAmount,
+      totalRefunded,
+      fullyRefunded,
+      reservationId: payment!.reservation_id,
+    },
+  });
 
   revalidatePath(PATH);
   redirect(`${PATH}?ok=1`);

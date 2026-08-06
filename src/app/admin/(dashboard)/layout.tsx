@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/customers", label: "顧客" },
   { href: "/admin/payments", label: "決済" },
   { href: "/admin/analytics", label: "集計・分析" },
+  { href: "/admin/audit", label: "操作履歴" },
   { href: "/admin/masters/room-types", label: "客室タイプ" },
   { href: "/admin/masters/rooms", label: "客室" },
   { href: "/admin/masters/plans", label: "宿泊プラン" },

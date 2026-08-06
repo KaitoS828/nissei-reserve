@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
+import { auditLog } from "@/lib/audit";
 import type { ReservationStatus, PaymentStatus } from "@/types/db";
 
 const PATH = "/admin/reservations";
@@ -197,6 +198,12 @@ export async function archiveReservation(formData: FormData) {
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
   if (error) redirectError(error.message);
+  await auditLog(supabase, {
+    action: "reservation.archive",
+    entityType: "reservations",
+    entityId: id,
+    summary: "予約をアーカイブに移動",
+  });
   revalidatePath(PATH);
   revalidatePath("/admin/reservations/archive");
   revalidatePath("/admin/calendar");
@@ -207,6 +214,13 @@ export async function deleteReservation(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = createAdminClient();
 
+  // 復元できない操作なので、何を消したか削除前に控える
+  const { data: target } = await supabase
+    .from("reservations")
+    .select("code, check_in, check_out, amount")
+    .eq("id", id)
+    .maybeSingle();
+
   await supabase.from("payments").delete().eq("reservation_id", id);
   await supabase.from("surveys").delete().eq("reservation_id", id);
 
@@ -214,6 +228,15 @@ export async function deleteReservation(formData: FormData) {
   if (error) {
     redirect(`/admin/reservations/archive?error=${encodeURIComponent(error.message)}`);
   }
+  await auditLog(supabase, {
+    action: "reservation.delete",
+    entityType: "reservations",
+    entityId: id,
+    summary: target
+      ? `予約 ${target.code}（${target.check_in}〜${target.check_out}）を完全削除`
+      : "予約を完全削除",
+    metadata: target ?? {},
+  });
   revalidatePath("/admin/reservations/archive");
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");

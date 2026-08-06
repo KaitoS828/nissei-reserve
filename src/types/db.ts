@@ -165,6 +165,17 @@ export type Reservation = {
   updated_at: string;
 };
 
+export type AuditLog = {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  summary: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 // JOIN 付き取得用
 export type ReservationWithRefs = Reservation & {
   customers: Pick<Customer, "id" | "last_name" | "first_name"> | null;
