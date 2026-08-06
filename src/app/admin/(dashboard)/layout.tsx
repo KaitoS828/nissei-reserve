@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminNav } from "./_components/AdminNav";
+import { Assistant } from "@/app/admin/_components/Assistant";
 
 const NAV = [
   { href: "/admin/hq", label: "本部管理", hq: true },
@@ -38,6 +39,9 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
       <AdminNav items={navItems} />
 
       <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">{children}</main>
+
+      {/* アシスタントは予約の個人情報を扱うため、本部ロールには出さない */}
+      {role === "admin" && <Assistant />}
     </div>
   );
 }
