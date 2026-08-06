@@ -210,7 +210,8 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const price = calcPrice(check_in, check_out, nightly, (planData.discounts ?? []) as Discount[]);
     const amount = amount_override ?? price.total;
 
-    const custFields = { last_name, first_name, ...(email ? { email } : {}), ...(phone ? { phone } : {}) };
+    const facilityId = await getDefaultFacilityId(supabase);
+    const custFields = { last_name, first_name, facility_id: facilityId, ...(email ? { email } : {}), ...(phone ? { phone } : {}) };
     let customerId: string;
     if (email) {
       const { data: existing } = await supabase.from("customers").select("id").eq("email", email).limit(1).maybeSingle();
@@ -232,8 +233,10 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const { data: resv, error: resErr } = await supabase
       .from("reservations")
       .insert({
+        // nights は DB の生成列なので渡さない（渡すと insert が拒否される）
         code, customer_id: customerId, plan_id: planData.id, room_type_id: roomTypeId,
-        check_in, check_out, nights: price.nights, num_guests, num_children: 0,
+        facility_id: facilityId,
+        check_in, check_out, num_guests, num_children: 0,
         amount, status: "confirmed", payment_status, source: "admin",
         ...(note ? { note } : {}),
         lookup_token: randomUUID(),
