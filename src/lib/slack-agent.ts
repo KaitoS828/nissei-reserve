@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "./supabase/admin";
+import { getDefaultFacilityId } from "./facility";
 import { getTypeAvailability, canBook, generateReservationCode } from "./reservations";
 import { eachNight } from "./availability";
 import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "./pricing";
@@ -31,8 +32,8 @@ async function activeRoomTypeId(): Promise<string | null> {
 const RESV_SELECT =
   "code, check_in, check_out, nights, num_guests, amount, status, payment_status, room_type_id, customers(last_name, first_name, email, phone), plans(name)";
 
-// ---- ツール実装 ----
-const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<string>> = {
+// ---- ツール実装（Slack / サイト内アシスタントで共用）----
+export const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<string>> = {
   async check_availability(input) {
     const from = String(input.from);
     const to = String(input.to);
@@ -143,7 +144,10 @@ const toolImpls: Record<string, (input: Record<string, unknown>) => Promise<stri
     const end = String(input.end ?? start);
     const reason = input.reason ? String(input.reason) : "休業";
     const supabase = createAdminClient();
-    const { error } = await supabase.from("blocked_dates").insert({ start_date: start, end_date: end, reason });
+    const facilityId = await getDefaultFacilityId(supabase);
+    const { error } = await supabase
+      .from("blocked_dates")
+      .insert({ facility_id: facilityId, start_date: start, end_date: end, reason });
     if (error) return `休業日の設定に失敗しました: ${error.message}`;
     return `${start}〜${end} を予約不可（${reason}）に設定しました。公開カレンダーに反映されます。`;
   },
@@ -285,7 +289,7 @@ function formatResv(r: Record<string, unknown>): string {
   return `・${r.code} | ${name} | ${r.check_in}〜${r.check_out}（${r.nights}泊/${r.num_guests}名） | ${p?.name ?? "—"} | ¥${Number(r.amount).toLocaleString()} | ${r.status}`;
 }
 
-const TOOLS: Anthropic.Tool[] = [
+export const TOOLS: Anthropic.Tool[] = [
   { name: "check_availability", description: "指定期間の空室状況を確認する。", input_schema: { type: "object", properties: { from: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, to: { type: "string", description: "チェックアウト日 YYYY-MM-DD" } }, required: ["from", "to"] } },
   { name: "list_reservations", description: "予約の一覧を取得する。scope=today(本日), upcoming(今後), all(直近)。queryで氏名・予約番号・メールで絞り込み可。", input_schema: { type: "object", properties: { scope: { type: "string", enum: ["today", "upcoming", "all"] }, query: { type: "string" } }, required: [] } },
   { name: "get_reservation", description: "予約番号で1件の予約詳細を取得する。", input_schema: { type: "object", properties: { code: { type: "string" } }, required: ["code"] } },
