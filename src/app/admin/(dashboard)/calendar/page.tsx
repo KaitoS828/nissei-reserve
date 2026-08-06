@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, RoomType, Plan, Customer } from "@/types/db";
 import { OCCUPYING_STATUSES } from "@/lib/availability";
+import { formatCheckInTime } from "@/lib/reservations";
 import { createReservation } from "../reservations/actions";
 import { toggleBlockedDate } from "../blocked/actions";
 import { CustomerPicker } from "../reservations/CustomerPicker";
@@ -128,7 +129,7 @@ export default async function CalendarPage({
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">予約カレンダー</h1>
           <p className="mt-1 text-sm text-gray-600">
-            各日の予約と空き室数（全{totalRooms}室）／右上の「空n・休」をクリックで予約不可を切り替え
+            各日の予約と空き室数（全{totalRooms}室）／「× 予約不可に設定」で休業日にできます
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -190,48 +191,79 @@ export default async function CalendarPage({
       )}
 
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <div className="grid min-w-[42rem] grid-cols-7 gap-px overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
+        <div className="grid min-w-[52rem] grid-cols-7 gap-px overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
         {WEEK.map((w, i) => (
-          <div key={w} className={`bg-white px-2 py-2 text-center text-xs font-medium ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-600"}`}>
+          <div key={w} className={`bg-white px-2 py-2.5 text-center text-sm font-medium ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-600"}`}>
             {w}
           </div>
         ))}
         {cells.map((cell, i) => {
-          if (!cell) return <div key={i} className="min-h-28 bg-gray-100" />;
+          if (!cell) return <div key={i} className="min-h-36 bg-gray-100" />;
           const isToday = cell.date === todayStr;
+          const isPast = cell.date < todayStr;
           return (
-            <div key={i} className={`min-h-28 space-y-1 bg-white p-1.5 ${isToday ? "ring-1 ring-inset ring-cyan-500" : ""}`}>
+            <div
+              key={i}
+              className={`min-h-36 space-y-1 p-2 ${
+                isPast
+                  ? "bg-[repeating-linear-gradient(45deg,#f8fafc_0px,#f8fafc_5px,#e9edf2_5px,#e9edf2_10px)]"
+                  : "bg-white"
+              } ${isToday ? "ring-2 ring-inset ring-cyan-500" : ""}`}
+            >
               <div className="flex items-center justify-between">
-                <span className={`text-xs ${isToday ? "font-bold text-cyan-700" : "text-gray-600"}`}>{cell.day}</span>
-                <form action={toggleBlockedDate}>
-                  <input type="hidden" name="date" value={cell.date} />
-                  <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
-                  <SubmitButton
-                    className={`rounded px-1 text-[10px] transition ${
-                      cell.isBlocked
-                        ? "bg-red-50 text-red-600 hover:bg-red-100"
-                        : cell.avail === 0
-                          ? "bg-red-50 text-red-600 hover:bg-red-100"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                    pendingLabel=""
-                  >
-                    <span title={cell.isBlocked ? `${cell.blockReason ?? "休業"}（クリックで解除）` : "クリックで予約不可にする"}>
-                      {cell.isBlocked ? "休" : `空${cell.avail}`}
-                    </span>
-                  </SubmitButton>
-                </form>
+                <span
+                  className={`text-sm ${
+                    isToday
+                      ? "font-bold text-cyan-700"
+                      : isPast
+                        ? "text-gray-400 line-through"
+                        : "font-medium text-gray-700"
+                  }`}
+                >
+                  {cell.day}
+                </span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[11px] ${
+                    isPast
+                      ? "bg-gray-100 text-gray-400"
+                      : cell.isBlocked || cell.avail === 0
+                        ? "bg-red-50 text-red-600"
+                        : "bg-gray-100 text-gray-600"
+                  }`}
+                  title={cell.isBlocked ? (cell.blockReason ?? "休業") : undefined}
+                >
+                  {cell.isBlocked ? "休" : `空${cell.avail}`}
+                </span>
               </div>
               {cell.resv.slice(0, 3).map((r) => (
-                <Link key={r.id} href="/admin/reservations" className="block truncate rounded bg-cyan-50 px-1 py-0.5 text-[10px] text-cyan-800 hover:bg-cyan-100">
+                <Link key={r.id} href="/admin/reservations" className={`block truncate rounded px-1.5 py-1 text-xs transition ${isPast ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`}>
+                  {r.check_in === cell.date && r.check_in_time && (
+                    <span className="font-mono font-medium">{formatCheckInTime(r.check_in_time)} </span>
+                  )}
                   {r.rooms?.name ? `${r.rooms.name} ` : ""}
                   {r.customers ? [r.customers.last_name, r.customers.first_name].filter(Boolean).join("") || "予約" : "予約"}
                 </Link>
               ))}
               {cell.resv.length > 3 && (
-                <span className="text-[10px] text-gray-500">+{cell.resv.length - 3}件</span>
+                <span className="text-xs text-gray-500">+{cell.resv.length - 3}件</span>
               )}
-              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1 py-0.5 text-[10px] text-gray-500 transition hover:bg-gray-100 hover:text-cyan-700">＋ 予約</Link>
+              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1.5 py-1 text-xs text-gray-500 transition hover:bg-gray-100 hover:text-cyan-700">＋ 予約</Link>
+              {!isPast && (
+                <form action={toggleBlockedDate}>
+                  <input type="hidden" name="date" value={cell.date} />
+                  <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
+                  <SubmitButton
+                    className={`w-full justify-start rounded px-1.5 py-1 text-left text-xs transition ${
+                      cell.isBlocked
+                        ? "text-red-600 hover:bg-red-50"
+                        : "text-gray-500 hover:bg-red-50 hover:text-red-700"
+                    }`}
+                    pendingLabel="更新中"
+                  >
+                    {cell.isBlocked ? "↩ 予約可に戻す" : "× 予約不可に設定"}
+                  </SubmitButton>
+                </form>
+              )}
             </div>
           );
         })}
