@@ -8,6 +8,7 @@ import { getStripe } from "@/lib/stripe";
 import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 function fail(planId: string, msg: string): never {
   const q = new URLSearchParams({ error: msg });
@@ -16,6 +17,13 @@ function fail(planId: string, msg: string): never {
 
 export async function startCheckout(formData: FormData) {
   const planId = String(formData.get("plan") ?? "");
+
+  // 1回ごとに仮予約レコードとStripeセッションを作るため、連打・空打ちを制限する
+  const limited = rateLimit(`checkout:${await clientIp()}`, 5, 10 * 60_000);
+  if (!limited.ok) {
+    fail(planId, "お申し込みの回数が上限に達しました。しばらくしてからお試しください");
+  }
+
   const from = String(formData.get("from") ?? "");
   const to = String(formData.get("to") ?? "");
   const adults = Number(formData.get("guests") ?? 1);
