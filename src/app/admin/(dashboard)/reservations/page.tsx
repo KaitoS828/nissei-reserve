@@ -110,7 +110,10 @@ export default async function ReservationsPage({
           <h1 className="text-2xl font-semibold text-gray-900">予約</h1>
           <p className="mt-1 text-sm text-gray-600">予約の登録・ステータス管理・客室割当</p>
         </div>
-        <Link href="/admin/reservations/archive" className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100">アーカイブ一覧</Link>
+        <div className="flex shrink-0 gap-2">
+          <a href="/admin/export/reservations" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100">CSV出力</a>
+          <Link href="/admin/reservations/archive" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100">アーカイブ一覧</Link>
+        </div>
       </header>
 
       {error && (
