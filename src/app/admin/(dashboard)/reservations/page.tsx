@@ -83,6 +83,26 @@ export default async function ReservationsPage({
   const planList = (plans ?? []) as Plan[];
   const customerList = (customers ?? []) as Customer[];
 
+  // チェックイン日の年→月でフォルダ分け。reservations は check_in 降順なので挿入順もそのまま新しい順になる。
+  const byYear = new Map<string, Map<string, ReservationWithRefs[]>>();
+  for (const r of reservations) {
+    const [y, m] = r.check_in.split("-");
+    let months = byYear.get(y);
+    if (!months) {
+      months = new Map();
+      byYear.set(y, months);
+    }
+    let list = months.get(m);
+    if (!list) {
+      list = [];
+      months.set(m, list);
+    }
+    list.push(r);
+  }
+  const now = new Date();
+  const curYear = String(now.getFullYear());
+  const curMonth = String(now.getMonth() + 1).padStart(2, "0");
+
   return (
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-3">
@@ -166,15 +186,65 @@ export default async function ReservationsPage({
         ))}
       </div>
 
-      {/* 一覧 */}
+      {/* 一覧（年 → 月 でフォルダ分け） */}
       <div className="space-y-3">
         {reservations.length === 0 && (
           <p className="text-sm text-gray-500">予約がありません。</p>
         )}
-        {reservations.map((r) => {
-          const meta = statusMeta(r.status);
+        {[...byYear.entries()].map(([y, months]) => {
+          const yearCount = [...months.values()].reduce((n, list) => n + list.length, 0);
           return (
-            <details key={r.id} className="rounded-2xl border border-gray-200 bg-white p-5">
+            <details key={y} open={y === curYear} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <summary className="cursor-pointer px-5 py-3 font-medium text-gray-900">
+                📁 {y}年
+                <span className="ml-2 text-sm font-normal text-gray-500">{yearCount}件</span>
+              </summary>
+              <div className="space-y-3 border-t border-gray-200 bg-gray-50 p-3">
+                {[...months.entries()].map(([m, list]) => (
+                  <details key={m} open={y === curYear && m === curMonth} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                    <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-800">
+                      📁 {Number(m)}月
+                      <span className="ml-2 text-xs font-normal text-gray-500">{list.length}件</span>
+                    </summary>
+                    <div className="space-y-3 border-t border-gray-200 p-3">
+                      {list.map((r) => (
+                        <ReservationCard
+                          key={r.id}
+                          r={r}
+                          roomTypes={roomTypes}
+                          roomList={roomList}
+                          planList={planList}
+                          customerList={customerList}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ReservationCard({
+  r,
+  roomTypes,
+  roomList,
+  planList,
+  customerList,
+}: {
+  r: ReservationWithRefs;
+  roomTypes: RoomType[];
+  roomList: Room[];
+  planList: Plan[];
+  customerList: Customer[];
+}) {
+  const meta = statusMeta(r.status);
+  return (
+            <details className="rounded-2xl border border-gray-200 bg-white p-5">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
                 <span className="flex items-center gap-3">
                   <span className={`rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
@@ -279,9 +349,5 @@ export default async function ReservationsPage({
                 </EditToggle>
               </div>
             </details>
-          );
-        })}
-      </div>
-    </div>
   );
 }
