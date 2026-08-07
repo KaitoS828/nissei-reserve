@@ -6,7 +6,9 @@
     "dev": "NODE_OPTIONS=--max-http-header-size=65536 next dev -p 3033",
     "build": "next build",
     "start": "NODE_OPTIONS=--max-http-header-size=65536 next start -p 3033",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"src/lib/__tests__/*.test.ts\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
