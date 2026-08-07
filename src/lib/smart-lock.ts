@@ -144,15 +144,21 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   }
 
   // id は今は取れない（keyList への反映が数分遅れる）。削除時に name から引く。
-  const { error } = await supabase.from("access_keys").insert({
-    reservation_id: args.reservationId,
-    door_pin: doorPin,
-    provider: "switchbot",
-    status: "issued",
-    valid_from: validFrom.toISOString(),
-    valid_until: validUntil.toISOString(),
-    issued_at: new Date().toISOString(),
-  });
+  // reservation_id は unique なので、失効済みの行が残っていても入れ替えられるよう upsert する。
+  const { error } = await supabase.from("access_keys").upsert(
+    {
+      reservation_id: args.reservationId,
+      door_pin: doorPin,
+      provider: "switchbot",
+      status: "issued",
+      valid_from: validFrom.toISOString(),
+      valid_until: validUntil.toISOString(),
+      issued_at: new Date().toISOString(),
+      revoked_at: null,
+      note: null,
+    },
+    { onConflict: "reservation_id" },
+  );
   if (error) {
     // キーパッド側には登録済みなので、DBだけ失敗した状態を残さないよう巻き戻す
     await revokeByName(cred, name).catch(() => {});

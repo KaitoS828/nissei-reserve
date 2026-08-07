@@ -185,5 +185,6 @@ export type ReservationWithRefs = Reservation & {
   rooms: Pick<Room, "id" | "name"> | null;
   plans: Pick<Plan, "id" | "name"> | null;
   // select に含めたときだけ入る
-  access_keys?: { door_pin: string; status: AccessKeyStatus }[];
+  // reservation_id に unique 制約があるので、PostgREST は配列でなく単一オブジェクトを返す
+  access_keys?: { door_pin: string; status: AccessKeyStatus } | null;
 };

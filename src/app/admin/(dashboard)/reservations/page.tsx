@@ -247,7 +247,7 @@ function ReservationCard({
 }) {
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
-  const activeKey = (r.access_keys ?? []).find((k) => k.status === "issued");
+  const activeKey = r.access_keys?.status === "issued" ? r.access_keys : null;
   return (
             <details className="rounded-2xl border border-gray-200 bg-white p-5">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
