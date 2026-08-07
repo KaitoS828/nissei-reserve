@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
           checkOut: info.checkOut,
           checkInTime: (facility?.check_in_time as string | null)?.slice(0, 5),
           checkOutTime: (facility?.check_out_time as string | null)?.slice(0, 5),
-          label: `${info.code} ${info.name}`,
+          code: info.code,
         }).catch((e) => console.error("ドアPINの発行に失敗:", e));
       }
     }

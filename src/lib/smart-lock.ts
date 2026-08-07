@@ -1,6 +1,14 @@
 // SwitchBot キーパッドの時間限定パスコード発行。
-// smart-checkin-app-v2 で実運用していた実装を移植した。
 // 未設定・失敗しても予約フローは止めない（PINは後から手動でも配れるため）。
+//
+// SwitchBot API の性質（実機で確認済み）:
+//  - createKey / deleteKey は statusCode 100 を返すが、これは「コマンドを受け付けた」
+//    という意味しかない。キーパッドが実際に登録したかは分からない。
+//  - createKey のレスポンス body は常に空で、発行された鍵の id は返らない。
+//  - id は GET /devices のキーパッドの keyList から name で引ける。ただし keyList への
+//    反映は数分遅れる（削除は20秒程度で反映される）。
+//  - このため発行直後に id は確定できない。鍵の name に予約コードを使い、削除時に
+//    name から id を引く。
 
 import crypto from "crypto";
 import { createAdminClient } from "./supabase/admin";
@@ -27,28 +35,47 @@ function buildHeaders(token: string, secret: string) {
   return { Authorization: token, sign, t, nonce, "Content-Type": "application/json" };
 }
 
-async function command(
-  deviceId: string,
-  token: string,
-  secret: string,
-  body: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API}/devices/${deviceId}/commands`, {
+type Cred = NonNullable<ReturnType<typeof credentials>>;
+
+async function command(cred: Cred, body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${API}/devices/${cred.deviceId}/commands`, {
     method: "POST",
-    headers: buildHeaders(token, secret),
+    headers: buildHeaders(cred.token, cred.secret),
     body: JSON.stringify(body),
   });
-  const data = (await res.json()) as { statusCode?: number; body?: Record<string, unknown> };
-  // SwitchBot は HTTP 200 でも statusCode で成否を返す
+  const data = (await res.json()) as { statusCode?: number };
+  // HTTP 200 でも statusCode で成否を返す。100 でもキーパッドが受理したとは限らない。
   if (data.statusCode !== 100) {
     throw new Error(`SwitchBot エラー: ${JSON.stringify(data).slice(0, 200)}`);
   }
-  return data.body ?? {};
+}
+
+type KeypadKey = { id: number; name: string; type: string; status: string };
+
+/** キーパッドに登録済みのパスコード一覧。反映は数分遅れることがある。 */
+async function listKeypadKeys(cred: Cred): Promise<KeypadKey[]> {
+  const res = await fetch(`${API}/devices`, {
+    headers: buildHeaders(cred.token, cred.secret),
+  });
+  const data = (await res.json()) as {
+    statusCode?: number;
+    body?: { deviceList?: { deviceId: string; keyList?: KeypadKey[] }[] };
+  };
+  if (data.statusCode !== 100) {
+    throw new Error(`SwitchBot エラー: ${JSON.stringify(data).slice(0, 200)}`);
+  }
+  const device = data.body?.deviceList?.find((d) => d.deviceId === cred.deviceId);
+  return device?.keyList ?? [];
 }
 
 function randomPin(): string {
-  // キーパッドの想定桁数に合わせて4桁。先頭0を避けるため 1000〜9999。
-  return String(crypto.randomInt(1000, 10000));
+  // SwitchBot の仕様上パスコードは 6〜12 桁。4桁だとキーパッドに登録されない。
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+/** キーパッド上の識別名。予約コードは一意なので、これで後から id を引ける。 */
+function keyName(code: string): string {
+  return code;
 }
 
 function nextDay(date: string): string {
@@ -58,16 +85,14 @@ function nextDay(date: string): string {
 
 type IssueArgs = {
   reservationId: string;
+  code: string; // 予約コード。キーパッド上の鍵の名前に使う
   checkIn: string; // YYYY-MM-DD
   checkOut?: string | null; // YYYY-MM-DD。無ければ翌日
   checkInTime?: string; // HH:MM (JST)
   checkOutTime?: string; // HH:MM (JST)
-  label?: string; // キーパッド上の識別名
 };
 
-export type IssueResult =
-  | { ok: true; doorPin: string; keyId: number | null }
-  | { ok: false; reason: string };
+export type IssueResult = { ok: true; doorPin: string } | { ok: false; reason: string };
 
 /** 予約にドアPINを発行し、SwitchBot に登録して access_keys に保存する。 */
 export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
@@ -79,16 +104,21 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   // 同じ予約に何度も鍵を作らない（webhook のリトライで二重発行されうるため）
   const { data: existing } = await supabase
     .from("access_keys")
-    .select("door_pin, switchbot_key_id")
+    .select("door_pin")
     .eq("reservation_id", args.reservationId)
     .in("status", ["pending", "issued"])
     .maybeSingle();
-  if (existing) {
-    return {
-      ok: true,
-      doorPin: existing.door_pin as string,
-      keyId: (existing.switchbot_key_id as number | null) ?? null,
-    };
+  if (existing) return { ok: true, doorPin: existing.door_pin as string };
+
+  const name = keyName(args.code);
+  // 同名の鍵があると createKey は（成功を返したまま）登録されない。先に消しておく。
+  const stale = (await listKeypadKeys(cred)).find((k) => k.name === name);
+  if (stale) {
+    await command(cred, {
+      command: "deleteKey",
+      commandType: "command",
+      parameter: { id: stale.id },
+    });
   }
 
   const doorPin = randomPin();
@@ -96,30 +126,28 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   const validFrom = new Date(`${args.checkIn}T${args.checkInTime ?? "15:00"}:00+09:00`);
   const validUntil = new Date(`${checkOut}T${args.checkOutTime ?? "11:00"}:00+09:00`);
 
-  let keyId: number | null = null;
   try {
-    const body = await command(cred.deviceId, cred.token, cred.secret, {
+    await command(cred, {
       command: "createKey",
       commandType: "command",
       parameter: {
-        name: args.label ?? `予約 ${args.reservationId.slice(0, 8)}`,
+        name,
         type: "timeLimit",
         password: doorPin,
         startTime: Math.floor(validFrom.getTime() / 1000),
         endTime: Math.floor(validUntil.getTime() / 1000),
       },
     });
-    keyId = (body.keyId as number | undefined) ?? null;
   } catch (e) {
     console.error("SwitchBot への鍵登録に失敗:", e);
     return { ok: false, reason: e instanceof Error ? e.message : "SwitchBot 登録に失敗" };
   }
 
+  // id は今は取れない（keyList への反映が数分遅れる）。削除時に name から引く。
   const { error } = await supabase.from("access_keys").insert({
     reservation_id: args.reservationId,
     door_pin: doorPin,
     provider: "switchbot",
-    switchbot_key_id: keyId,
     status: "issued",
     valid_from: validFrom.toISOString(),
     valid_until: validUntil.toISOString(),
@@ -127,62 +155,72 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   });
   if (error) {
     // キーパッド側には登録済みなので、DBだけ失敗した状態を残さないよう巻き戻す
-    if (keyId !== null) await revokeSwitchBotKey(keyId).catch(() => {});
+    await revokeByName(cred, name).catch(() => {});
     return { ok: false, reason: error.message };
   }
 
-  return { ok: true, doorPin, keyId };
+  return { ok: true, doorPin };
 }
 
-async function revokeSwitchBotKey(keyId: number): Promise<void> {
-  const cred = credentials();
-  if (!cred) return;
-  await command(cred.deviceId, cred.token, cred.secret, {
+/** キーパッドから name で鍵を探して削除する。見つからなければ false。 */
+async function revokeByName(cred: Cred, name: string): Promise<boolean> {
+  const key = (await listKeypadKeys(cred)).find((k) => k.name === name);
+  if (!key) return false;
+  await command(cred, {
     command: "deleteKey",
     commandType: "command",
-    parameter: { id: keyId },
+    parameter: { id: key.id },
   });
+  return true;
 }
 
-/** 予約のドアPINを無効化する（キャンセル時など）。
- *
- *  注意: 現行のキーパッド（Keypad Touch）は createKey が keyId を返さないため、
- *  キーパッド側の登録を API から消せない。鍵は滞在期間だけ有効な timeLimit なので
- *  期間外には使えないが、「キャンセルされた予約の PIN が元の宿泊期間中は通る」点は
- *  残る。取り消しが必要なときは SwitchBot アプリから手動で削除する必要があるため、
- *  消せなかったことを note に残して分かるようにしておく。
- */
+/** 予約のドアPINを無効化する（キャンセル時など）。 */
 export async function revokeDoorPin(reservationId: string): Promise<void> {
   const supabase = createAdminClient();
   const { data: keys } = await supabase
     .from("access_keys")
-    .select("id, door_pin, switchbot_key_id, note")
+    .select("id, door_pin, note")
     .eq("reservation_id", reservationId)
     .in("status", ["pending", "issued"]);
+  if (!keys?.length) return;
 
-  for (const k of keys ?? []) {
-    let removedFromKeypad = false;
-    if (k.switchbot_key_id !== null) {
-      removedFromKeypad = await revokeSwitchBotKey(k.switchbot_key_id as number)
-        .then(() => true)
-        .catch((e) => {
-          console.error("SwitchBot の鍵削除に失敗:", e);
-          return false;
-        });
-    } else {
-      console.warn(
-        `keyId が無いためキーパッドから削除できません（PIN ${k.door_pin}）。SwitchBot アプリで手動削除してください。`,
-      );
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("code")
+    .eq("id", reservationId)
+    .maybeSingle();
+
+  const cred = credentials();
+  let removed = false;
+  let problem: string | null = null;
+
+  if (!cred) {
+    problem = "SwitchBot 未設定のためキーパッド未削除";
+  } else if (!resv?.code) {
+    problem = "予約コード不明でキーパッドから鍵を特定できず未削除";
+  } else {
+    try {
+      // keyList に無い＝キーパッドに登録されていない。消す対象が無いので正常扱い。
+      removed = await revokeByName(cred, keyName(resv.code as string));
+    } catch (e) {
+      console.error("SwitchBot の鍵削除に失敗:", e);
+      problem = "キーパッド未削除（手動削除が必要）";
     }
+  }
 
+  if (problem) {
+    console.warn(`${problem}: 予約 ${reservationId}`);
+  } else if (!removed) {
+    console.info(`キーパッドに該当の鍵が無いため削除不要: 予約 ${reservationId}`);
+  }
+
+  for (const k of keys) {
     await supabase
       .from("access_keys")
       .update({
         status: "revoked",
         revoked_at: new Date().toISOString(),
-        note: removedFromKeypad
-          ? k.note
-          : [k.note, "キーパッド未削除（手動削除が必要）"].filter(Boolean).join(" / "),
+        note: problem ? [k.note, problem].filter(Boolean).join(" / ") : k.note,
       })
       .eq("id", k.id);
   }
