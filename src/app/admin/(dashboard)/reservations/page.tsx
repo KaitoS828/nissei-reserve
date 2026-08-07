@@ -62,7 +62,7 @@ export default async function ReservationsPage({
   let q = supabase
     .from("reservations")
     .select(
-      "*, customers(id,last_name,first_name), room_types(id,name), rooms(id,name), plans(id,name)",
+      "*, customers(id,last_name,first_name), room_types(id,name), rooms(id,name), plans(id,name), access_keys(door_pin,status)",
     )
     .is("archived_at", null)
     .order("check_in", { ascending: false });
@@ -246,6 +246,8 @@ function ReservationCard({
   customerList: Customer[];
 }) {
   const meta = statusMeta(r.status);
+  // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
+  const activeKey = (r.access_keys ?? []).find((k) => k.status === "issued");
   return (
             <details className="rounded-2xl border border-gray-200 bg-white p-5">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
@@ -267,6 +269,14 @@ function ReservationCard({
                   <span>プラン: {r.plans?.name ?? "—"}</span>
                   <span>経路: {r.source}</span>
                   <span>支払: {paymentLabel(r.payment_status)}</span>
+                  {activeKey && (
+                    <span>
+                      ドアPIN:{" "}
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono font-medium text-gray-900">
+                        {activeKey.door_pin}
+                      </span>
+                    </span>
+                  )}
                 </div>
                 {r.note && <p className="text-sm text-gray-700">メモ: {r.note}</p>}
                 {r.status === "cancelled" && (r.cancel_category || r.cancel_reason) && (

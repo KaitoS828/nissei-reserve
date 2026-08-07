@@ -176,10 +176,14 @@ export type AuditLog = {
   created_at: string;
 };
 
+export type AccessKeyStatus = "pending" | "issued" | "revoked" | "expired";
+
 // JOIN 付き取得用
 export type ReservationWithRefs = Reservation & {
   customers: Pick<Customer, "id" | "last_name" | "first_name"> | null;
   room_types: Pick<RoomType, "id" | "name"> | null;
   rooms: Pick<Room, "id" | "name"> | null;
   plans: Pick<Plan, "id" | "name"> | null;
+  // select に含めたときだけ入る
+  access_keys?: { door_pin: string; status: AccessKeyStatus }[];
 };

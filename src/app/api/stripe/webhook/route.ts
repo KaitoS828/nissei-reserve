@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, bookingConfirmedHtml, ownerBookingHtml, ownerEmails } from "@/lib/email";
 import { notifyOwner, newBookingMessage } from "@/lib/notify";
 import { gcalCreateEvent } from "@/lib/gcal";
+import { issueDoorPin } from "@/lib/smart-lock";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -83,6 +84,23 @@ export async function POST(req: NextRequest) {
         if (eventId) {
           await supabase.from("reservations").update({ gcal_event_id: eventId }).eq("id", reservationId);
         }
+
+        // ドアPINを発行してキーパッドに登録する。
+        // 鍵は滞在期間だけ有効なので、直前でなく確定時に作って構わない。
+        // ゲストへは本人確認を経たチェックイン画面で渡す想定のため、ここでは配信しない。
+        const { data: facility } = await supabase
+          .from("facility")
+          .select("check_in_time, check_out_time")
+          .limit(1)
+          .maybeSingle();
+        await issueDoorPin({
+          reservationId,
+          checkIn: info.checkIn,
+          checkOut: info.checkOut,
+          checkInTime: (facility?.check_in_time as string | null)?.slice(0, 5),
+          checkOutTime: (facility?.check_out_time as string | null)?.slice(0, 5),
+          label: `${info.code} ${info.name}`,
+        }).catch((e) => console.error("ドアPINの発行に失敗:", e));
       }
     }
   }

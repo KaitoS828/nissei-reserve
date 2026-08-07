@@ -8,6 +8,7 @@ import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from
 import { computeRefund } from "./cancel";
 import { getStripe } from "./stripe";
 import { gcalCreateEvent, gcalDeleteEvent } from "./gcal";
+import { revokeDoorPin } from "./smart-lock";
 
 // コスト重視で Sonnet（現行は 4.6。「4.7」は存在しないため 4.6 を使用）
 const MODEL = "claude-sonnet-4-6";
@@ -136,6 +137,7 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const payStatus = refundAmount >= (resv.amount as number) ? "refunded" : refundAmount > 0 ? "partially_refunded" : (resv.payment_status as string);
     await supabase.from("reservations").update({ status: "cancelled", payment_status: payStatus, cancel_category: "オーナー操作", cancel_reason: reason || null, cancelled_at: new Date().toISOString() }).eq("id", resv.id);
     if (resv.gcal_event_id) await gcalDeleteEvent(resv.gcal_event_id as string).catch(() => {});
+    await revokeDoorPin(resv.id as string).catch(() => {});
     return `予約 ${code} をキャンセルしました。返金額: ¥${refundAmount.toLocaleString()}`;
   },
 

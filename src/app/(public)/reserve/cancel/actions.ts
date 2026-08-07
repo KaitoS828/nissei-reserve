@@ -7,6 +7,7 @@ import { computeRefund } from "@/lib/cancel";
 import { sendEmail, cancellationHtml, ownerCancellationHtml, ownerEmails } from "@/lib/email";
 import { notifyOwner, cancellationMessage } from "@/lib/notify";
 import { gcalDeleteEvent } from "@/lib/gcal";
+import { revokeDoorPin } from "@/lib/smart-lock";
 
 function back(code: string, email: string, msg: string): never {
   const q = new URLSearchParams({ code, email, error: msg });
@@ -91,6 +92,11 @@ export async function confirmCancel(formData: FormData) {
   // Googleカレンダーのイベントを削除
   const eventId = (resv as { gcal_event_id?: string | null }).gcal_event_id;
   if (eventId) await gcalDeleteEvent(eventId).catch(() => {});
+
+  // キャンセル後も入れてしまわないよう、ドアPINを無効化する
+  await revokeDoorPin(resv.id as string).catch((e) =>
+    console.error("ドアPINの無効化に失敗:", e),
+  );
 
   redirect(`/reserve/cancel/done?code=${code}`);
 }
