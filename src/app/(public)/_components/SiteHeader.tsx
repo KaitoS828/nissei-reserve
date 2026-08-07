@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 const NAV = [
   { href: "/reserve", label: "予約" },
   { href: "/reserve/lookup", label: "予約照会" },
+  { href: "/checkin", label: "チェックイン" },
   { href: "/account", label: "マイページ" },
   { href: "/account/login", label: "ログイン" },
 ];

@@ -64,7 +64,7 @@ const row = (k: string, v: string) =>
   `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td style="padding:4px 0;font-weight:600">${v}</td></tr>`;
 
 export function bookingConfirmedHtml(p: {
-  name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number;
+  name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number; checkinUrl?: string;
 }): string {
   return wrap(`
     <p>${esc(p.name)} 様</p>
@@ -80,6 +80,7 @@ export function bookingConfirmedHtml(p: {
     <div style="margin-top:16px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:13px">
       <p style="margin:0 0 6px"><strong>📌 予約番号は必ず保存してください。</strong>確認・変更・キャンセルに必要です。</p>
       <p style="margin:0 0 6px">🔑 会員（マイページ）の方は、マイページからいつでも確認・<strong>キャンセル</strong>が可能です。</p>
+      ${p.checkinUrl ? `<p style="margin:0 0 6px">🚪 玄関の<strong>ドアコード</strong>は <a href="${esc(p.checkinUrl)}" style="color:#0f766e">チェックインページ</a> でご確認いただけます（予約番号とこのメールアドレスが必要です）。</p>` : ""}
       <p style="margin:0">📞 ご不明点は <strong>070-1251-6275</strong> までお問い合わせください。</p>
     </div>`);
 }

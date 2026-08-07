@@ -61,7 +61,16 @@ export async function POST(req: NextRequest) {
           nights: r.nights as number, guests: r.num_guests as number, amount: r.amount as number,
         };
         if (cust?.email) {
-          await sendEmail({ to: cust.email, subject: `【日靜】ご予約確定（${r.code}）`, html: bookingConfirmedHtml(info) }).catch(() => {});
+          // Stripe は自サイトのドメインに POST してくるので host からチェックインURLを組める
+          const host = req.headers.get("host");
+          await sendEmail({
+            to: cust.email,
+            subject: `【日靜】ご予約確定（${r.code}）`,
+            html: bookingConfirmedHtml({
+              ...info,
+              checkinUrl: host ? `https://${host}/checkin` : undefined,
+            }),
+          }).catch(() => {});
         }
         await notifyOwner(newBookingMessage(info)).catch(() => {});
         // オーナーにもメール通知
