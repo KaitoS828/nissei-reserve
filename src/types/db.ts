@@ -1,6 +1,19 @@
 // 手書きの行型（管理画面で扱う最小集合）。
 // 実DBスキーマは supabase/migrations を正とする。
 
+export type IcalSource = {
+  id: string;
+  name: string;
+  url: string;
+  source_type: string;
+  room_type_id: string | null;
+  is_active: boolean;
+  last_synced_at: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type RoomType = {
   id: string;
   facility_id: string | null;

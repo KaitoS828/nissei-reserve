@@ -66,7 +66,15 @@ export default async function BlockedPage({
       <div className="space-y-2">
         {blocks.length === 0 && <p className="text-sm text-gray-500">設定された予約不可日はありません。</p>}
         {blocks.map((b) => {
-          const isSync = b.reason === "gcal-sync";
+          // 連携由来の行は手で消しても次の取り込みで戻るので、解除させない
+          const icalSummary = b.reason?.match(/^\[ical:[^\]]+\]\s*(.*)$/)?.[1];
+          const isSync = b.reason === "gcal-sync" || icalSummary !== undefined;
+          const label =
+            icalSummary !== undefined
+              ? `iCal連携${icalSummary ? `: ${icalSummary}` : ""}`
+              : b.reason === "gcal-sync"
+                ? "Googleカレンダー連携"
+                : b.reason;
           return (
             <div
               key={b.id}
@@ -77,9 +85,7 @@ export default async function BlockedPage({
                   {b.start_date}
                   {b.end_date !== b.start_date ? ` 〜 ${b.end_date}` : ""}
                 </span>
-                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                  {isSync ? "Googleカレンダー連携" : b.reason}
-                </span>
+                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{label}</span>
               </div>
               {!isSync && (
                 <form action={deleteBlocked}>

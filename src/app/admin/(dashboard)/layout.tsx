@@ -8,6 +8,7 @@ const NAV = [
   { href: "/admin/calendar", label: "予約カレンダー" },
   { href: "/admin/reservations", label: "予約リスト" },
   { href: "/admin/blocked", label: "予約不可" },
+  { href: "/admin/ical", label: "iCal連携" },
   { href: "/admin/customers", label: "顧客" },
   { href: "/admin/payments", label: "決済" },
   { href: "/admin/analytics", label: "集計・分析" },
