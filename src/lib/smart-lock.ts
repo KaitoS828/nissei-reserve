@@ -73,9 +73,16 @@ function randomPin(): string {
   return String(crypto.randomInt(100000, 1000000));
 }
 
-/** キーパッド上の識別名。予約コードは一意なので、これで後から id を引ける。 */
-function keyName(code: string): string {
-  return code;
+/** キーパッド上の識別名。SwitchBot アプリで誰の鍵か分かるように予約者名を入れる。 */
+export function keypadKeyName(guestName: string | null | undefined, code: string): string {
+  const name = guestName?.trim();
+  return name ? `${name}様 ${code}` : code;
+}
+
+/** キーパッドの鍵がこの予約のものか。予約コードは一意なので、これで照合する。
+ *  表示名に予約者名を含めるため、名前の変更で見失わないよう完全一致では見ない。 */
+export function isKeyForReservation(keyName: string, code: string): boolean {
+  return keyName.includes(code);
 }
 
 function nextDay(date: string): string {
@@ -85,7 +92,8 @@ function nextDay(date: string): string {
 
 type IssueArgs = {
   reservationId: string;
-  code: string; // 予約コード。キーパッド上の鍵の名前に使う
+  code: string; // 予約コード。キーパッド上の鍵の照合に使う
+  guestName?: string | null; // キーパッド上の表示名に入れる予約者名
   checkIn: string; // YYYY-MM-DD
   checkOut?: string | null; // YYYY-MM-DD。無ければ翌日
   checkInTime?: string; // HH:MM (JST)
@@ -110,9 +118,9 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
     .maybeSingle();
   if (existing) return { ok: true, doorPin: existing.door_pin as string };
 
-  const name = keyName(args.code);
+  const name = keypadKeyName(args.guestName, args.code);
   // 同名の鍵があると createKey は（成功を返したまま）登録されない。先に消しておく。
-  const stale = (await listKeypadKeys(cred)).find((k) => k.name === name);
+  const stale = (await listKeypadKeys(cred)).find((k) => isKeyForReservation(k.name, args.code));
   if (stale) {
     await command(cred, {
       command: "deleteKey",
@@ -161,16 +169,16 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   );
   if (error) {
     // キーパッド側には登録済みなので、DBだけ失敗した状態を残さないよう巻き戻す
-    await revokeByName(cred, name).catch(() => {});
+    await revokeByCode(cred, args.code).catch(() => {});
     return { ok: false, reason: error.message };
   }
 
   return { ok: true, doorPin };
 }
 
-/** キーパッドから name で鍵を探して削除する。見つからなければ false。 */
-async function revokeByName(cred: Cred, name: string): Promise<boolean> {
-  const key = (await listKeypadKeys(cred)).find((k) => k.name === name);
+/** キーパッドから予約コードで鍵を探して削除する。見つからなければ false。 */
+async function revokeByCode(cred: Cred, code: string): Promise<boolean> {
+  const key = (await listKeypadKeys(cred)).find((k) => isKeyForReservation(k.name, code));
   if (!key) return false;
   await command(cred, {
     command: "deleteKey",
@@ -207,7 +215,7 @@ export async function revokeDoorPin(reservationId: string): Promise<void> {
   } else {
     try {
       // keyList に無い＝キーパッドに登録されていない。消す対象が無いので正常扱い。
-      removed = await revokeByName(cred, keyName(resv.code as string));
+      removed = await revokeByCode(cred, resv.code as string);
     } catch (e) {
       console.error("SwitchBot の鍵削除に失敗:", e);
       problem = "キーパッド未削除（手動削除が必要）";
