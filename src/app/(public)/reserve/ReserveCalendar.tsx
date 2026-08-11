@@ -133,15 +133,23 @@ export function ReserveCalendar({
         {/* ナビ: 前年/前月  月  翌月/翌年 */}
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
-            <button onClick={() => shift(-12)} disabled={atMin} className={navBtn} aria-label="前の年">«年</button>
-            <button onClick={() => shift(-1)} disabled={atMin} className={navBtn} aria-label="前の月">‹</button>
+            <button onClick={() => shift(-12)} disabled={atMin} className={navBtn} aria-label="前の年">
+              « 前年
+            </button>
+            <button onClick={() => shift(-1)} disabled={atMin} className={navBtn} aria-label="前の月">
+              ‹ 前月
+            </button>
           </div>
           <span className="text-base font-semibold text-gray-900 sm:text-lg">
             {baseYear}年{baseMonth + 1}月
           </span>
           <div className="flex items-center gap-1">
-            <button onClick={() => shift(1)} className={navBtn} aria-label="次の月">›</button>
-            <button onClick={() => shift(12)} className={navBtn} aria-label="次の年">年»</button>
+            <button onClick={() => shift(1)} className={navBtn} aria-label="次の月">
+              翌月 ›
+            </button>
+            <button onClick={() => shift(12)} className={navBtn} aria-label="次の年">
+              翌年 »
+            </button>
           </div>
         </div>
         <p className="mb-3 text-center text-xs text-gray-400">
