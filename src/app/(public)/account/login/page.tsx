@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { login } from "../actions";
 
@@ -23,7 +24,7 @@ export default async function AccountLoginPage({
           <span className="text-sm text-gray-700">パスワード</span>
           <input type="password" name="password" required autoComplete="current-password" className={field} />
         </label>
-        <button className="w-full rounded-full bg-teal-600 py-2.5 text-sm font-medium text-white hover:bg-teal-500">ログイン</button>
+        <SubmitButton pendingLabel="確認しています…" className="w-full rounded-full bg-teal-600 py-2.5 text-sm font-medium text-white hover:bg-teal-500">ログイン</SubmitButton>
       </form>
       <p className="text-center text-sm text-gray-500">
         初めての方は <Link href="/account/signup" className="text-teal-700 hover:underline">会員登録</Link>

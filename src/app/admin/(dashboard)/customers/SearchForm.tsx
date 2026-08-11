@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Spinner } from "@/app/admin/_components/SubmitButton";
+import { Spinner } from "@/components/SubmitButton";
 
 export function SearchForm({ defaultValue }: { defaultValue: string }) {
   const router = useRouter();

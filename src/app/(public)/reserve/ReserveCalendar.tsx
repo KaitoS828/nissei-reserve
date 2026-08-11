@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Spinner } from "@/components/SubmitButton";
 import Link from "next/link";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 
@@ -152,8 +153,15 @@ export function ReserveCalendar({
             </button>
           </div>
         </div>
-        <p className="mb-3 text-center text-xs text-gray-400">
-          空いている日をタップして宿泊期間を選択
+        <p className="mb-3 flex items-center justify-center gap-2 text-center text-xs text-gray-400">
+          {loaded ? (
+            "空いている日をタップして宿泊期間を選択"
+          ) : (
+            <>
+              <Spinner className="h-3 w-3" />
+              空き状況を確認しています…
+            </>
+          )}
         </p>
 
         {/* 曜日 */}

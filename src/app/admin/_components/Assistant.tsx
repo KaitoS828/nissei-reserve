@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Spinner } from "./SubmitButton";
+import { Spinner } from "@/components/SubmitButton";
 
 type Msg = { role: "user" | "assistant"; text: string };
 type History = unknown[];

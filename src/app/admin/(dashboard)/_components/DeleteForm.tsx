@@ -1,6 +1,6 @@
 "use client";
 
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export function DeleteForm({
   action,

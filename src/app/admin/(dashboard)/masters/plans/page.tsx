@@ -1,4 +1,4 @@
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Plan } from "@/types/db";
 import { createPlan, updatePlan, togglePlanActive, deletePlan, setPlanPrice } from "./actions";

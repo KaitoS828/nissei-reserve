@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { logout } from "@/app/admin/login/actions";
 
 type NavItem = { href: string; label: string };

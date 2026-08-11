@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, ReservationStatus } from "@/types/db";
 import { unarchiveReservation, deleteReservation } from "../actions";

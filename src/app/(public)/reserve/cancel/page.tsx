@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeRefund, CANCEL_CATEGORIES } from "@/lib/cancel";
@@ -116,9 +117,9 @@ export default async function CancelPage({
 
         <div className="flex justify-end gap-3">
           <Link href="/reserve/lookup" className="rounded-full border border-gray-300 px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50">戻る</Link>
-          <button className="rounded-full bg-red-600 px-8 py-2.5 text-sm font-medium text-white transition hover:bg-red-500">
+          <SubmitButton pendingLabel="手続き中です…" className="rounded-full bg-red-600 px-8 py-2.5 text-sm font-medium text-white transition hover:bg-red-500">
             キャンセルを確定する
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </div>

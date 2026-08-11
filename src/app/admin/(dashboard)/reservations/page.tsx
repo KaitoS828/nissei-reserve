@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCheckInTime } from "@/lib/reservations";
 import type {

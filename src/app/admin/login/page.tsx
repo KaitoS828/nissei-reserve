@@ -1,4 +1,4 @@
-import { SubmitButton } from "@/app/admin/_components/SubmitButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { login } from "./actions";
 
 export default async function LoginPage({

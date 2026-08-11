@@ -73,7 +73,8 @@ export default async function CompletePage({
         <p className="font-semibold text-gray-900">ご予約後のご案内</p>
         <p>📌 <span className="font-semibold">予約番号は必ず保存してください。</span>予約の確認・変更・キャンセルに必要です。</p>
         <p>🔑 会員登録（マイページ）をされている方は、<Link href="/account" className="text-teal-700 underline">マイページ</Link>からいつでもご予約の確認・<span className="font-semibold">キャンセル</span>が可能です。</p>
-        <p>🚪 玄関のドアコードは<Link href="/checkin" className="text-teal-700 underline">チェックインページ</Link>でご確認いただけます（予約番号とメールアドレスが必要です）。</p>
+        <p>📧 <span className="font-semibold">チェックイン番号や当日の詳細は、お送りする確認メールにてご確認ください。</span></p>
+        <p>🚪 玄関のドアコードは<Link href="/checkin" className="text-teal-700 underline">チェックインページ</Link>でもご確認いただけます（予約番号とメールアドレスが必要です）。</p>
         <p>📞 ご不明な点は <a href="tel:07012516275" className="font-semibold text-teal-700">070-1251-6275</a> までお問い合わせください。</p>
       </div>
 

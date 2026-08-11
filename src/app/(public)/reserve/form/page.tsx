@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -143,9 +144,9 @@ export default async function ReserveFormPage({
         </div>
 
         <div className="flex justify-center">
-          <button className="rounded-full bg-teal-600 px-12 py-3 font-medium text-white transition hover:bg-teal-500">
+          <SubmitButton pendingLabel="決済ページへ移動しています…" className="rounded-full bg-teal-600 px-12 py-3 font-medium text-white transition hover:bg-teal-500">
             お支払いへ進む
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </div>
