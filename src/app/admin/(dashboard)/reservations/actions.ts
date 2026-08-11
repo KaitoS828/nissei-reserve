@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
 import { auditLog } from "@/lib/audit";
+import { issueDoorPin, revokeDoorPin } from "@/lib/smart-lock";
 import type { ReservationStatus, PaymentStatus } from "@/types/db";
 
 const PATH = "/admin/reservations";
@@ -241,6 +242,73 @@ export async function deleteReservation(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
   revalidatePath("/admin/payments");
+}
+
+// ドアPINは通常 Stripe の決済確定で自動発行される。
+// 現地精算や電話予約など webhook を通らない予約のために、手動の口も用意する。
+export async function issueDoorPinManually(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("id, code, check_in, check_out, status, customers(last_name, first_name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!resv) redirectError("予約が見つかりません");
+  if (resv.status === "cancelled") redirectError("キャンセル済みの予約には発行できません");
+
+  const { data: facility } = await supabase
+    .from("facility")
+    .select("check_in_time, check_out_time")
+    .limit(1)
+    .maybeSingle();
+
+  const cust = resv.customers as unknown as
+    | { last_name: string | null; first_name: string | null }
+    | null;
+
+  const result = await issueDoorPin({
+    reservationId: resv.id as string,
+    code: resv.code as string,
+    guestName: [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || null,
+    checkIn: resv.check_in as string,
+    checkOut: resv.check_out as string,
+    checkInTime: (facility?.check_in_time as string | null)?.slice(0, 5),
+    checkOutTime: (facility?.check_out_time as string | null)?.slice(0, 5),
+  });
+  if (!result.ok) redirectError(`ドアPINの発行に失敗しました: ${result.reason}`);
+
+  await auditLog(supabase, {
+    action: "door_pin_issue",
+    entityType: "reservation",
+    entityId: id,
+    summary: `${resv.code} のドアPINを手動で発行しました`,
+  }).catch(() => {});
+
+  revalidatePath(PATH);
+}
+
+export async function revokeDoorPinManually(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("code")
+    .eq("id", id)
+    .maybeSingle();
+
+  await revokeDoorPin(id);
+
+  await auditLog(supabase, {
+    action: "door_pin_revoke",
+    entityType: "reservation",
+    entityId: id,
+    summary: `${resv?.code ?? id} のドアPINを無効化しました`,
+  }).catch(() => {});
+
+  revalidatePath(PATH);
 }
 
 export async function unarchiveReservation(formData: FormData) {

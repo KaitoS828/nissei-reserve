@@ -2,6 +2,15 @@
 // Web予約では自動送信し、手動予約では管理画面からコピーして送れるよう、
 // 本文の組み立てだけをここに置く（送信手段に依存させない）。
 
+// 館内の案内。変更はここだけ直せば全文に反映される。
+export const WIFI_SSID = "nissei-guest";
+export const WIFI_PASSWORD = "gh-nissei37";
+export const HOUSE_NOTES = [
+  "漁師町のため、夜間はお静かにお過ごしください。近隣の方は早朝から漁に出られます。",
+  "館内は禁煙です。喫煙は屋外の灰皿をご利用ください。",
+  "ゴミは分別のうえ、所定の場所にお願いいたします。",
+];
+
 export type BookingGuideInput = {
   guestName: string | null;
   code: string;
@@ -76,6 +85,14 @@ ${jpDate(input.checkOut)} ${input.checkOutTime} まで有効です。
       : `■ 玄関の解錠方法
 ドアコードは追ってご連絡いたします。`,
   );
+
+  blocks.push(
+    `■ Wi-Fi
+ネットワーク名（SSID）: ${WIFI_SSID}
+パスワード: ${WIFI_PASSWORD}`,
+  );
+
+  blocks.push(`■ お願い\n${HOUSE_NOTES.map((n) => `・${n}`).join("\n")}`);
 
   blocks.push(
     `■ お問い合わせ

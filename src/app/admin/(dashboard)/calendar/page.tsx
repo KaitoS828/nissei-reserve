@@ -55,7 +55,7 @@ export default async function CalendarPage({
       supabase.from("rooms").select("id", { count: "exact", head: true }).eq("is_active", true),
       supabase
         .from("reservations")
-        .select("*, customers(id,last_name,first_name), room_types(id,name), rooms(id,name), plans(id,name)")
+        .select("*, customers(id,last_name,first_name,email), room_types(id,name), rooms(id,name), plans(id,name)")
         .in("status", OCCUPYING_STATUSES as unknown as string[])
         .is("archived_at", null)
         .lt("check_in", rangeTo)
@@ -236,7 +236,8 @@ export default async function CalendarPage({
                 </span>
               </div>
               {cell.resv.slice(0, 3).map((r) => (
-                <Link key={r.id} href="/admin/reservations" className={`block truncate rounded px-1.5 py-1 text-xs transition ${isPast ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`}>
+                // セルが狭いのでメールは title に入れる（ホバーで確認できる）
+                <Link key={r.id} href="/admin/reservations" title={[r.code, [r.customers?.last_name, r.customers?.first_name].filter(Boolean).join(" "), r.customers?.email].filter(Boolean).join(" / ")} className={`block truncate rounded px-1.5 py-1 text-xs transition ${isPast ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`}>
                   {r.check_in === cell.date && r.check_in_time && (
                     <span className="font-mono font-medium">{formatCheckInTime(r.check_in_time)} </span>
                   )}

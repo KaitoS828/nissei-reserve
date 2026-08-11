@@ -16,6 +16,8 @@ import {
   createReservation,
   updateReservation,
   archiveReservation,
+  issueDoorPinManually,
+  revokeDoorPinManually,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
@@ -52,6 +54,15 @@ const PAYMENT: { value: PaymentStatus; label: string }[] = [
 ];
 const paymentLabel = (s: PaymentStatus) =>
   PAYMENT.find((x) => x.value === s)?.label ?? s;
+const SOURCE_LABEL: Record<string, string> = {
+  web: "Web",
+  admin: "管理画面",
+  phone: "電話",
+  ical: "iCal",
+  walkin: "飛込み",
+};
+const sourceLabel = (s: string | null) => (s ? (SOURCE_LABEL[s] ?? s) : "—");
+
 const custName = (c: ReservationWithRefs["customers"]) =>
   c ? [c.last_name, c.first_name].filter(Boolean).join(" ") || "（無名）" : "—";
 
@@ -66,7 +77,7 @@ export default async function ReservationsPage({
   let q = supabase
     .from("reservations")
     .select(
-      "*, customers(id,last_name,first_name), room_types(id,name), rooms(id,name), plans(id,name), access_keys(door_pin,status)",
+      "*, customers(id,last_name,first_name,email), room_types(id,name), rooms(id,name), plans(id,name), access_keys(door_pin,status)",
     )
     .is("archived_at", null)
     .order("check_in", { ascending: false });
@@ -121,26 +132,6 @@ export default async function ReservationsPage({
   const roomList = (rooms ?? []) as Room[];
   const planList = (plans ?? []) as Plan[];
   const customerList = (customers ?? []) as Customer[];
-
-  // チェックイン日の年→月でフォルダ分け。reservations は check_in 降順なので挿入順もそのまま新しい順になる。
-  const byYear = new Map<string, Map<string, ReservationWithRefs[]>>();
-  for (const r of reservations) {
-    const [y, m] = r.check_in.split("-");
-    let months = byYear.get(y);
-    if (!months) {
-      months = new Map();
-      byYear.set(y, months);
-    }
-    let list = months.get(m);
-    if (!list) {
-      list = [];
-      months.set(m, list);
-    }
-    list.push(r);
-  }
-  const now = new Date();
-  const curYear = String(now.getFullYear());
-  const curMonth = String(now.getMonth() + 1).padStart(2, "0");
 
   return (
     <div className="space-y-8">
@@ -233,38 +224,31 @@ export default async function ReservationsPage({
         {reservations.length === 0 && (
           <p className="text-sm text-gray-500">予約がありません。</p>
         )}
-        {[...byYear.entries()].map(([y, months]) => {
-          const yearCount = [...months.values()].reduce((n, list) => n + list.length, 0);
+        {/* 日付で追えるよう、開閉するフォルダではなく一続きのリストにする。
+            月が変わるところに見出しを挟むだけで、折りたためない＝隠れない。 */}
+        {reservations.map((r, i) => {
+          const [y, m] = r.check_in.split("-");
+          const prev = i > 0 ? reservations[i - 1].check_in.slice(0, 7) : null;
+          const showHeading = prev !== `${y}-${m}`;
           return (
-            <details key={y} open={y === curYear} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <summary className="cursor-pointer px-5 py-3 font-medium text-gray-900">
-                📁 {y}年
-                <span className="ml-2 text-sm font-normal text-gray-500">{yearCount}件</span>
-              </summary>
-              <div className="space-y-3 border-t border-gray-200 bg-gray-50 p-3">
-                {[...months.entries()].map(([m, list]) => (
-                  <details key={m} open={y === curYear && m === curMonth} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                    <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-800">
-                      📁 {Number(m)}月
-                      <span className="ml-2 text-xs font-normal text-gray-500">{list.length}件</span>
-                    </summary>
-                    <div className="space-y-3 border-t border-gray-200 p-3">
-                      {list.map((r) => (
-                        <ReservationCard
-                          key={r.id}
-                          r={r}
-                          roomTypes={roomTypes}
-                          roomList={roomList}
-                          planList={planList}
-                          customerList={customerList}
-                          guide={guides.get(r.id) ?? null}
-                        />
-                      ))}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </details>
+            <div key={r.id}>
+              {showHeading && (
+                <h2 className="sticky top-0 z-10 -mx-1 mb-2 mt-6 bg-gray-50/95 px-1 py-2 text-sm font-semibold text-gray-500 backdrop-blur first:mt-0">
+                  {y}年{Number(m)}月
+                  <span className="ml-2 font-normal text-gray-400">
+                    {reservations.filter((x) => x.check_in.slice(0, 7) === `${y}-${m}`).length}件
+                  </span>
+                </h2>
+              )}
+              <ReservationCard
+                r={r}
+                roomTypes={roomTypes}
+                roomList={roomList}
+                planList={planList}
+                customerList={customerList}
+                guide={guides.get(r.id) ?? null}
+              />
+            </div>
           );
         })}
       </div>
@@ -292,34 +276,82 @@ function ReservationCard({
   const activeKey = r.access_keys?.status === "issued" ? r.access_keys : null;
   return (
             <details className="rounded-2xl border border-gray-200 bg-white p-5">
-              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
-                <span className="flex items-center gap-3">
-                  <span className={`rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
-                  <span className="font-mono text-xs text-gray-500">{r.code}</span>
-                  <span className="font-medium text-gray-900">{custName(r.customers)}</span>
+              {/* 日付 → 状態 → 名前 → 予約番号 の順。日付を先頭に固定幅で置いて、
+                  どの行も同じ位置で追えるようにする。客室・金額は展開後に出す。 */}
+              <summary className="flex cursor-pointer items-center gap-3">
+                <span className="shrink-0 text-sm tabular-nums">
+                  <span className="font-medium text-gray-900">{r.check_in}</span>
+                  <span className="text-gray-400"> → </span>
+                  <span className="text-gray-600">{r.check_out}</span>
+                  <span className="ml-1 text-xs text-gray-400">{r.nights}泊</span>
                 </span>
-                <span className="text-sm text-gray-600">
-                  {r.check_in} <span className="text-cyan-700">{formatCheckInTime(r.check_in_time)}着</span> → {r.check_out}（{r.nights}泊） / {r.room_types?.name ?? "—"}
-                  {r.rooms ? ` ${r.rooms.name}` : ""} / ¥{r.amount.toLocaleString()}
+                <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  <span className="font-medium text-gray-900">{custName(r.customers)}</span>
+                  <span className="ml-2 font-mono text-xs text-gray-400">{r.code}</span>
+                </span>
+                <span className="shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500">
+                  {sourceLabel(r.source)}
                 </span>
               </summary>
 
               <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
                 <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 md:grid-cols-4">
+                  <span>客室: {r.room_types?.name ?? "—"}{r.rooms ? ` / ${r.rooms.name}` : ""}</span>
+                  <span>金額: ¥{r.amount.toLocaleString()}</span>
                   <span>人数: {r.num_guests}名</span>
                   <span>チェックイン時間: {formatCheckInTime(r.check_in_time)}</span>
                   <span>プラン: {r.plans?.name ?? "—"}</span>
-                  <span>経路: {r.source}</span>
+                  <span>経路: {sourceLabel(r.source)}</span>
                   <span>支払: {paymentLabel(r.payment_status)}</span>
-                  {activeKey && (
-                    <span>
-                      ドアPIN:{" "}
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono font-medium text-gray-900">
-                        {activeKey.door_pin}
-                      </span>
-                    </span>
-                  )}
+                  <span className="col-span-2">
+                    メール:{" "}
+                    {r.customers?.email ? (
+                      <a href={`mailto:${r.customers.email}`} className="text-cyan-700 hover:underline">
+                        {r.customers.email}
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">未登録</span>
+                    )}
+                  </span>
                 </div>
+
+                {/* 決済が通れば webhook で自動発行される。現地精算や管理画面からの
+                    代理予約は webhook を通らないので、ここから手動で出せるようにする。 */}
+                {r.status !== "cancelled" && (
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                    <span className="text-sm text-gray-600">ドアPIN:</span>
+                    {activeKey ? (
+                      <>
+                        <span className="rounded bg-white px-2 py-1 font-mono text-base font-semibold tracking-wider text-gray-900">
+                          {activeKey.door_pin}
+                        </span>
+                        <form action={revokeDoorPinManually}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <SubmitButton className="rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600 transition hover:bg-red-50">
+                            無効化
+                          </SubmitButton>
+                        </form>
+                        <span className="text-xs text-gray-500">
+                          キーパッドに「{custName(r.customers)}様 {r.code}」として登録されています
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm text-gray-500">未発行</span>
+                        <form action={issueDoorPinManually}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <SubmitButton className="rounded-lg bg-cyan-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-cyan-700">
+                            ドアPINを発行
+                          </SubmitButton>
+                        </form>
+                        <span className="text-xs text-gray-500">
+                          滞在期間だけ有効な番号をキーパッドに登録します
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
                 {r.note && <p className="text-sm text-gray-700">メモ: {r.note}</p>}
                 {r.status === "cancelled" && (r.cancel_category || r.cancel_reason) && (
                   <p className="text-sm text-red-700">

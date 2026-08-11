@@ -193,7 +193,7 @@ export type AccessKeyStatus = "pending" | "issued" | "revoked" | "expired";
 
 // JOIN 付き取得用
 export type ReservationWithRefs = Reservation & {
-  customers: Pick<Customer, "id" | "last_name" | "first_name"> | null;
+  customers: Pick<Customer, "id" | "last_name" | "first_name" | "email"> | null;
   room_types: Pick<RoomType, "id" | "name"> | null;
   rooms: Pick<Room, "id" | "name"> | null;
   plans: Pick<Plan, "id" | "name"> | null;

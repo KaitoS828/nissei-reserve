@@ -31,6 +31,25 @@ describe("bookingGuideText", () => {
     assert.ok(text.includes("キーパッド"), "当日の鍵の開け方");
   });
 
+  it("Wi-Fi の接続情報を載せる", () => {
+    const text = bookingGuideText(base);
+    assert.ok(text.includes("nissei-guest"));
+    assert.ok(text.includes("gh-nissei37"));
+  });
+
+  it("チェックイン・チェックアウト時刻を項目として載せる", () => {
+    const text = bookingGuideText(base);
+    assert.ok(text.includes("チェックイン: 15:00 以降"));
+    assert.ok(text.includes("チェックアウト: 10:00 まで"));
+  });
+
+  it("夜間の注意を含むお願いを載せる", () => {
+    const text = bookingGuideText(base);
+    assert.ok(text.includes("お願い"));
+    assert.ok(text.includes("漁師町"));
+    assert.ok(text.includes("夜間"));
+  });
+
   it("予約内容を載せる", () => {
     const text = bookingGuideText(base);
     assert.ok(text.includes("R-20260809-JHDV"));
