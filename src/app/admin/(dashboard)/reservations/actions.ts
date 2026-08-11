@@ -2,6 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { sendEmail } from "@/lib/email";
+import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
+import {
+  GUIDE_SELECT,
+  guideInput,
+  originFromHeaders,
+  type GuideFacility,
+  type GuideRow,
+} from "@/lib/booking-guide-server";
+import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
@@ -308,6 +319,55 @@ export async function revokeDoorPinManually(formData: FormData) {
     summary: `${resv?.code ?? id} のドアPINを無効化しました`,
   }).catch(() => {});
 
+  revalidatePath(PATH);
+}
+
+// 予約時メールを予約者に送る。手動予約でも同じ文面を1クリックで送れるようにする。
+export async function sendBookingGuideEmail(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+
+  const { data: resv } = await supabase.from("reservations").select(GUIDE_SELECT).eq("id", id).maybeSingle();
+  if (!resv) redirectError("予約が見つかりません");
+
+  const row = resv as unknown as GuideRow;
+  const to = row.customers?.email?.trim();
+  if (!to) redirectError("この予約にはメールアドレスが登録されていません");
+
+  const { data: facility } = await supabase
+    .from("facility")
+    .select("check_in_time, check_out_time, phone")
+    .limit(1)
+    .maybeSingle();
+
+  const h = await headers();
+  const origin = originFromHeaders(h);
+  const secret = await ensureSecretCode(supabase, id);
+  const input = guideInput(row, facility as GuideFacility, registerUrl(origin, secret));
+  const subject = bookingGuideSubject(row.code);
+
+  const ok = await sendEmail({ to, subject, html: bookingGuideHtml(input) });
+
+  // 送ったかどうかが分からないと二重送信するので、成否どちらも残す
+  await supabase.from("guest_message_deliveries").insert({
+    reservation_id: id,
+    message_type: "booking_guide",
+    channel: "email",
+    sent_to: to,
+    subject,
+    status: ok ? "sent" : "failed",
+    error: ok ? null : "送信に失敗しました",
+    sent_at: new Date().toISOString(),
+  });
+
+  await auditLog(supabase, {
+    action: "booking_guide_send",
+    entityType: "reservation",
+    entityId: id,
+    summary: `${row.code} の予約時メールを ${to} へ${ok ? "送信" : "送信失敗"}`,
+  }).catch(() => {});
+
+  if (!ok) redirectError("メールの送信に失敗しました。設定をご確認ください");
   revalidatePath(PATH);
 }
 

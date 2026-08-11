@@ -36,6 +36,17 @@ export function bookingGuideSubject(code: string): string {
   return `【日靜】ご宿泊のご案内（${code}）`;
 }
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** 本文をメール用のHTMLにする。URLはそのままだと押せないのでリンクにする。 */
+export function bookingGuideHtml(input: BookingGuideInput): string {
+  const body = escapeHtml(bookingGuideText(input))
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#0f766e">$1</a>')
+    .replace(/\n/g, "<br>");
+  return `<div style="font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px;line-height:1.9;color:#111827">${body}</div>`;
+}
+
 export function bookingGuideText(input: BookingGuideInput): string {
   const name = input.guestName?.trim();
   const blocks: string[] = [];
@@ -66,7 +77,7 @@ export function bookingGuideText(input: BookingGuideInput): string {
 
 ${input.registerUrl}
 
-ご同行の方がいらっしゃる場合は、人数ぶん繰り返しご記入ください。
+ご同行の方がいらっしゃる場合は、人数分繰り返しご記入ください。
 海外にお住まいの方は、国籍と旅券番号のご記入もお願いいたします。`
       : `■ 宿泊者名簿のご記入（ご宿泊前にお願いします）
 法令により、ご宿泊者全員の氏名・住所・連絡先などを宿泊者名簿に記録することが
@@ -101,7 +112,12 @@ ${input.phone ? `電話: ${input.phone}` : ""}
 
 当日お会いできますことを楽しみにしております。
 
-一棟貸し宿「日靜」`.replace(/\n\n+/g, "\n\n"),
+――――――――――――――――
+一棟貸し宿「日靜」
+住所: 北海道広尾郡広尾町音調津733番地${input.phone ? `\n電話: ${input.phone}` : ""}`.replace(
+      /\n\n+/g,
+      "\n\n",
+    ),
   );
 
   return blocks.join("\n\n");

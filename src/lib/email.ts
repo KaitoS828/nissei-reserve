@@ -6,6 +6,12 @@ type SendArgs = { to: string | string[]; subject: string; html: string };
 export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  // 送信ドメインに MX が無いと、お客様が返信してもどこにも届かない。
+  // 実際に読めるアドレスを Reply-To に入れておく。
+  const replyTo =
+    process.env.EMAIL_REPLY_TO?.trim() ||
+    (process.env.OWNER_EMAILS || "").split(",")[0]?.trim() ||
+    "";
   if (!key) return false;
   const recipients = (Array.isArray(to) ? to : [to]).map((s) => s.trim()).filter(Boolean);
   if (recipients.length === 0) return false;
@@ -20,7 +26,13 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolea
             Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ from: `一棟貸し宿「日靜」 <${from}>`, to: addr, subject, html }),
+          body: JSON.stringify({
+            from: `一棟貸し宿「日靜」 <${from}>`,
+            to: addr,
+            subject,
+            html,
+            ...(replyTo ? { reply_to: replyTo } : {}),
+          }),
         });
         return res.ok;
       } catch {

@@ -18,6 +18,7 @@ import {
   archiveReservation,
   issueDoorPinManually,
   revokeDoorPinManually,
+  sendBookingGuideEmail,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
@@ -25,6 +26,18 @@ import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
+import {
+  guideInput,
+  originFromHeaders,
+  type GuideFacility,
+  type GuideRow,
+} from "@/lib/booking-guide-server";
+
+const jstDateTime = (iso: string) =>
+  new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(iso));
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +114,36 @@ export default async function ReservationsPage({
 
   const reservations = (resData ?? []) as ReservationWithRefs[];
 
+  const ids = reservations.map((r) => r.id);
+  const [{ data: deliveries }, { data: registered }] = await Promise.all([
+    ids.length
+      ? supabase
+          .from("guest_message_deliveries")
+          .select("reservation_id, sent_at, status")
+          .in("reservation_id", ids)
+          .eq("message_type", "booking_guide")
+          .order("sent_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    ids.length
+      ? supabase.from("reservation_guests").select("reservation_id").in("reservation_id", ids)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  // 送信済みかどうかが分からないと二重送信するので、最後に送れた日時を持つ
+  const lastSent = new Map<string, string>();
+  for (const d of (deliveries ?? []) as { reservation_id: string; sent_at: string; status: string }[]) {
+    if (d.status === "sent" && !lastSent.has(d.reservation_id)) {
+      lastSent.set(d.reservation_id, jstDateTime(d.sent_at));
+    }
+  }
+  const guestCount = new Map<string, number>();
+  for (const g of (registered ?? []) as { reservation_id: string }[]) {
+    guestCount.set(g.reservation_id, (guestCount.get(g.reservation_id) ?? 0) + 1);
+  }
+
   // 予約時メールの案内文をここで組む。名簿フォームのURLは予約ごとの secret_code で作る。
   const h = await headers();
-  const origin = h.get("origin") ?? `https://${h.get("host") ?? "reserve.gh-nissei.jp"}`;
+  const origin = originFromHeaders(h);
   const guides = new Map<string, { subject: string; body: string }>();
   await Promise.all(
     reservations
@@ -112,19 +152,9 @@ export default async function ReservationsPage({
         const secret = await ensureSecretCode(supabase, r.id);
         guides.set(r.id, {
           subject: bookingGuideSubject(r.code),
-          body: bookingGuideText({
-            guestName: custName(r.customers),
-            code: r.code,
-            checkIn: r.check_in,
-            checkOut: r.check_out,
-            checkInTime: ((facility?.check_in_time as string | null) ?? "15:00").slice(0, 5),
-            checkOutTime: ((facility?.check_out_time as string | null) ?? "10:00").slice(0, 5),
-            numGuests: r.num_guests,
-            planName: r.plans?.name ?? null,
-            doorPin: r.access_keys?.status === "issued" ? r.access_keys.door_pin : null,
-            registerUrl: registerUrl(origin, secret),
-            phone: (facility?.phone as string | null) ?? null,
-          }),
+          body: bookingGuideText(
+            guideInput(r as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
+          ),
         });
       }),
   );
@@ -247,6 +277,8 @@ export default async function ReservationsPage({
                 planList={planList}
                 customerList={customerList}
                 guide={guides.get(r.id) ?? null}
+                lastSentAt={lastSent.get(r.id) ?? null}
+                registeredGuests={guestCount.get(r.id) ?? 0}
               />
             </div>
           );
@@ -263,6 +295,8 @@ function ReservationCard({
   planList,
   customerList,
   guide,
+  lastSentAt,
+  registeredGuests,
 }: {
   r: ReservationWithRefs;
   roomTypes: RoomType[];
@@ -270,6 +304,8 @@ function ReservationCard({
   planList: Plan[];
   customerList: Customer[];
   guide: { subject: string; body: string } | null;
+  lastSentAt: string | null;
+  registeredGuests: number;
 }) {
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
@@ -360,7 +396,32 @@ function ReservationCard({
                   </p>
                 )}
 
-                {guide && <BookingGuide subject={guide.subject} body={guide.body} />}
+                {/* 名簿は法令上の記録なので、揃っているかを一覧から見えるようにする */}
+                {r.status !== "cancelled" && (
+                  <p className="text-sm">
+                    <span className="text-gray-600">宿泊者名簿: </span>
+                    <span
+                      className={
+                        registeredGuests >= r.num_guests ? "text-emerald-700" : "text-amber-700"
+                      }
+                    >
+                      {registeredGuests} / {r.num_guests} 名
+                      {registeredGuests >= r.num_guests ? "（記入済み）" : "（未記入あり）"}
+                    </span>
+                  </p>
+                )}
+
+                {guide && (
+                  <BookingGuide
+                    subject={guide.subject}
+                    body={guide.body}
+                    email={r.customers?.email ?? null}
+                    lastSentAt={lastSentAt}
+                    sendAction={sendBookingGuideEmail}
+                    reservationId={r.id}
+                    hasDoorPin={activeKey !== null}
+                  />
+                )}
 
                 <EditToggle
                   actions={
