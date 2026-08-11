@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, bookingConfirmedHtml, ownerBookingHtml, ownerEmails } from "@/lib/email";
+import { sendEmail, ownerBookingHtml, ownerEmails } from "@/lib/email";
+import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
+import { GUIDE_SELECT, guideInput, type GuideFacility, type GuideRow } from "@/lib/booking-guide-server";
+import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { notifyOwner, newBookingMessage } from "@/lib/notify";
 import { gcalCreateEvent } from "@/lib/gcal";
 import { issueDoorPin } from "@/lib/smart-lock";
@@ -60,18 +63,6 @@ export async function POST(req: NextRequest) {
           checkIn: r.check_in as string, checkOut: r.check_out as string,
           nights: r.nights as number, guests: r.num_guests as number, amount: r.amount as number,
         };
-        if (cust?.email) {
-          // Stripe は自サイトのドメインに POST してくるので host からチェックインURLを組める
-          const host = req.headers.get("host");
-          await sendEmail({
-            to: cust.email,
-            subject: `【日靜】ご予約確定（${r.code}）`,
-            html: bookingConfirmedHtml({
-              ...info,
-              checkinUrl: host ? `https://${host}/checkin` : undefined,
-            }),
-          }).catch(() => {});
-        }
         await notifyOwner(newBookingMessage(info)).catch(() => {});
         // オーナーにもメール通知
         const owners = ownerEmails();
@@ -96,10 +87,9 @@ export async function POST(req: NextRequest) {
 
         // ドアPINを発行してキーパッドに登録する。
         // 鍵は滞在期間だけ有効なので、直前でなく確定時に作って構わない。
-        // ゲストへは本人確認を経たチェックイン画面で渡す想定のため、ここでは配信しない。
         const { data: facility } = await supabase
           .from("facility")
-          .select("check_in_time, check_out_time")
+          .select("check_in_time, check_out_time, phone")
           .limit(1)
           .maybeSingle();
         await issueDoorPin({
@@ -111,6 +101,36 @@ export async function POST(req: NextRequest) {
           code: info.code,
           guestName: info.name,
         }).catch((e) => console.error("ドアPINの発行に失敗:", e));
+
+        // 案内メールは PIN を載せたいので、発行のあとに送る。
+        // 管理画面から送るものと同じ本文・同じ組み立てを使う。
+        if (cust?.email) {
+          const { data: guideRow } = await supabase
+            .from("reservations")
+            .select(GUIDE_SELECT)
+            .eq("id", reservationId)
+            .maybeSingle();
+          const secret = await ensureSecretCode(supabase, reservationId);
+          const host = req.headers.get("host");
+          const origin = host ? `https://${host}` : "https://reserve.gh-nissei.jp";
+          const subject = bookingGuideSubject(info.name);
+          const html = bookingGuideHtml(
+            guideInput(guideRow as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
+          );
+          const ok = await sendEmail({ to: cust.email, subject, html }).catch(() => false);
+
+          // 管理画面の送信履歴と同じ場所に残す。送れたかどうかを後から確認できる。
+          await supabase.from("guest_message_deliveries").insert({
+            reservation_id: reservationId,
+            message_type: "booking_guide",
+            channel: "email",
+            sent_to: cust.email,
+            subject,
+            status: ok ? "sent" : "failed",
+            error: ok ? null : "決済確定時の自動送信に失敗しました",
+            sent_at: new Date().toISOString(),
+          });
+        }
       }
     }
   }

@@ -24,6 +24,7 @@ import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
 import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
@@ -83,19 +84,25 @@ const custName = (c: ReservationWithRefs["customers"]) =>
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; error?: string; done?: string; q?: string; month?: string }>;
 }) {
-  const { status, error } = await searchParams;
+  const { status, error, done, q, month } = await searchParams;
   const supabase = createAdminClient();
 
-  let q = supabase
+  let query = supabase
     .from("reservations")
     .select(
       "*, customers(id,last_name,first_name,email), room_types(id,name), rooms(id,name), plans(id,name), access_keys(door_pin,status)",
     )
     .is("archived_at", null)
     .order("check_in", { ascending: false });
-  if (status) q = q.eq("status", status);
+  if (status) query = query.eq("status", status);
+  // 月指定はチェックイン日で絞る
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    query = query.gte("check_in", `${month}-01`).lte("check_in", last);
+  }
 
   const [
     { data: resData },
@@ -105,7 +112,7 @@ export default async function ReservationsPage({
     { data: customers },
     { data: facility },
   ] = await Promise.all([
-    q,
+    query,
     supabase.from("room_types").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("rooms").select("*").eq("is_active", true).order("name"),
     supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
@@ -113,7 +120,17 @@ export default async function ReservationsPage({
     supabase.from("facility").select("check_in_time, check_out_time, phone").limit(1).maybeSingle(),
   ]);
 
-  const reservations = (resData ?? []) as ReservationWithRefs[];
+  let reservations = (resData ?? []) as ReservationWithRefs[];
+  // 氏名は埋め込み先にあるので、取得後に絞る（予約番号でも引けるようにする）
+  if (q) {
+    const needle = q.trim().toLowerCase();
+    reservations = reservations.filter((r) =>
+      [custName(r.customers), r.code, r.customers?.email ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(needle),
+    );
+  }
 
   const ids = reservations.map((r) => r.id);
   const [{ data: deliveries }, { data: registered }] = await Promise.all([
@@ -160,7 +177,7 @@ export default async function ReservationsPage({
       .map(async (r) => {
         const secret = await ensureSecretCode(supabase, r.id);
         guides.set(r.id, {
-          subject: bookingGuideSubject(r.code),
+          subject: bookingGuideSubject(custName(r.customers)),
           body: bookingGuideText(
             guideInput(r as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
           ),
@@ -185,8 +202,32 @@ export default async function ReservationsPage({
         </div>
       </header>
 
+      <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4">
+        {status && <input type="hidden" name="status" value={status} />}
+        <label className="space-y-1">
+          <span className="block text-xs text-gray-600">お名前・予約番号・メール</span>
+          <input name="q" defaultValue={q ?? ""} placeholder="一部でも可" className={field} />
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs text-gray-600">チェックインの月</span>
+          <input type="month" name="month" defaultValue={month ?? ""} className={field} />
+        </label>
+        <SubmitButton className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-700">
+          絞り込む
+        </SubmitButton>
+        {(q || month) && (
+          <Link href="/admin/reservations" className="px-2 py-2 text-sm text-gray-600 hover:text-gray-900">
+            条件をクリア
+          </Link>
+        )}
+        <span className="ml-auto self-center text-sm text-gray-500">{reservations.length}件</span>
+      </form>
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
+      {done && (
+        <p className="rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-800">{done}</p>
       )}
 
       {/* 新規予約 */}
@@ -372,10 +413,26 @@ function ReservationCard({
                           {activeKey.door_pin}
                         </span>
                         <form action={revokeDoorPinManually}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <SubmitButton className="rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600 transition hover:bg-red-50">
+                          <ConfirmButton
+                            hidden={{ id: r.id }}
+                            danger
+                            title="ドアPINを無効化します"
+                            message={
+                              <>
+                                <p>
+                                  {custName(r.customers)}様の番号 {activeKey.door_pin} をキーパッドから削除します。
+                                  お客様はこの番号で解錠できなくなります。
+                                </p>
+                                <p className="mt-2">
+                                  すでにお客様へお伝えしている場合は、新しい番号の連絡が必要です。
+                                </p>
+                              </>
+                            }
+                            confirmLabel="はい、無効化する"
+                            className="rounded-lg border border-red-300 px-3 py-1 text-sm text-red-600 transition hover:bg-red-50"
+                          >
                             無効化
-                          </SubmitButton>
+                          </ConfirmButton>
                         </form>
                         <span className="text-xs text-gray-500">
                           キーパッドに「{custName(r.customers)}様 {r.code}」として登録されています
@@ -385,10 +442,23 @@ function ReservationCard({
                       <>
                         <span className="text-sm text-gray-500">未発行</span>
                         <form action={issueDoorPinManually}>
-                          <input type="hidden" name="id" value={r.id} />
-                          <SubmitButton className="rounded-lg bg-cyan-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-cyan-700">
+                          <ConfirmButton
+                            hidden={{ id: r.id }}
+                            title="ドアPINを発行します"
+                            message={
+                              <>
+                                <p>
+                                  {custName(r.customers)}様（{r.check_in} 〜 {r.check_out}）の番号を
+                                  キーパッドに登録します。
+                                </p>
+                                <p className="mt-2">滞在期間だけ有効で、期間外は解錠できません。</p>
+                              </>
+                            }
+                            confirmLabel="はい、発行する"
+                            className="rounded-lg bg-cyan-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-cyan-700"
+                          >
                             ドアPINを発行
-                          </SubmitButton>
+                          </ConfirmButton>
                         </form>
                         <span className="text-xs text-gray-500">
                           滞在期間だけ有効な番号をキーパッドに登録します

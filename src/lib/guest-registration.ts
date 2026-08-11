@@ -7,18 +7,6 @@ import type { createAdminClient } from "./supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-export const GENDERS = [
-  { value: "male", label: "男性" },
-  { value: "female", label: "女性" },
-  { value: "other", label: "その他" },
-] as const;
-
-export function genderLabel(gender: string | null): string {
-  if (!gender) return "未回答";
-  const hit = GENDERS.find((g) => g.value === gender);
-  return hit ? hit.label : "その他";
-}
-
 export function newSecretCode(): string {
   // URL に載るので記号を含まない形にする
   return crypto.randomBytes(16).toString("hex");

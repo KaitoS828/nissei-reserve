@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin/blocked", label: "予約不可" },
   { href: "/admin/ical", label: "iCal連携" },
   { href: "/admin/customers", label: "顧客" },
+  { href: "/admin/guests", label: "宿泊者名簿" },
   { href: "/admin/payments", label: "決済" },
   { href: "/admin/analytics", label: "集計・分析" },
   { href: "/admin/audit", label: "操作履歴" },

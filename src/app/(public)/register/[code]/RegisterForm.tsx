@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { GENDERS } from "@/lib/guest-registration";
+import { GENDERS } from "@/lib/guests";
+import { SubmitButton } from "@/components/SubmitButton";
 import { submitGuestRegistration } from "./actions";
 
 export type ExistingGuest = {
@@ -281,9 +282,12 @@ export function RegisterForm({
         </button>
       )}
 
-      <button className="w-full rounded-full bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700">
+      <SubmitButton
+        pendingLabel="登録しています…"
+        className="w-full rounded-full bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700"
+      >
         この内容で登録する
-      </button>
+      </SubmitButton>
       <p className="text-center text-xs text-gray-500">
         あとからこのページを開き直せば、内容の修正もできます。
       </p>

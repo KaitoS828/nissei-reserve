@@ -32,8 +32,9 @@ function jpDate(date: string): string {
   return `${y}年${m}月${d}日(${w})`;
 }
 
-export function bookingGuideSubject(code: string): string {
-  return `【日靜】ご宿泊のご案内（${code}）`;
+export function bookingGuideSubject(guestName: string | null): string {
+  const name = guestName?.trim();
+  return name ? `【日靜】ご宿泊のご案内（${name}様）` : "【日靜】ご宿泊のご案内";
 }
 
 const escapeHtml = (s: string) =>
@@ -89,7 +90,7 @@ ${input.registerUrl}
       ? `■ 玄関の解錠方法
 ドアコード: ${input.doorPin}
 
-玄関の右側にあるキーパッドに上記の番号を入力してください。
+玄関ドアに付いているキーパッドに上記の番号を入力してください。
 このコードは ${jpDate(input.checkIn)} ${input.checkInTime} から
 ${jpDate(input.checkOut)} ${input.checkOutTime} まで有効です。
 他の方には共有なさらないようお願いいたします。`

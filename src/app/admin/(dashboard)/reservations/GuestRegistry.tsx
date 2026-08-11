@@ -1,4 +1,4 @@
-import { genderLabel } from "@/lib/guest-registration";
+import { genderLabel } from "@/lib/guests";
 
 export type RegistryGuest = {
   guest_order: number;

@@ -8,6 +8,7 @@ import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
 import {
   GUIDE_SELECT,
   guideInput,
+  guestFullName,
   originFromHeaders,
   type GuideFacility,
   type GuideRow,
@@ -344,7 +345,7 @@ export async function sendBookingGuideEmail(formData: FormData) {
   const origin = originFromHeaders(h);
   const secret = await ensureSecretCode(supabase, id);
   const input = guideInput(row, facility as GuideFacility, registerUrl(origin, secret));
-  const subject = bookingGuideSubject(row.code);
+  const subject = bookingGuideSubject(guestFullName(row.customers));
 
   const ok = await sendEmail({ to, subject, html: bookingGuideHtml(input) });
 
@@ -369,6 +370,8 @@ export async function sendBookingGuideEmail(formData: FormData) {
 
   if (!ok) redirectError("メールの送信に失敗しました。設定をご確認ください");
   revalidatePath(PATH);
+  // 押した結果が画面に出ないと、送れたのか分からない
+  redirect(`${PATH}?done=${encodeURIComponent(`${to} へ送信しました`)}`);
 }
 
 export async function unarchiveReservation(formData: FormData) {

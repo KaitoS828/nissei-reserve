@@ -17,8 +17,17 @@ const base: BookingGuideInput = {
 };
 
 describe("bookingGuideSubject", () => {
-  it("予約番号を件名に入れる", () => {
-    assert.equal(bookingGuideSubject(base.code), `【日靜】ご宿泊のご案内（${base.code}）`);
+  it("お名前を件名に入れる", () => {
+    assert.equal(bookingGuideSubject("神部 葵"), "【日靜】ご宿泊のご案内（神部 葵様）");
+  });
+
+  it("前後の空白は落とす", () => {
+    assert.equal(bookingGuideSubject("  神部 葵 "), "【日靜】ご宿泊のご案内（神部 葵様）");
+  });
+
+  it("名前が無ければ「様」だけの件名にしない", () => {
+    assert.equal(bookingGuideSubject(null), "【日靜】ご宿泊のご案内");
+    assert.equal(bookingGuideSubject("  "), "【日靜】ご宿泊のご案内");
   });
 });
 

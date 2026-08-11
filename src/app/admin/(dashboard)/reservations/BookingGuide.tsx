@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 // 手動予約でもそのまま送れるよう、本文をまるごとコピーできるようにする。
 export function BookingGuide({
@@ -21,8 +22,6 @@ export function BookingGuide({
   hasDoorPin: boolean;
 }) {
   const [copied, setCopied] = useState<"subject" | "body" | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const copy = async (kind: "subject" | "body", text: string) => {
     try {
@@ -53,15 +52,34 @@ export function BookingGuide({
         <div className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white px-3 py-2">
           {email ? (
             <>
-              <form ref={formRef} action={sendAction}>
-                <input type="hidden" name="id" value={reservationId} />
-                <button
-                  type={hasDoorPin ? "submit" : "button"}
-                  onClick={hasDoorPin ? undefined : () => setConfirming(true)}
+              <form action={sendAction}>
+                <ConfirmButton
+                  hidden={{ id: reservationId }}
+                  title={lastSentAt ? "このメールを再送します" : "このメールを送信します"}
+                  message={
+                    <>
+                      <p>
+                        {email} 宛に「{subject}」を送信します。お客様に直接届きます。
+                      </p>
+                      {lastSentAt && (
+                        <p className="mt-2 text-amber-700">
+                          このメールは {lastSentAt} に送信済みです。同じ内容がもう一度届きます。
+                        </p>
+                      )}
+                      {!hasDoorPin && (
+                        <p className="mt-2 text-amber-700">
+                          ドアPINが未発行のため、本文には番号が入らず「追ってご連絡いたします」と
+                          記載されます。あとで番号をお伝えする必要があります。
+                        </p>
+                      )}
+                      <p className="mt-2">送信してよろしいですか？</p>
+                    </>
+                  }
+                  confirmLabel="はい、送信する"
                   className="rounded bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-700"
                 >
                   {lastSentAt ? "このメールを再送する" : "このメールを送信する"}
-                </button>
+                </ConfirmButton>
               </form>
               <span className="text-xs text-gray-600">宛先: {email}</span>
               <span className="text-xs text-gray-500">
@@ -107,36 +125,6 @@ export function BookingGuide({
           </pre>
         </div>
       </div>
-      {confirming && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-gray-900">ドアPINが未発行です</h2>
-            <p className="text-sm text-gray-600">
-              このまま送ると、本文には番号が入らず「ドアコードは追ってご連絡いたします」と記載されます。
-              あとで番号をお伝えする必要があります。送信してよろしいですか？
-            </p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirming(false);
-                  formRef.current?.requestSubmit();
-                }}
-                className="w-full rounded-lg bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-700"
-              >
-                このまま送信する
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="w-full rounded-lg border border-gray-300 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                やめる（先にPINを発行する）
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </details>
   );
 }
