@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { SubmitButton } from "@/app/admin/_components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCheckInTime } from "@/lib/reservations";
@@ -19,6 +20,9 @@ import {
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
 import { EditToggle } from "./EditToggle";
+import { BookingGuide } from "./BookingGuide";
+import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
+import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 
 export const dynamic = "force-dynamic";
 
@@ -68,16 +72,51 @@ export default async function ReservationsPage({
     .order("check_in", { ascending: false });
   if (status) q = q.eq("status", status);
 
-  const [{ data: resData }, { data: types }, { data: rooms }, { data: plans }, { data: customers }] =
-    await Promise.all([
-      q,
-      supabase.from("room_types").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("rooms").select("*").eq("is_active", true).order("name"),
-      supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500),
-    ]);
+  const [
+    { data: resData },
+    { data: types },
+    { data: rooms },
+    { data: plans },
+    { data: customers },
+    { data: facility },
+  ] = await Promise.all([
+    q,
+    supabase.from("room_types").select("*").eq("is_active", true).order("sort_order"),
+    supabase.from("rooms").select("*").eq("is_active", true).order("name"),
+    supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
+    supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500),
+    supabase.from("facility").select("check_in_time, check_out_time, phone").limit(1).maybeSingle(),
+  ]);
 
   const reservations = (resData ?? []) as ReservationWithRefs[];
+
+  // 予約時メールの案内文をここで組む。名簿フォームのURLは予約ごとの secret_code で作る。
+  const h = await headers();
+  const origin = h.get("origin") ?? `https://${h.get("host") ?? "reserve.gh-nissei.jp"}`;
+  const guides = new Map<string, { subject: string; body: string }>();
+  await Promise.all(
+    reservations
+      .filter((r) => r.status !== "cancelled")
+      .map(async (r) => {
+        const secret = await ensureSecretCode(supabase, r.id);
+        guides.set(r.id, {
+          subject: bookingGuideSubject(r.code),
+          body: bookingGuideText({
+            guestName: custName(r.customers),
+            code: r.code,
+            checkIn: r.check_in,
+            checkOut: r.check_out,
+            checkInTime: ((facility?.check_in_time as string | null) ?? "15:00").slice(0, 5),
+            checkOutTime: ((facility?.check_out_time as string | null) ?? "10:00").slice(0, 5),
+            numGuests: r.num_guests,
+            planName: r.plans?.name ?? null,
+            doorPin: r.access_keys?.status === "issued" ? r.access_keys.door_pin : null,
+            registerUrl: registerUrl(origin, secret),
+            phone: (facility?.phone as string | null) ?? null,
+          }),
+        });
+      }),
+  );
   const roomTypes = (types ?? []) as RoomType[];
   const roomList = (rooms ?? []) as Room[];
   const planList = (plans ?? []) as Plan[];
@@ -218,6 +257,7 @@ export default async function ReservationsPage({
                           roomList={roomList}
                           planList={planList}
                           customerList={customerList}
+                          guide={guides.get(r.id) ?? null}
                         />
                       ))}
                     </div>
@@ -238,12 +278,14 @@ function ReservationCard({
   roomList,
   planList,
   customerList,
+  guide,
 }: {
   r: ReservationWithRefs;
   roomTypes: RoomType[];
   roomList: Room[];
   planList: Plan[];
   customerList: Customer[];
+  guide: { subject: string; body: string } | null;
 }) {
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
@@ -285,6 +327,8 @@ function ReservationCard({
                     {r.cancel_reason ? ` / ${r.cancel_reason}` : ""}
                   </p>
                 )}
+
+                {guide && <BookingGuide subject={guide.subject} body={guide.body} />}
 
                 <EditToggle
                   actions={
