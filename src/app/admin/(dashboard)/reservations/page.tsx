@@ -24,6 +24,7 @@ import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
 import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
+import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import {
@@ -125,7 +126,13 @@ export default async function ReservationsPage({
           .order("sent_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     ids.length
-      ? supabase.from("reservation_guests").select("reservation_id").in("reservation_id", ids)
+      ? supabase
+          .from("reservation_guests")
+          .select(
+            "reservation_id, guest_order, full_name, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url",
+          )
+          .in("reservation_id", ids)
+          .order("guest_order")
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -136,9 +143,11 @@ export default async function ReservationsPage({
       lastSent.set(d.reservation_id, jstDateTime(d.sent_at));
     }
   }
-  const guestCount = new Map<string, number>();
-  for (const g of (registered ?? []) as { reservation_id: string }[]) {
-    guestCount.set(g.reservation_id, (guestCount.get(g.reservation_id) ?? 0) + 1);
+  const registry = new Map<string, RegistryGuest[]>();
+  for (const g of (registered ?? []) as (RegistryGuest & { reservation_id: string })[]) {
+    const list = registry.get(g.reservation_id) ?? [];
+    list.push(g);
+    registry.set(g.reservation_id, list);
   }
 
   // 予約時メールの案内文をここで組む。名簿フォームのURLは予約ごとの secret_code で作る。
@@ -278,7 +287,7 @@ export default async function ReservationsPage({
                 customerList={customerList}
                 guide={guides.get(r.id) ?? null}
                 lastSentAt={lastSent.get(r.id) ?? null}
-                registeredGuests={guestCount.get(r.id) ?? 0}
+                registry={registry.get(r.id) ?? []}
               />
             </div>
           );
@@ -296,7 +305,7 @@ function ReservationCard({
   customerList,
   guide,
   lastSentAt,
-  registeredGuests,
+  registry,
 }: {
   r: ReservationWithRefs;
   roomTypes: RoomType[];
@@ -305,7 +314,7 @@ function ReservationCard({
   customerList: Customer[];
   guide: { subject: string; body: string } | null;
   lastSentAt: string | null;
-  registeredGuests: number;
+  registry: RegistryGuest[];
 }) {
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
@@ -396,19 +405,9 @@ function ReservationCard({
                   </p>
                 )}
 
-                {/* 名簿は法令上の記録なので、揃っているかを一覧から見えるようにする */}
+                {/* 名簿は法令上の記録なので、内容をそのまま確認できるようにする */}
                 {r.status !== "cancelled" && (
-                  <p className="text-sm">
-                    <span className="text-gray-600">宿泊者名簿: </span>
-                    <span
-                      className={
-                        registeredGuests >= r.num_guests ? "text-emerald-700" : "text-amber-700"
-                      }
-                    >
-                      {registeredGuests} / {r.num_guests} 名
-                      {registeredGuests >= r.num_guests ? "（記入済み）" : "（未記入あり）"}
-                    </span>
-                  </p>
+                  <GuestRegistry guests={registry} numGuests={r.num_guests} />
                 )}
 
                 {guide && (
