@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { auditLog } from "@/lib/audit";
+import { dict, isLocale, type Locale } from "@/lib/i18n";
 
 // ドアPINは URL に載せない（共有・履歴・Referer に残るため）。
 // 照会は GET ではなく Server Action で受けて、結果を state で返す。
@@ -29,7 +30,6 @@ export type CheckinState =
     };
 
 // 予約の存在を推測されないよう、番号違いもメール違いも同じ文言にする。
-const NOT_FOUND = "予約が見つかりませんでした。予約番号とメールアドレスをご確認ください。";
 
 /** UTC の timestamptz を「YYYY-MM-DD HH:MM」(JST) にする。 */
 function jst(iso: string | null): string | null {
@@ -46,7 +46,8 @@ type Loaded = {
   state: Extract<CheckinState, { status: "ok" }>;
 };
 
-async function load(code: string, email: string): Promise<Loaded | string> {
+async function load(code: string, email: string, locale: Locale): Promise<Loaded | string> {
+  const t = dict(locale).checkin;
   const supabase = createAdminClient();
   const { data: resv } = await supabase
     .from("reservations")
@@ -59,17 +60,17 @@ async function load(code: string, email: string): Promise<Loaded | string> {
   const cust = resv?.customers as unknown as
     | { email: string | null; last_name: string | null; first_name: string | null }
     | null;
-  if (!resv || cust?.email?.trim().toLowerCase() !== email) return NOT_FOUND;
+  if (!resv || cust?.email?.trim().toLowerCase() !== email) return t.notFound;
 
   switch (resv.status) {
     case "cancelled":
-      return "この予約はキャンセルされています。";
+      return t.cancelled;
     case "checked_out":
-      return "チェックアウト済みの予約です。";
+      return t.checkedOut;
     case "pending":
-      return "決済の確認が取れていません。しばらく経ってから再度お試しください。";
+      return t.unpaid;
     case "no_show":
-      return "この予約はご利用いただけません。宿までお問い合わせください。";
+      return t.noShow;
   }
 
   const { data: facility } = await supabase
@@ -113,9 +114,12 @@ export async function checkinAction(
   const code = String(formData.get("code") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const intent = String(formData.get("intent") ?? "verify");
+  const raw = String(formData.get("locale") ?? "ja");
+  const locale: Locale = isLocale(raw) ? raw : "ja";
+  const t = dict(locale).checkin;
 
   if (!code || !email) {
-    return { status: "error", message: "予約番号とメールアドレスを入力してください。", code, email };
+    return { status: "error", message: t.notFound, code, email };
   }
 
   // 番号とメールの総当たりを止める
@@ -123,13 +127,13 @@ export async function checkinAction(
   if (!limited.ok) {
     return {
       status: "error",
-      message: `試行回数が多すぎます。${Math.ceil(limited.retryAfterSec / 60)}分ほど経ってからお試しください。`,
+      message: t.tooMany,
       code,
       email,
     };
   }
 
-  const loaded = await load(code, email);
+  const loaded = await load(code, email, locale);
   if (typeof loaded === "string") {
     return { status: "error", message: loaded, code, email };
   }
@@ -142,7 +146,7 @@ export async function checkinAction(
     .update({ status: "checked_in", updated_at: new Date().toISOString() })
     .eq("id", loaded.id);
   if (error) {
-    return { status: "error", message: "チェックインの記録に失敗しました。宿までご連絡ください。", code, email };
+    return { status: "error", message: t.contactUs, code, email };
   }
 
   await auditLog(supabase, {
