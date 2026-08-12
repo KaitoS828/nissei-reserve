@@ -7,8 +7,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { logout } from "@/app/admin/login/actions";
 
 type NavItem = { href: string; label: string };
+type NavGroup = { group: string; items: NavItem[] };
 
-export function AdminNav({ items }: { items: NavItem[] }) {
+export function AdminNav({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -27,19 +28,26 @@ export function AdminNav({ items }: { items: NavItem[] }) {
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   const links = (
-    <nav className="flex flex-col gap-0.5 p-3">
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={`block rounded-lg px-3 py-2.5 text-sm transition md:py-2 ${
-            isActive(item.href)
-              ? "bg-cyan-50 font-medium text-cyan-800"
-              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-          }`}
-        >
-          {item.label}
-        </Link>
+    <nav className="flex flex-col gap-4 p-3">
+      {groups.map((g) => (
+        <div key={g.group} className="flex flex-col gap-0.5">
+          <p className="px-3 pb-1 text-[11px] font-medium tracking-wide text-gray-400">
+            {g.group}
+          </p>
+          {g.items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block rounded-lg px-3 py-2.5 text-sm transition md:py-2 ${
+                isActive(item.href)
+                  ? "bg-cyan-50 font-medium text-cyan-800"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
       ))}
     </nav>
   );

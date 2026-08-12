@@ -84,18 +84,29 @@ const custName = (c: ReservationWithRefs["customers"]) =>
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string; done?: string; q?: string; month?: string }>;
+  searchParams: Promise<{ status?: string; error?: string; done?: string; q?: string; month?: string; range?: string }>;
 }) {
-  const { status, error, done, q, month } = await searchParams;
+  const { status, error, done, q, month, range } = await searchParams;
   const supabase = createAdminClient();
+
+  // 既定は「これから」。日々の運用では近い予約から見たいので、先の予約が
+  // 先頭に来る降順は既定にしない。月を指定したときはその月をそのまま出す。
+  const view = month ? "all" : (range ?? "upcoming");
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
 
   let query = supabase
     .from("reservations")
     .select(
       "*, customers(id,last_name,first_name,email), room_types(id,name), rooms(id,name), plans(id,name), access_keys(door_pin,status)",
     )
-    .is("archived_at", null)
-    .order("check_in", { ascending: false });
+    .is("archived_at", null);
+  if (view === "upcoming") {
+    query = query.gte("check_out", today).order("check_in", { ascending: true });
+  } else if (view === "past") {
+    query = query.lt("check_out", today).order("check_in", { ascending: false });
+  } else {
+    query = query.order("check_in", { ascending: false });
+  }
   if (status) query = query.eq("status", status);
   // 月指定はチェックイン日で絞る
   if (month && /^\d{4}-\d{2}$/.test(month)) {
@@ -222,6 +233,35 @@ export default async function ReservationsPage({
         )}
         <span className="ml-auto self-center text-sm text-gray-500">{reservations.length}件</span>
       </form>
+
+      {!month && (
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "upcoming", label: "これから" },
+            { key: "past", label: "過去" },
+            { key: "all", label: "すべて" },
+          ].map((t) => {
+            const params = new URLSearchParams();
+            if (t.key !== "upcoming") params.set("range", t.key);
+            if (status) params.set("status", status);
+            if (q) params.set("q", q);
+            const href = `/admin/reservations${params.size ? `?${params}` : ""}`;
+            return (
+              <Link
+                key={t.key}
+                href={href}
+                className={`rounded-full px-3 py-1 text-sm transition ${
+                  view === t.key
+                    ? "bg-cyan-600 font-medium text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

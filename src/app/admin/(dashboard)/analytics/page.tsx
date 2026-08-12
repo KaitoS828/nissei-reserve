@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationStatus } from "@/types/db";
 
@@ -21,12 +22,28 @@ function monthKey(d: string) {
   return d.slice(0, 7);
 }
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const { year: yearParam, month: monthParam } = await searchParams;
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reservations")
     .select("status, payment_status, amount, check_in, nights");
-  const rows = (data ?? []) as Row[];
+  const all = (data ?? []) as Row[];
+
+  // 期間の指定はチェックイン日で行う。未指定なら今年。
+  const years = [...new Set(all.map((r) => r.check_in.slice(0, 4)))].sort().reverse();
+  const thisYear = String(new Date().getFullYear());
+  const year = yearParam && years.includes(yearParam) ? yearParam : (years.includes(thisYear) ? thisYear : years[0] ?? thisYear);
+  const month = monthParam && /^\d{2}$/.test(monthParam) ? monthParam : "";
+
+  const rows = all.filter((r) =>
+    month ? r.check_in.slice(0, 7) === `${year}-${month}` : r.check_in.slice(0, 4) === year,
+  );
+  const periodLabel = month ? `${year}年${Number(month)}月` : `${year}年`;
 
   const total = rows.length;
   const byStatus = (s: ReservationStatus) => rows.filter((r) => r.status === s).length;
@@ -37,17 +54,19 @@ export default async function AnalyticsPage() {
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
 
-  // 直近6ヶ月の売上（チェックイン月・paid）
-  const now = new Date();
-  const months: { key: string; label: string }[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${d.getMonth() + 1}月` });
-  }
-  const monthlyRevenue = months.map((m) => ({
-    ...m,
-    value: rows.filter((r) => r.payment_status === "paid" && monthKey(r.check_in) === m.key).reduce((s, r) => s + r.amount, 0),
-  }));
+  // 選んだ年の12ヶ月。月を選んでいても年間の推移は出す（比較できるように）。
+  const yearRows = all.filter((r) => r.check_in.slice(0, 4) === year);
+  const monthlyRevenue = Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, "0");
+    return {
+      key: `${year}-${mm}`,
+      mm,
+      label: `${i + 1}`,
+      value: yearRows
+        .filter((r) => r.payment_status === "paid" && monthKey(r.check_in) === `${year}-${mm}`)
+        .reduce((s, r) => s + r.amount, 0),
+    };
+  });
   const maxRev = Math.max(1, ...monthlyRevenue.map((m) => m.value));
 
   const cards = [
@@ -61,8 +80,49 @@ export default async function AnalyticsPage() {
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-semibold text-gray-900">集計・分析</h1>
-        <p className="mt-1 text-sm text-gray-600">予約・売上・キャンセルの集計</p>
+        <p className="mt-1 text-sm text-gray-600">
+          予約・売上・キャンセルの集計（{periodLabel}／チェックイン日で集計）
+        </p>
       </header>
+
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500">年</span>
+          {years.map((y) => (
+            <Link
+              key={y}
+              href={`/admin/analytics?year=${y}`}
+              className={`rounded-full px-3 py-1 text-sm transition ${
+                y === year ? "bg-cyan-600 font-medium text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {y}年
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500">月</span>
+          <Link
+            href={`/admin/analytics?year=${year}`}
+            className={`rounded-full px-3 py-1 text-sm transition ${
+              !month ? "bg-cyan-600 font-medium text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            通年
+          </Link>
+          {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((mm) => (
+            <Link
+              key={mm}
+              href={`/admin/analytics?year=${year}&month=${mm}`}
+              className={`rounded-full px-3 py-1 text-sm transition ${
+                mm === month ? "bg-cyan-600 font-medium text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {Number(mm)}月
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
@@ -76,7 +136,7 @@ export default async function AnalyticsPage() {
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 月別売上 */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 font-medium text-gray-900">月別売上（直近6ヶ月）</h2>
+          <h2 className="mb-4 font-medium text-gray-900">{year}年の月別売上</h2>
           <div className="flex h-48 items-end justify-between gap-3">
             {monthlyRevenue.map((m) => (
               <div key={m.key} className="flex flex-1 flex-col items-center gap-2">
