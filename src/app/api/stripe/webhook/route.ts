@@ -6,7 +6,7 @@ import { sendEmail, ownerBookingHtml, ownerEmails } from "@/lib/email";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
 import { GUIDE_SELECT, guideInput, type GuideFacility, type GuideRow } from "@/lib/booking-guide-server";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
-import { notifyOwner, newBookingMessage } from "@/lib/notify";
+import { notifyOwner, newBookingMessage, notifyFailure } from "@/lib/notify";
 import { gcalCreateEvent } from "@/lib/gcal";
 import { issueDoorPin } from "@/lib/smart-lock";
 import { releaseUnpaidHold } from "@/lib/hold";
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
           checkOutTime: (facility?.check_out_time as string | null)?.slice(0, 5),
           code: info.code,
           guestName: info.name,
-        }).catch((e) => console.error("ドアPINの発行に失敗:", e));
+        }).catch((e) => notifyFailure("ドアPINの発行", e, { 予約: info.code }));
 
         // 案内メールは PIN を載せたいので、発行のあとに送る。
         // 管理画面から送るものと同じ本文・同じ組み立てを使う。
@@ -135,6 +135,7 @@ export async function POST(req: NextRequest) {
             guideInput(guideRow as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
           );
           const ok = await sendEmail({ to: cust.email, subject, html }).catch(() => false);
+          if (!ok) await notifyFailure("予約時メールの自動送信", "送信に失敗", { 予約: info.code, 宛先: cust.email });
 
           // 管理画面の送信履歴と同じ場所に残す。送れたかどうかを後から確認できる。
           await supabase.from("guest_message_deliveries").insert({

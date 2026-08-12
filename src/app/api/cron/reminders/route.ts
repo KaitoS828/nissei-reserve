@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { originFromHeaders } from "@/lib/booking-guide-server";
 import { reminderHtml, reminderSubject, tomorrowJst } from "@/lib/reminder";
+import { notifyFailure } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ async function handle(req: NextRequest) {
         phone: (facility?.phone as string | null) ?? null,
       }),
     }).catch(() => false);
+    if (!ok) await notifyFailure("前日リマインドの送信", "送信に失敗", { 予約: r.code, 宛先: to });
 
     await supabase.from("guest_message_deliveries").insert({
       reservation_id: r.id,

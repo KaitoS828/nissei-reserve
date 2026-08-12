@@ -12,6 +12,7 @@
 
 import crypto from "crypto";
 import { createAdminClient } from "./supabase/admin";
+import { notifyFailure } from "./notify";
 
 const API = "https://api.switch-bot.com/v1.1";
 
@@ -217,8 +218,8 @@ export async function revokeDoorPin(reservationId: string): Promise<void> {
       // keyList に無い＝キーパッドに登録されていない。消す対象が無いので正常扱い。
       removed = await revokeByCode(cred, resv.code as string);
     } catch (e) {
-      console.error("SwitchBot の鍵削除に失敗:", e);
       problem = "キーパッド未削除（手動削除が必要）";
+      await notifyFailure("キーパッドの鍵削除", e, { 予約: resv?.code as string });
     }
   }
 

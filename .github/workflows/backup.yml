@@ -1,0 +1,47 @@
+name: バックアップ
+
+# 予約・名簿・決済記録は失うと復旧できない。名簿は法令上の保存義務もある。
+# Supabase と同じ場所に置くと共倒れになるので、GitHub 側に保管する。
+on:
+  schedule:
+    - cron: "0 18 * * *" # JST 03:00
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 各テーブルを書き出す
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          # 失うと困る順。マスタは移行SQLから作り直せるので対象外。
+          for t in reservations customers reservation_guests reservation_checkins \
+                   access_keys payments guest_message_deliveries blocked_dates \
+                   plans plan_prices room_types rooms facility audit_logs; do
+            code=$(curl -s -o "backup/$t.json" -w "%{http_code}" \
+              "$URL/rest/v1/$t?select=*" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+            n=$(python3 -c "import json;print(len(json.load(open('backup/$t.json'))))" 2>/dev/null || echo "?")
+            echo "$t: HTTP $code / $n 件"
+            # 1つでも取れなければ失敗にする。欠けたバックアップは無いのと同じ。
+            [ "$code" = "200" ] || exit 1
+          done
+
+      - name: 保管する
+        uses: actions/upload-artifact@v4
+        with:
+          name: nissei-backup-${{ github.run_id }}
+          path: backup/
+          retention-days: 90
+
+      - name: 失敗を知らせる
+        if: failure()
+        env:
+          SLACK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK" ] && exit 0
+          curl -s -X POST "$SLACK" -H 'Content-Type: application/json' \
+            -d '{"text":"⚠️ *バックアップに失敗しました*\nGitHub Actions の実行ログをご確認ください。"}'

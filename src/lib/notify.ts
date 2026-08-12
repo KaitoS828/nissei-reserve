@@ -29,6 +29,27 @@ export async function notifyOwner(text: string): Promise<boolean> {
   return false;
 }
 
+// 失敗しても予約フローは止めない方針のため、握りつぶした箇所は画面に何も出ない。
+// そのままだと「動いていないこと」に誰も気づけない（4桁PINで鍵が一度も
+// 作られていなかったのが実例）。運用に影響するものはここから知らせる。
+export async function notifyFailure(
+  where: string,
+  detail: unknown,
+  context?: Record<string, string | number | null | undefined>,
+): Promise<void> {
+  const message = detail instanceof Error ? detail.message : String(detail);
+  const lines = [
+    "⚠️ **処理に失敗しました**",
+    `箇所: ${where}`,
+    `内容: ${message.slice(0, 300)}`,
+  ];
+  for (const [k, v] of Object.entries(context ?? {})) {
+    if (v !== undefined && v !== null && v !== "") lines.push(`${k}: ${v}`);
+  }
+  console.error(`[failure] ${where}: ${message}`, context ?? {});
+  await notifyOwner(lines.join("\n")).catch(() => {});
+}
+
 export function newBookingMessage(p: {
   code: string; name: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number;
 }): string {
