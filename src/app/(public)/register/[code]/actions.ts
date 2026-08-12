@@ -4,20 +4,26 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { uploadPassportImage } from "@/lib/passport-storage";
+import { dict, isLocale, type Locale } from "@/lib/i18n";
 
 const str = (formData: FormData, key: string) => String(formData.get(key) ?? "").trim();
 const nullable = (formData: FormData, key: string) => str(formData, key) || null;
 
-function back(code: string, msg: string): never {
-  redirect(`/register/${code}?error=${encodeURIComponent(msg)}`);
+function back(code: string, msg: string, locale: Locale = "ja"): never {
+  const base = locale === "en" ? "/en/register" : "/register";
+  redirect(`${base}/${code}?error=${encodeURIComponent(msg)}`);
 }
 
 export async function submitGuestRegistration(formData: FormData) {
   const code = str(formData, "secret_code");
   if (!code) redirect("/");
 
+  const rawLocale = String(formData.get("locale") ?? "ja");
+  const locale: Locale = isLocale(rawLocale) ? rawLocale : "ja";
+  const t = dict(locale).register;
+
   const limited = rateLimit(`register:${await clientIp()}`, 30, 10 * 60_000);
-  if (!limited.ok) back(code, "送信が続いています。しばらく経ってからお試しください。");
+  if (!limited.ok) back(code, dict(locale).checkin.tooMany, locale);
 
   const count = Math.max(1, Number(formData.get("guest_count") ?? 1));
 
@@ -27,7 +33,7 @@ export async function submitGuestRegistration(formData: FormData) {
     .select("reservation_id")
     .eq("secret_code", code)
     .maybeSingle();
-  if (!checkin) back(code, "ご予約が見つかりません");
+  if (!checkin) back(code, t.invalidUrl, locale);
   const reservationId = checkin.reservation_id as string;
 
   // 全員分をまとめて受け取る。1件でも不備があれば、何も保存せず入力画面に戻す。
@@ -40,14 +46,14 @@ export async function submitGuestRegistration(formData: FormData) {
     // 後半の方をまだ入力していない場合は、そこまでを保存して終える
     if (!fullName && !address && !contact) continue;
     if (!fullName || !address || !contact) {
-      back(code, `${i}人目の氏名・住所・連絡先をご記入ください`);
+      back(code, `${t.person} ${i}: ${t.errName} / ${t.errAddress} / ${t.errContact}`, locale);
     }
 
     const isForeign = formData.get(`is_foreign_national_${i}`) === "on";
     const nationality = nullable(formData, `nationality_${i}`);
     const passportNumber = nullable(formData, `passport_number_${i}`);
     if (isForeign && (!nationality || !passportNumber)) {
-      back(code, `${i}人目の国籍と旅券番号をご記入ください`);
+      back(code, `${t.person} ${i}: ${t.errNationality} / ${t.errPassportNo}`, locale);
     }
 
     // 旅券の写しは非公開バケットへ。保存するのはパスだけで、公開URLは作らない。
@@ -55,7 +61,7 @@ export async function submitGuestRegistration(formData: FormData) {
     let passportPath: string | null = null;
     if (file instanceof File && file.size > 0) {
       const up = await uploadPassportImage(supabase, file, reservationId, i);
-      if (!up.ok) back(code, `${i}人目の旅券の写し: ${up.reason}`);
+      if (!up.ok) back(code, `${t.person} ${i}: ${up.reason}`, locale);
       passportPath = up.path;
     }
 
@@ -75,7 +81,7 @@ export async function submitGuestRegistration(formData: FormData) {
     });
   }
 
-  if (rows.length === 0) back(code, "少なくとも1人分のご記入をお願いいたします");
+  if (rows.length === 0) back(code, t.errAtLeastOne, locale);
 
   const { error } = await supabase
     .from("reservation_guests")
@@ -83,7 +89,7 @@ export async function submitGuestRegistration(formData: FormData) {
       rows.map((r) => ({ ...r, reservation_id: reservationId })),
       { onConflict: "reservation_id,guest_order" },
     );
-  if (error) back(code, error.message);
+  if (error) back(code, error.message, locale);
 
   await supabase
     .from("reservation_checkins")
@@ -94,5 +100,5 @@ export async function submitGuestRegistration(formData: FormData) {
     })
     .eq("reservation_id", reservationId);
 
-  redirect(`/register/${code}?done=${rows.length}`);
+  redirect(`${locale === "en" ? "/en/register" : "/register"}/${code}?done=${rows.length}`);
 }

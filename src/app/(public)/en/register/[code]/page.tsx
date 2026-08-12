@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { RegisterScreen } from "./RegisterScreen";
+import { RegisterScreen } from "@/app/(public)/register/[code]/RegisterScreen";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "宿泊者名簿のご記入",
+  title: "Guest register",
   robots: { index: false, follow: false },
 };
 
-export default async function RegisterPage({
+export default async function EnRegisterPage({
   params,
   searchParams,
 }: {
@@ -17,5 +17,5 @@ export default async function RegisterPage({
 }) {
   const { code } = await params;
   const { error, done } = await searchParams;
-  return <RegisterScreen code={code} error={error} done={done} locale="ja" />;
+  return <RegisterScreen code={code} error={error} done={done} locale="en" />;
 }

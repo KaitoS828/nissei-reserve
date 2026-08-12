@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { GENDERS } from "@/lib/guests";
+import { dict, type Locale } from "@/lib/i18n";
 import { SubmitButton } from "@/components/SubmitButton";
 import { submitGuestRegistration } from "./actions";
 
@@ -30,11 +31,15 @@ export function RegisterForm({
   secretCode,
   numGuests,
   existing,
+  locale = "ja",
 }: {
   secretCode: string;
   numGuests: number;
   existing: ExistingGuest[];
+  locale?: Locale;
 }) {
+  const t = dict(locale).register;
+  const c = dict(locale).common;
   const [errors, setErrors] = useState<Errors>({});
   const [summary, setSummary] = useState<string | null>(null);
   // 一度に全員分の空欄を並べると圧が強いので、1人ずつ増やしていく
@@ -64,34 +69,34 @@ export function RegisterForm({
       if (!any) continue;
       filled += 1;
 
-      if (!name) next[`full_name_${i}`] = "お名前をご記入ください";
-      if (!address) next[`address_${i}`] = "ご住所をご記入ください";
+      if (!name) next[`full_name_${i}`] = t.errName;
+      if (!address) next[`address_${i}`] = t.errAddress;
       if (!contact) {
-        next[`contact_${i}`] = "ご連絡先をご記入ください";
+        next[`contact_${i}`] = t.errContact;
       } else if (!/^[0-9+\-() 　]{8,}$/.test(contact) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact)) {
-        next[`contact_${i}`] = "電話番号またはメールアドレスの形式でご記入ください";
+        next[`contact_${i}`] = t.errContactFormat;
       }
 
       const birth = get(`birth_date_${i}`);
       if (birth && new Date(birth) > new Date()) {
-        next[`birth_date_${i}`] = "生年月日が未来の日付になっています";
+        next[`birth_date_${i}`] = t.errBirth;
       }
 
       if (checked(`is_foreign_national_${i}`)) {
-        if (!get(`nationality_${i}`)) next[`nationality_${i}`] = "国籍をご記入ください";
-        if (!get(`passport_number_${i}`)) next[`passport_number_${i}`] = "旅券番号をご記入ください";
+        if (!get(`nationality_${i}`)) next[`nationality_${i}`] = t.errNationality;
+        if (!get(`passport_number_${i}`)) next[`passport_number_${i}`] = t.errPassportNo;
         // 法令上、国内に住所の無い方は旅券の写しの保存が要る
         const file = (form.elements.namedItem(`passport_image_${i}`) as HTMLInputElement | null)
           ?.files?.[0];
         if (!file && !find(i)?.passport_image_url) {
-          next[`passport_image_${i}`] = "旅券（パスポート）の写しをご添付ください";
+          next[`passport_image_${i}`] = t.errPassportImage;
         } else if (file && file.size > 10 * 1024 * 1024) {
-          next[`passport_image_${i}`] = "ファイルサイズは10MBまでにしてください";
+          next[`passport_image_${i}`] = t.errFileSize;
         }
       }
     }
 
-    if (filled === 0) next.__form = "少なくとも1人分のご記入をお願いいたします";
+    if (filled === 0) next.__form = t.errAtLeastOne;
     return next;
   }
 
@@ -112,7 +117,7 @@ export function RegisterForm({
       e.preventDefault();
       setErrors(found);
       setSummary(
-        found.__form ?? `ご記入内容に${Object.keys(found).length}件の不備があります。赤い箇所をご確認ください。`,
+        found.__form ?? t.errSummary(Object.keys(found).length),
       );
       form.querySelector<HTMLElement>("[data-invalid='true']")?.scrollIntoView({
         behavior: "smooth",
@@ -141,6 +146,7 @@ export function RegisterForm({
     <form ref={formRef} action={submitGuestRegistration} onSubmit={onSubmit} noValidate className="space-y-6">
       <input type="hidden" name="secret_code" value={secretCode} />
       <input type="hidden" name="guest_count" value={visible} />
+      <input type="hidden" name="locale" value={locale} />
 
       {summary && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{summary}</p>
@@ -155,45 +161,45 @@ export function RegisterForm({
             className="space-y-4 rounded-2xl border border-gray-200 p-6"
           >
             <legend className="px-2 text-sm font-medium text-gray-900">
-              {i}人目の方{i === 1 ? "（代表者）" : ""}
+              {t.person} {i}{i === 1 ? t.representative : ""}
             </legend>
 
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">お名前 <span className="text-red-500">*</span></span>
+              <span className="text-sm text-gray-700">{t.fullName} <span className="text-red-500">*</span></span>
               <input name={`full_name_${i}`} defaultValue={g?.full_name ?? ""} className={cls(`full_name_${i}`)} />
               <Err name={`full_name_${i}`} />
             </label>
 
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">ご住所 <span className="text-red-500">*</span></span>
+              <span className="text-sm text-gray-700">{t.address} <span className="text-red-500">*</span></span>
               <input
                 name={`address_${i}`}
                 defaultValue={g?.address ?? ""}
-                placeholder="都道府県から番地まで"
+                placeholder={t.addressHint}
                 className={cls(`address_${i}`)}
               />
               <Err name={`address_${i}`} />
             </label>
 
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">ご連絡先 <span className="text-red-500">*</span></span>
+              <span className="text-sm text-gray-700">{t.contact} <span className="text-red-500">*</span></span>
               <input
                 name={`contact_${i}`}
                 defaultValue={g?.contact ?? ""}
-                placeholder="電話番号またはメールアドレス"
+                placeholder={t.contactHint}
                 className={cls(`contact_${i}`)}
               />
               <Err name={`contact_${i}`} />
             </label>
 
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">ご職業</span>
+              <span className="text-sm text-gray-700">{t.occupation}</span>
               <input name={`occupation_${i}`} defaultValue={g?.occupation ?? ""} className={cls(`occupation_${i}`)} />
             </label>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block space-y-1">
-                <span className="text-sm text-gray-700">生年月日</span>
+                <span className="text-sm text-gray-700">{t.birthDate}</span>
                 <input
                   type="date"
                   name={`birth_date_${i}`}
@@ -203,9 +209,9 @@ export function RegisterForm({
                 <Err name={`birth_date_${i}`} />
               </label>
               <label className="block space-y-1">
-                <span className="text-sm text-gray-700">性別</span>
+                <span className="text-sm text-gray-700">{t.gender}</span>
                 <select name={`gender_${i}`} defaultValue={g?.gender ?? ""} className={cls(`gender_${i}`)}>
-                  <option value="">未回答</option>
+                  <option value="">{t.noAnswer}</option>
                   {GENDERS.map((x) => (
                     <option key={x.value} value={x.value}>{x.label}</option>
                   ))}
@@ -221,18 +227,18 @@ export function RegisterForm({
                   defaultChecked={g?.is_foreign_national ?? false}
                   className="h-4 w-4"
                 />
-                日本国内に住所をお持ちでない方
+                {t.foreign}
               </label>
               <p className="text-xs text-gray-500">
-                該当する場合、法令により国籍と旅券番号の記載が必要です。
+                {t.foreignNote}
               </p>
               <label className="block space-y-1">
-                <span className="text-sm text-gray-700">国籍</span>
+                <span className="text-sm text-gray-700">{t.nationality}</span>
                 <input name={`nationality_${i}`} defaultValue={g?.nationality ?? ""} className={cls(`nationality_${i}`)} />
                 <Err name={`nationality_${i}`} />
               </label>
               <label className="block space-y-1">
-                <span className="text-sm text-gray-700">旅券番号</span>
+                <span className="text-sm text-gray-700">{t.passportNo}</span>
                 <input
                   name={`passport_number_${i}`}
                   defaultValue={g?.passport_number ?? ""}
@@ -241,7 +247,7 @@ export function RegisterForm({
                 <Err name={`passport_number_${i}`} />
               </label>
               <label className="block space-y-1">
-                <span className="text-sm text-gray-700">旅券（パスポート）の写し</span>
+                <span className="text-sm text-gray-700">{t.passportImage}</span>
                 <input
                   type="file"
                   name={`passport_image_${i}`}
@@ -249,8 +255,8 @@ export function RegisterForm({
                   className={`${cls(`passport_image_${i}`)} file:mr-3 file:rounded file:border-0 file:bg-gray-200 file:px-3 file:py-1 file:text-sm`}
                 />
                 <span className="block text-xs text-gray-500">
-                  顔写真のページを撮影したものをご添付ください（JPEG・PNG・WebP・PDF、10MBまで）。
-                  {g?.passport_image_url ? "すでに登録済みです。差し替える場合のみお選びください。" : ""}
+                  {t.passportImageHint}
+                  {g?.passport_image_url ? ` ${t.alreadyUploaded}` : ""}
                 </span>
                 <Err name={`passport_image_${i}`} />
               </label>
@@ -269,7 +275,7 @@ export function RegisterForm({
             const found = validate(form);
             if (Object.keys(found).length > 0) {
               setErrors(found);
-              setSummary(found.__form ?? "先に上のご記入内容をご確認ください。");
+              setSummary(found.__form ?? t.errSummary(Object.keys(found).length));
               return;
             }
             setErrors({});
@@ -278,26 +284,25 @@ export function RegisterForm({
           }}
           className="w-full rounded-full border border-gray-300 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          ＋ 次の人を登録する（{visible} / {numGuests} 名記入中）
+          {t.addNext}（{visible} / {numGuests}）
         </button>
       )}
 
       <SubmitButton
-        pendingLabel="登録しています…"
+        pendingLabel={c.loading}
         className="w-full rounded-full bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700"
       >
-        この内容で登録する
+        {t.submitAll}
       </SubmitButton>
       <p className="text-center text-xs text-gray-500">
-        あとからこのページを開き直せば、内容の修正もできます。
+        {t.editLater}
       </p>
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-gray-900">全員分の名簿が未登録です</h2>
+            <h2 className="text-base font-semibold text-gray-900">{t.confirmTitle}</h2>
             <p className="text-sm text-gray-600">
-              ご予約は{numGuests}名ですが、現在{pending.done}名分のご記入です。
-              このまま登録することもできますが、ご宿泊までに全員分のご記入をお願いいたします。
+              {t.confirmBody(pending.done, numGuests)}
             </p>
             <div className="space-y-2">
               <button
@@ -309,14 +314,14 @@ export function RegisterForm({
                 }}
                 className="w-full rounded-full bg-gray-900 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
               >
-                このまま{pending.done}名分を登録する
+                {t.confirmYes(pending.done)}
               </button>
               <button
                 type="button"
                 onClick={() => setPending(null)}
                 className="w-full rounded-full border border-gray-300 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
               >
-                戻って記入する
+                {t.confirmNo}
               </button>
             </div>
           </div>
