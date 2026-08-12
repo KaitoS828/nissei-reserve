@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
+import { CHECKOUT_WINDOW_MINUTES } from "@/lib/hold";
 import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
@@ -165,8 +166,11 @@ export async function startCheckout(formData: FormData) {
       },
     ],
     metadata: { reservation_id: resv.id, code: resv.code },
+    // 期限切れを Stripe に通知させて、掴んだ在庫を確実に解放する
+    expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_WINDOW_MINUTES * 60,
     success_url: `${origin}/reserve/complete?code=${resv.code}&token=${lookupToken}`,
-    cancel_url: `${origin}/reserve/${planId}?from=${from}&to=${to}`,
+    // 戻ってきた時点で在庫を解放する。戻り先で放置されると他のお客様が予約できない。
+    cancel_url: `${origin}/reserve/abandon?id=${resv.id}&plan=${planId}&from=${from}&to=${to}`,
   });
 
   if (!session.url) fail(planId, "決済セッションの作成に失敗しました");

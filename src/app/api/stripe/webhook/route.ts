@@ -9,6 +9,7 @@ import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { notifyOwner, newBookingMessage } from "@/lib/notify";
 import { gcalCreateEvent } from "@/lib/gcal";
 import { issueDoorPin } from "@/lib/smart-lock";
+import { releaseUnpaidHold } from "@/lib/hold";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -25,6 +26,22 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "signature error";
     return NextResponse.json({ error: `Webhook検証失敗: ${msg}` }, { status: 400 });
+  }
+
+  // 決済されないまま期限切れになったら在庫を解放する。
+  // これが無いと、決済画面で離脱した日程が塞がったままになる。
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const reservationId = session.metadata?.reservation_id;
+    if (reservationId) {
+      const released = await releaseUnpaidHold(
+        createAdminClient(),
+        reservationId,
+        "決済期限切れのため解放",
+      );
+      if (released) console.info(`未決済の仮予約を解放しました: ${reservationId}`);
+    }
+    return NextResponse.json({ received: true });
   }
 
   if (event.type === "checkout.session.completed") {
