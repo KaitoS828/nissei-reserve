@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { SITE, siteUrl } from "@/lib/site";
 
 const GA_ID = "G-TWZ6JXXCSW";
 
@@ -15,9 +16,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// 検索結果とSNSに出るのはここ。読むのは宿を探しているお客様なので、
+// システムの説明ではなく宿の紹介を書く。
 export const metadata: Metadata = {
-  title: "nissei 予約",
-  description: "広尾町のサウナ宿 nissei の予約・決済システム",
+  metadataBase: new URL(siteUrl()),
+  title: {
+    default: `${SITE.name}｜${SITE.tagline}`,
+    template: `%s｜${SITE.name}`,
+  },
+  description: SITE.description,
+  keywords: [
+    "広尾町 宿",
+    "十勝 サウナ 貸切",
+    "北海道 一棟貸し",
+    "KOBU SAUNA",
+    "日靜",
+    "貸切サウナ 宿泊",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    siteName: SITE.name,
+    title: `${SITE.name}｜${SITE.tagline}`,
+    description: SITE.description,
+    url: siteUrl(),
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE.name}｜${SITE.tagline}`,
+    description: SITE.description,
+  },
+  alternates: { canonical: siteUrl() },
 };
 
 export default function RootLayout({
