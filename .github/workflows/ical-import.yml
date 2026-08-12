@@ -1,0 +1,23 @@
+name: iCal取り込み
+
+# 外部カレンダー（Airbnb等）の予約を取り込んで二重予約を防ぐ。
+# Vercel の cron は Hobby プランだと1日1回までなので、こちらを主にする。
+on:
+  schedule:
+    - cron: "0 * * * *" # 毎時0分（UTC）
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取り込みを実行
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -X POST "https://reserve.gh-nissei.jp/api/ical/import" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}")
+          echo "HTTP $code"
+          cat /tmp/out.json
+          echo
+          # 認証失敗や設定漏れに気づけるよう、2xx以外は失敗にする
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]

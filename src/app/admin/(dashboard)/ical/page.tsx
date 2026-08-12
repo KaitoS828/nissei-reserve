@@ -1,5 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { originFromHeaders } from "@/lib/booking-guide-server";
 import type { IcalSource, RoomType } from "@/types/db";
 import { importIcal, saveIcalSource, toggleIcalSource } from "./actions";
 
@@ -23,6 +25,12 @@ export default async function IcalPage({
 }) {
   const { error, done } = await searchParams;
   const supabase = createAdminClient();
+
+  const h = await headers();
+  const token = process.env.ICAL_EXPORT_TOKEN;
+  const exportUrl = token
+    ? `${originFromHeaders(h)}/api/ical/export?token=${token}`
+    : null;
   const [{ data: sourcesData }, { data: roomsData }, { data: logsData }] = await Promise.all([
     supabase.from("ical_sources").select("*").order("created_at", { ascending: false }),
     supabase.from("room_types").select("*").eq("is_active", true).order("sort_order"),
@@ -53,6 +61,30 @@ export default async function IcalPage({
       </header>
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {/* 取り込みだけでは片方向。自社の予約を相手先に伝えないと逆向きの二重予約は防げない */}
+      <section className="space-y-2 rounded-2xl border border-gray-200 bg-white p-5">
+        <h2 className="font-medium text-gray-900">日靜のカレンダーを配信する</h2>
+        <p className="text-sm text-gray-600">
+          下記URLを Airbnb 等の「カレンダーを接続（インポート）」に登録すると、
+          日靜で埋まっている日が相手先でも予約不可になります。取り込みだけでは
+          「自社の予約を相手先で売られる」事故は防げません。
+        </p>
+        {exportUrl ? (
+          <>
+            <p className="break-all rounded border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-xs text-gray-800">
+              {exportUrl}
+            </p>
+            <p className="text-xs text-amber-700">
+              このURLを知っていれば予約状況を見られます。外部に公開しないでください。
+            </p>
+          </>
+        ) : (
+          <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            配信用トークン（ICAL_EXPORT_TOKEN）が未設定のため、まだ配信できません。
+          </p>
+        )}
+      </section>
       {done && <p className="rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-800">{done}</p>}
 
       <form
