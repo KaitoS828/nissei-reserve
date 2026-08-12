@@ -35,6 +35,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdmin = pathname.startsWith("/admin");
   const isLogin = pathname === "/admin/login";
+  // 2段階認証の入力画面は aal1 のまま通す。そうしないと入力に辿り着けない。
+  const isMfa = pathname === "/admin/mfa";
 
   if (isAdmin && !isLogin) {
     // IP 制限（ADMIN_ALLOWED_IPS 設定時のみ）
@@ -54,6 +56,29 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    // 2段階認証。TOTPを登録済みなら aal2 まで昇格していないと通さない。
+    // 未登録のユーザーは nextLevel が aal1 のままなので、影響を受けない。
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const needsMfa = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
+
+    if (isMfa) {
+      // 済んでいる／不要なのに入力画面に来たら管理画面へ戻す
+      if (!needsMfa) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+      return response;
+    }
+
+    if (needsMfa) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/mfa";
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
