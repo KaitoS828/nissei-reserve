@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // /en は言語の入口。英語の予約ページへ送る。
+  // ページ側の redirect() だと静的化されてクローラに 200 を返してしまうため、
+  // サーバレベルで返す。
+  async redirects() {
+    return [{ source: "/en", destination: "/en/reserve", permanent: true }];
+  },
   webpack: (config) => {
     // OMC の HUD が書き込む .omc/ を監視対象外にして
     // 無駄な再コンパイル（→devキャッシュ破損）を防ぐ

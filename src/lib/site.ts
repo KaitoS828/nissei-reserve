@@ -35,6 +35,9 @@ export function lodgingJsonLd(): string {
     "@context": "https://schema.org",
     "@type": "LodgingBusiness",
     name: SITE.name,
+    // 英語で検索されたときに宿名が結び付くようにする
+    alternateName: "Nissei — private house with sauna, Hiroo, Hokkaido",
+    knowsLanguage: ["ja", "en"],
     description: SITE.description,
     url: siteUrl(),
     telephone: SITE.phone,

@@ -2,9 +2,8 @@ import { LookupScreen } from "./LookupScreen";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  alternates: { canonical: "/reserve/lookup", languages: { ja: "/reserve/lookup", en: "/en/reserve/lookup" } },
-};
+// 予約番号とメールを扱う画面なので検索対象から外す（robots.txt でも塞いでいる）。
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function LookupPage({
   searchParams,

@@ -3,10 +3,10 @@ import { LookupScreen } from "@/app/(public)/reserve/lookup/LookupScreen";
 
 export const dynamic = "force-dynamic";
 
+// 予約番号とメールを扱う画面なので、日本語版と同じく検索対象から外す。
 export const metadata: Metadata = {
   title: { absolute: "Find or cancel your booking | Nissei" },
-  description: "Look up your booking at Nissei with your booking number and email address, or request a cancellation.",
-  alternates: { canonical: "/en/reserve/lookup", languages: { ja: "/reserve/lookup", en: "/en/reserve/lookup" } },
+  robots: { index: false, follow: false },
 };
 
 export default async function EnLookupPage({
