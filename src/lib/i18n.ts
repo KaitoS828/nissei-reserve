@@ -2,6 +2,8 @@
 // 同じURLで切り替えるだけだと Google が英語版を別ページとして扱わず、
 // 英語圏からの検索流入が取れないため、URLを分ける。
 
+import type { ReservationStatus } from "@/types/db";
+
 export const LOCALES = ["ja", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 
@@ -56,6 +58,12 @@ const TERMS_EN: Record<string, string> = {
   敷地内無料駐車場: "Free on-site parking",
   キッチン: "Kitchen",
   貸切サウナ: "Private sauna",
+  // キャンセル理由。DB には日本語のまま保存し、表示だけ訳す
+  予定が変わった: "My plans changed",
+  体調不良: "Illness",
+  "天候・交通の都合": "Weather or transport",
+  "料金・プランの変更希望": "I want to change the plan or rate",
+  その他: "Other",
 };
 
 /** タグ・アメニティなど定型語の訳。訳が無ければ元の語をそのまま返す。 */
@@ -98,6 +106,58 @@ type Dict = {
     reservationCode: string; email: string; guests: string; nights: string;
     plan: string; dates: string; submit: string; back: string; loading: string;
     required: string; optional: string; switchLang: string;
+  };
+  status: Record<ReservationStatus, string>;
+  form: {
+    back: string; taxIncl: string;
+    summary: (from: string, to: string, nights: number, guests: number) => string;
+    name: string; lastName: string; firstName: string;
+    nameKana: string; lastNameKana: string; firstNameKana: string;
+    email: string; emailConfirm: string; phone: string; phonePlaceholder: string;
+    prefecture: string; city: string; address: string; building: string;
+    prefecturePlaceholder: string; cityPlaceholder: string;
+    addressPlaceholder: string; buildingPlaceholder: string;
+    addressHint: string;
+    checkInTime: string;
+    survey: string; surveyPlaceholder: string;
+    contact: string; contactPlaceholder: string;
+    submit: string; submitting: string;
+    errors: Record<string, string>;
+    errMinGuests: (n: number) => string;
+  };
+  complete: {
+    title: string; lead: string; notFound: string;
+    amount: string; statusLabel: string; paid: string; pending: string;
+    guideTitle: string; guideCode: string;
+    // リンクを文中に挟むので、前後の文に分けて持つ
+    guideAccount: { before: string; after: string };
+    guideEmail: string;
+    guideDoor: { before: string; after: string };
+    guidePhone: string;
+    home: string; viewBooking: string; receipt: string;
+  };
+  lookup: {
+    title: string; cancelled: string; codePlaceholder: string;
+    emailLabel: string; search: string; notFound: string;
+    doorCode: string; validBetween: (from: string, to: string) => string;
+    doNotShare: string; notIssuedYet: string;
+    policy: string; requestCancel: string;
+  };
+  cancel: {
+    title: string; notFound: string; backToLookup: string; alreadyCancelled: string; home: string;
+    paidAmount: string; refundAmount: string;
+    dateRange: (from: string, to: string, nights: number) => string;
+    refundNote: (days: number, pct: number, fee: string) => string;
+    reason: string; detail: string; detailPlaceholder: string;
+    irreversible: string; back: string; confirm: string; confirming: string;
+    doneTitle: string; doneLead: string; refunded: string;
+    errors: Record<string, string>;
+  };
+  receipt: {
+    print: string; title: string; issuedOn: (d: string) => string;
+    honorific: (name: string) => string; amount: string;
+    forStay: (plan: string) => string; stayDates: string;
+    received: string; cannotShow: string; notPaidYet: string; fallbackName: string;
   };
   checkin: {
     title: string; lead: string; showCode: string; verifying: string;
@@ -162,6 +222,111 @@ const ja: Dict = {
     reservationCode: "予約番号", email: "メールアドレス", guests: "人数", nights: "泊",
     plan: "プラン", dates: "日程", submit: "送信する", back: "戻る", loading: "読み込んでいます…",
     required: "必須", optional: "任意", switchLang: "English",
+  },
+  status: {
+    pending: "決済確認中", confirmed: "予約確定", checked_in: "チェックイン済",
+    checked_out: "チェックアウト済", cancelled: "キャンセル済", no_show: "ノーショー",
+  },
+  form: {
+    back: "← 戻る", taxIncl: "税・サービス料込",
+    summary: (from, to, nights, guests) => `${from} 〜 ${to}（${nights}泊）/ ${guests}名`,
+    name: "氏名", lastName: "姓", firstName: "名",
+    nameKana: "氏名（カナ）", lastNameKana: "セイ", firstNameKana: "メイ",
+    email: "メールアドレス", emailConfirm: "メールアドレス（確認）",
+    phone: "電話番号", phonePlaceholder: "0312345678",
+    prefecture: "都道府県（自宅）", city: "市区町村（自宅）",
+    address: "番地（自宅）", building: "建物名（自宅）",
+    prefecturePlaceholder: "北海道", cityPlaceholder: "広尾郡広尾町",
+    addressPlaceholder: "山海谷町1-3-11", buildingPlaceholder: "谷海山ビル3階",
+    addressHint: "",
+    checkInTime: "チェックイン予定時刻",
+    survey: "ご要望・アンケート", surveyPlaceholder: "・宿泊の目的\n・ご要望など",
+    contact: "連絡事項", contactPlaceholder: "連絡事項がございましたらご入力ください",
+    submit: "お支払いへ進む", submitting: "決済ページへ移動しています…",
+    errors: {
+      rate_limited: "お申し込みの回数が上限に達しました。しばらくしてからお試しください",
+      invalid_plan_dates: "プラン・日程が不正です",
+      name_email_required: "氏名・メールは必須です",
+      kana_required: "氏名（カナ）は必須です",
+      address_required: "住所（都道府県・市区町村・番地）は必須です",
+      email_mismatch: "メールアドレスが一致しません",
+      email_format: "メールアドレスの形式が正しくありません",
+      invalid_dates: "日程が不正です",
+      too_long: "入力内容が長すぎます",
+      invalid_guests: "人数が不正です",
+      plan_not_found: "プランが見つかりません",
+      price_not_set: "料金が設定されていません",
+      sold_out: "満室のため予約できません",
+      customer_save_failed: "顧客情報の保存に失敗しました",
+      reservation_failed: "予約の作成に失敗しました",
+      checkout_failed: "決済セッションの作成に失敗しました",
+      generic: "処理できませんでした。お手数ですが最初からお試しください",
+    },
+    errMinGuests: (n) => `このプランは${n}名以上でご予約ください`,
+  },
+  complete: {
+    title: "ご予約ありがとうございます",
+    lead: "確認メールをお送りしました。当日のご来館をお待ちしております。",
+    notFound: "予約情報を確認できませんでした。",
+    amount: "お支払い金額", statusLabel: "状況", paid: "決済完了・予約確定", pending: "決済確認中…",
+    guideTitle: "ご予約後のご案内",
+    guideCode: "予約番号は必ず保存してください。予約の確認・変更・キャンセルに必要です。",
+    guideAccount: {
+      before: "会員登録をされている方は、",
+      after: "からいつでもご予約の確認・キャンセルが可能です。",
+    },
+    guideEmail: "チェックイン番号や当日の詳細は、お送りする確認メールにてご確認ください。",
+    guideDoor: {
+      before: "玄関のドアコードは",
+      after: "ページでもご確認いただけます（予約番号とメールアドレスが必要です）。",
+    },
+    guidePhone: "ご不明な点は下記までお問い合わせください。",
+    home: "ホームへ", viewBooking: "予約を確認", receipt: "領収書",
+  },
+  lookup: {
+    title: "予約照会・キャンセル",
+    cancelled: "キャンセルを受け付けました。返金がある場合は数日内に処理されます。",
+    codePlaceholder: "R-20260601-XXXX",
+    emailLabel: "ご予約時のメールアドレス", search: "照会する",
+    notFound: "該当する予約が見つかりませんでした。予約番号とメールをご確認ください。",
+    doorCode: "🔑 玄関ドアコード",
+    validBetween: (from, to) => `有効期間: ${from} 〜 ${to}`,
+    doNotShare: "このコードは第三者に共有しないようお願いします。",
+    notIssuedYet: "ドアコードはチェックイン前日のご案内メールでお知らせします。",
+    policy: "キャンセルポリシー: 7日前まで無料 / 3日前まで50% / 当日100%",
+    requestCancel: "キャンセルを申請する",
+  },
+  cancel: {
+    title: "キャンセル申請",
+    notFound: "予約が確認できませんでした。", backToLookup: "予約照会へ戻る",
+    alreadyCancelled: "この予約はすでにキャンセル済みです。", home: "ホームへ",
+    paidAmount: "お支払い済み金額", refundAmount: "返金予定額",
+    dateRange: (from, to, nights) => `${from} 〜 ${to}（${nights}泊）`,
+    refundNote: (days, pct, fee) => `チェックインまで ${days} 日 ・ キャンセル料 ${pct}%（¥${fee}）`,
+    reason: "キャンセル理由", detail: "詳細（任意）",
+    detailPlaceholder: "差し支えなければ詳しい理由をお聞かせください",
+    irreversible: "※ キャンセルを確定すると取り消せません。返金は Stripe を通じて数日内に処理されます。",
+    back: "戻る", confirm: "キャンセルを確定する", confirming: "手続き中です…",
+    doneTitle: "キャンセルを承りました",
+    doneLead: "ご予約のキャンセルを受け付けました。確認メールをお送りします。",
+    refunded: "返金額",
+    errors: {
+      category_required: "キャンセル理由を選択してください",
+      not_found: "予約が見つかりません",
+      already_cancelled: "すでにキャンセル済みです",
+      refund_failed: "返金処理に失敗しました。お手数ですがお問い合わせください",
+      generic: "処理できませんでした。お手数ですがお問い合わせください",
+    },
+  },
+  receipt: {
+    print: "PDFで保存・印刷", title: "領　収　書",
+    issuedOn: (d) => `発行日: ${d}`,
+    honorific: (name) => `${name} 様`, amount: "金額",
+    forStay: (plan) => `但し　ご宿泊代として（${plan}）`,
+    stayDates: "宿泊日", received: "上記正に領収いたしました。",
+    cannotShow: "領収書を表示できませんでした。",
+    notPaidYet: "お支払い完了後に領収書を発行できます。",
+    fallbackName: "ご宿泊者",
   },
   checkin: {
     title: "チェックイン",
@@ -257,6 +422,115 @@ const en: Dict = {
     reservationCode: "Booking number", email: "Email address", guests: "Guests", nights: "night(s)",
     plan: "Plan", dates: "Dates", submit: "Submit", back: "Back", loading: "Loading…",
     required: "required", optional: "optional", switchLang: "日本語",
+  },
+  status: {
+    pending: "Awaiting payment", confirmed: "Confirmed", checked_in: "Checked in",
+    checked_out: "Checked out", cancelled: "Cancelled", no_show: "No show",
+  },
+  form: {
+    back: "← Back", taxIncl: "Tax and service included",
+    summary: (from, to, nights, guests) =>
+      `${from} – ${to} (${nights === 1 ? "1 night" : `${nights} nights`}) / ${guests === 1 ? "1 guest" : `${guests} guests`}`,
+    name: "Name", lastName: "Family name", firstName: "Given name",
+    // 英語フォームではカナを聞かない（海外のお客様は書けないため）
+    nameKana: "", lastNameKana: "", firstNameKana: "",
+    email: "Email address", emailConfirm: "Email address (confirm)",
+    phone: "Phone number", phonePlaceholder: "+81 90 1234 5678",
+    prefecture: "State / Province / Region", city: "City",
+    address: "Street address", building: "Apartment, suite, etc.",
+    prefecturePlaceholder: "California", cityPlaceholder: "San Francisco",
+    addressPlaceholder: "1234 Market St, USA", buildingPlaceholder: "Apt 5B",
+    addressHint: "Please include your country in the street address.",
+    checkInTime: "Estimated arrival time",
+    survey: "Requests and comments", surveyPlaceholder: "・Purpose of your stay\n・Any requests",
+    contact: "Anything else we should know", contactPlaceholder: "Let us know if there is anything else",
+    submit: "Continue to payment", submitting: "Taking you to the payment page…",
+    errors: {
+      rate_limited: "You have reached the limit for booking attempts. Please try again later.",
+      invalid_plan_dates: "The plan or dates are not valid.",
+      name_email_required: "Name and email address are required.",
+      kana_required: "Name in katakana is required.",
+      address_required: "Region, city and street address are required.",
+      email_mismatch: "The email addresses do not match.",
+      email_format: "Please enter a valid email address.",
+      invalid_dates: "The dates are not valid.",
+      too_long: "One of the fields is too long.",
+      invalid_guests: "The number of guests is not valid.",
+      plan_not_found: "We could not find that plan.",
+      price_not_set: "No rate has been set for this plan.",
+      sold_out: "Those dates are no longer available.",
+      customer_save_failed: "We could not save your details.",
+      reservation_failed: "We could not create the booking.",
+      checkout_failed: "We could not start the payment session.",
+      generic: "We could not complete that. Please start again.",
+    },
+    errMinGuests: (n) => `This plan requires at least ${n} guests.`,
+  },
+  complete: {
+    title: "Thank you for your booking",
+    lead: "We have sent you a confirmation email. We look forward to welcoming you.",
+    notFound: "We could not load the booking details.",
+    amount: "Amount paid", statusLabel: "Status", paid: "Paid — booking confirmed", pending: "Confirming payment…",
+    guideTitle: "What happens next",
+    guideCode: "Please keep your booking number. You need it to view, change or cancel your booking.",
+    guideAccount: {
+      before: "If you have an account, you can view and cancel your booking any time from ",
+      after: ".",
+    },
+    guideEmail: "Your door code and arrival details are in the confirmation email.",
+    guideDoor: {
+      before: "You can also see the entrance door code on the ",
+      after: " page (booking number and email address required).",
+    },
+    guidePhone: "If anything is unclear, please contact us.",
+    home: "Home", viewBooking: "View booking", receipt: "Receipt",
+  },
+  lookup: {
+    title: "Find or cancel your booking",
+    cancelled: "Your cancellation has been accepted. Any refund will be processed within a few days.",
+    codePlaceholder: "R-20260601-XXXX",
+    emailLabel: "Email address used for the booking", search: "Find booking",
+    notFound: "We could not find that booking. Please check the booking number and email address.",
+    doorCode: "🔑 Entrance door code",
+    validBetween: (from, to) => `Valid ${from} – ${to}`,
+    doNotShare: "Please do not share this code with anyone else.",
+    notIssuedYet: "We will send your door code by email the day before check-in.",
+    policy: "Cancellation policy: free until 7 days before, 50% until 3 days before, 100% on the day.",
+    requestCancel: "Request cancellation",
+  },
+  cancel: {
+    title: "Cancel your booking",
+    notFound: "We could not find that booking.", backToLookup: "Back to booking lookup",
+    alreadyCancelled: "This booking has already been cancelled.", home: "Home",
+    paidAmount: "Amount paid", refundAmount: "Refund amount",
+    dateRange: (from, to, nights) => `${from} – ${to} (${nights === 1 ? "1 night" : `${nights} nights`})`,
+    refundNote: (days, pct, fee) =>
+      `${days} day(s) until check-in — cancellation fee ${pct}% (¥${fee})`,
+    reason: "Reason for cancelling", detail: "Details (optional)",
+    detailPlaceholder: "Tell us more if you would like to",
+    irreversible:
+      "Once confirmed, a cancellation cannot be undone. Refunds are processed through Stripe within a few days.",
+    back: "Back", confirm: "Confirm cancellation", confirming: "Processing…",
+    doneTitle: "Your booking is cancelled",
+    doneLead: "We have cancelled your booking and will send you a confirmation email.",
+    refunded: "Refunded",
+    errors: {
+      category_required: "Please choose a reason.",
+      not_found: "We could not find that booking.",
+      already_cancelled: "This booking has already been cancelled.",
+      refund_failed: "The refund could not be processed. Please contact us.",
+      generic: "We could not complete that. Please contact us.",
+    },
+  },
+  receipt: {
+    print: "Save as PDF / print", title: "RECEIPT",
+    issuedOn: (d) => `Issued: ${d}`,
+    honorific: (name) => name, amount: "Amount",
+    forStay: (plan) => `For accommodation (${plan})`,
+    stayDates: "Stay", received: "Payment received with thanks.",
+    cannotShow: "We could not display the receipt.",
+    notPaidYet: "The receipt is available once payment is complete.",
+    fallbackName: "Guest",
   },
   checkin: {
     title: "Check-in",

@@ -125,7 +125,7 @@ export async function PlanScreen({
             {available === false ? (
               <span className="rounded-full bg-red-50 px-6 py-2.5 text-sm font-medium text-red-600">{t.full}</span>
             ) : validDates && available ? (
-              <Link href={`/reserve/form?${formQuery.toString()}`} className="rounded-full bg-teal-600 px-8 py-2.5 text-sm font-medium text-white transition hover:bg-teal-500">
+              <Link href={`${localePath(locale, "/reserve/form")}?${formQuery.toString()}`} className="rounded-full bg-teal-600 px-8 py-2.5 text-sm font-medium text-white transition hover:bg-teal-500">
                 {t.book}
               </Link>
             ) : (

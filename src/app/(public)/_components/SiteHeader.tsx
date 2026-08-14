@@ -10,7 +10,7 @@ import { LangSwitch } from "./LangSwitch";
 // 無いものを /en に飛ばすと 404 になるので、日本語ページへ落とす。
 const NAV = [
   { href: "/reserve", key: "reserve", hasEn: true },
-  { href: "/reserve/lookup", key: "lookup", hasEn: false },
+  { href: "/reserve/lookup", key: "lookup", hasEn: true },
   { href: "/checkin", key: "checkin", hasEn: true },
   { href: "/account", key: "account", hasEn: false },
   { href: "/account/login", key: "login", hasEn: false },

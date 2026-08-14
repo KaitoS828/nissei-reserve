@@ -10,20 +10,24 @@ import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { isLocale, localePath, type Locale } from "@/lib/i18n";
 
-function fail(planId: string, msg: string): never {
-  const q = new URLSearchParams({ error: msg });
-  redirect(`/reserve/form?plan=${planId}&${q.toString()}`);
+// エラーは文言ではなくコードでURLに載せる。表示側で言語ごとに引くため、
+// また任意の文字列を画面に出させないため。
+function fail(locale: Locale, planId: string, code: string, n?: number): never {
+  const q = new URLSearchParams({ plan: planId, error: code });
+  if (n !== undefined) q.set("n", String(n));
+  redirect(`${localePath(locale, "/reserve/form")}?${q.toString()}`);
 }
 
 export async function startCheckout(formData: FormData) {
   const planId = String(formData.get("plan") ?? "");
+  const rawLocale = String(formData.get("locale") ?? "ja");
+  const locale: Locale = isLocale(rawLocale) ? rawLocale : "ja";
 
   // 1回ごとに仮予約レコードとStripeセッションを作るため、連打・空打ちを制限する
   const limited = rateLimit(`checkout:${await clientIp()}`, 5, 10 * 60_000);
-  if (!limited.ok) {
-    fail(planId, "お申し込みの回数が上限に達しました。しばらくしてからお試しください");
-  }
+  if (!limited.ok) fail(locale, planId, "rate_limited");
 
   const from = String(formData.get("from") ?? "");
   const to = String(formData.get("to") ?? "");
@@ -45,18 +49,19 @@ export async function startCheckout(formData: FormData) {
   const survey = String(formData.get("survey") ?? "").trim() || null;
   const contact = String(formData.get("contact") ?? "").trim() || null;
 
-  if (!planId || !from || !to) fail(planId, "プラン・日程が不正です");
-  if (!lastName || !firstName || !email) fail(planId, "氏名・メールは必須です");
-  if (!lastKana || !firstKana) fail(planId, "氏名（カナ）は必須です");
-  if (!prefecture || !city || !address) fail(planId, "住所（都道府県・市区町村・番地）は必須です");
-  if (email !== email2) fail(planId, "メールアドレスが一致しません");
+  if (!planId || !from || !to) fail(locale, planId, "invalid_plan_dates");
+  if (!lastName || !firstName || !email) fail(locale, planId, "name_email_required");
+  // カナは日本語フォームのみ必須。海外のお客様は書けないため英語版では聞かない。
+  if (locale === "ja" && (!lastKana || !firstKana)) fail(locale, planId, "kana_required");
+  if (!prefecture || !city || !address) fail(locale, planId, "address_required");
+  if (email !== email2) fail(locale, planId, "email_mismatch");
   // メール形式（サーバ側でも検証。HTMLのrequiredは直POSTでバイパス可能なため）
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    fail(planId, "メールアドレスの形式が正しくありません");
+    fail(locale, planId, "email_format");
   }
   // 日付形式（YYYY-MM-DD のみ許可。不正な値での処理を防ぐ）
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    fail(planId, "日程が不正です");
+    fail(locale, planId, "invalid_dates");
   }
   // 文字数上限（過大入力・不正データ・DoS的ペイロード防止）
   const over =
@@ -66,13 +71,13 @@ export async function startCheckout(formData: FormData) {
     (city?.length ?? 0) > 100 || (address?.length ?? 0) > 200 ||
     (building?.length ?? 0) > 100 || (survey?.length ?? 0) > 2000 ||
     (contact?.length ?? 0) > 2000;
-  if (over) fail(planId, "入力内容が長すぎます");
+  if (over) fail(locale, planId, "too_long");
   // 人数の範囲チェック（負数・極端な値を弾く）
   if (!Number.isInteger(adults) || adults < 1 || adults > 20) {
-    fail(planId, "人数が不正です");
+    fail(locale, planId, "invalid_guests");
   }
   const nights = eachNight(from, to);
-  if (nights.length < 1) fail(planId, "日程が不正です");
+  if (nights.length < 1) fail(locale, planId, "invalid_dates");
 
   const supabase = createAdminClient();
 
@@ -82,18 +87,18 @@ export async function startCheckout(formData: FormData) {
     .select("*, plan_prices(price_per_night, guest_prices, room_type_id)")
     .eq("id", planId)
     .single();
-  if (!plan) fail(planId, "プランが見つかりません");
+  if (!plan) fail(locale, planId, "plan_not_found");
   const pp = (plan.plan_prices ?? [])[0];
-  if (!pp) fail(planId, "料金が設定されていません");
+  if (!pp) fail(locale, planId, "price_not_set");
   const roomTypeId: string = pp.room_type_id;
   const facilityId = (plan as { facility_id?: string | null }).facility_id ?? null;
 
   // プラン別の最低人数チェック（guest_prices の最小キー。例: サウナ付きは2名から）
   const { min: minGuests } = guestRange(pp.guest_prices as GuestPrices, 0);
-  if (adults < minGuests) fail(planId, `このプランは${minGuests}名以上でご予約ください`);
+  if (adults < minGuests) fail(locale, planId, "min_guests", minGuests);
 
   // 空室再チェック（サーバ側）
-  if (!(await canBook(roomTypeId, from, to))) fail(planId, "満室のため予約できません");
+  if (!(await canBook(roomTypeId, from, to))) fail(locale, planId, "sold_out");
 
   // 料金はサーバ側で再計算（人数別単価 × 泊数 → 長期割引）
   const nightly = nightlyRateForGuests(adults, pp.guest_prices as GuestPrices, pp.price_per_night);
@@ -121,7 +126,7 @@ export async function startCheckout(formData: FormData) {
   } else {
     const { data: created, error } = await supabase
       .from("customers").insert(custFields).select("id").single();
-    if (error || !created) fail(planId, "顧客情報の保存に失敗しました");
+    if (error || !created) fail(locale, planId, "customer_save_failed");
     customerId = created.id;
   }
 
@@ -140,14 +145,18 @@ export async function startCheckout(formData: FormData) {
     })
     .select("id, code")
     .single();
-  if (resErr || !resv) fail(planId, "予約の作成に失敗しました");
+  if (resErr || !resv) fail(locale, planId, "reservation_failed");
 
   // Stripe Checkout Session
   const h = await headers();
   const origin = h.get("origin") ?? `https://${h.get("host")}`;
   const stripe = getStripe();
+  const nightsLabel =
+    locale === "en" ? (price.nights === 1 ? "1 night" : `${price.nights} nights`) : `${price.nights}泊`;
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
+    // 決済ページ自体も同じ言語で出す
+    locale: locale === "en" ? "en" : "ja",
     // カードのみに固定（即時決済）。PayPay 等を将来追加する際は、ここに方式を足す。
     // コンビニ/銀行振込など非同期決済は async_payment_* の処理を実装してから追加すること。
     payment_method_types: ["card"],
@@ -159,8 +168,11 @@ export async function startCheckout(formData: FormData) {
           currency: "jpy",
           unit_amount: price.total,
           product_data: {
-            name: `${plan.name}（${price.nights}泊）`,
-            description: `${from} 〜 ${to} / 予約番号 ${resv.code}`,
+            name: `${plan.name}（${nightsLabel}）`,
+            description:
+              locale === "en"
+                ? `${from} – ${to} / Booking number ${resv.code}`
+                : `${from} 〜 ${to} / 予約番号 ${resv.code}`,
           },
         },
       },
@@ -168,11 +180,11 @@ export async function startCheckout(formData: FormData) {
     metadata: { reservation_id: resv.id, code: resv.code },
     // 期限切れを Stripe に通知させて、掴んだ在庫を確実に解放する
     expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_WINDOW_MINUTES * 60,
-    success_url: `${origin}/reserve/complete?code=${resv.code}&token=${lookupToken}`,
+    success_url: `${origin}${localePath(locale, "/reserve/complete")}?code=${resv.code}&token=${lookupToken}`,
     // 戻ってきた時点で在庫を解放する。戻り先で放置されると他のお客様が予約できない。
-    cancel_url: `${origin}/reserve/abandon?id=${resv.id}&plan=${planId}&from=${from}&to=${to}`,
+    cancel_url: `${origin}/reserve/abandon?id=${resv.id}&plan=${planId}&from=${from}&to=${to}&locale=${locale}`,
   });
 
-  if (!session.url) fail(planId, "決済セッションの作成に失敗しました");
+  if (!session.url) fail(locale, planId, "checkout_failed");
   redirect(session.url);
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { releaseUnpaidHold } from "@/lib/hold";
+import { isLocale, localePath } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,11 @@ export async function GET(req: NextRequest) {
   }
 
   // 元のプランに戻す。日程はそのまま残して、選び直さなくて済むようにする。
+  // 英語で申し込んだ方を日本語ページに落とさないよう、言語も引き継ぐ。
+  const rawLocale = params.get("locale") ?? "ja";
+  const locale = isLocale(rawLocale) ? rawLocale : "ja";
   const back = plan
-    ? `/reserve/${plan}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
-    : "/reserve";
+    ? `${localePath(locale, `/reserve/${plan}`)}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    : localePath(locale, "/reserve");
   return NextResponse.redirect(new URL(back, req.nextUrl.origin));
 }
