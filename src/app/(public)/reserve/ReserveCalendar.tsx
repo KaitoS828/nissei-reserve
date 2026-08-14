@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Spinner } from "@/components/SubmitButton";
 import Link from "next/link";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
+import { dict, localePath, term, type Locale } from "@/lib/i18n";
 
 type Plan = {
   id: string;
@@ -13,8 +14,6 @@ type Plan = {
   guestPrices: GuestPrices;
   discounts: Discount[];
 };
-
-const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -45,13 +44,17 @@ export function ReserveCalendar({
   plans,
   roomTypeId,
   maxGuests = 6,
-  roomLabel = "日靜（1日1組限定）",
+  locale = "ja",
+  roomLabel,
 }: {
   plans: Plan[];
   roomTypeId: string;
   maxGuests?: number;
+  locale?: Locale;
   roomLabel?: string;
 }) {
+  const t = dict(locale).reserve;
+  const room = roomLabel ?? t.roomLabel;
   const today = todayStr();
   const now = new Date();
   const minMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -134,39 +137,39 @@ export function ReserveCalendar({
         {/* ナビ: 前年/前月  月  翌月/翌年 */}
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
-            <button onClick={() => shift(-12)} disabled={atMin} className={navBtn} aria-label="前の年">
-              « 前年
+            <button onClick={() => shift(-12)} disabled={atMin} className={navBtn} aria-label={t.prevYear}>
+              « {t.prevYear}
             </button>
-            <button onClick={() => shift(-1)} disabled={atMin} className={navBtn} aria-label="前の月">
-              ‹ 前月
+            <button onClick={() => shift(-1)} disabled={atMin} className={navBtn} aria-label={t.prevMonth}>
+              ‹ {t.prevMonth}
             </button>
           </div>
           <span className="text-base font-semibold text-gray-900 sm:text-lg">
-            {baseYear}年{baseMonth + 1}月
+            {t.monthLabel(baseYear, baseMonth)}
           </span>
           <div className="flex items-center gap-1">
-            <button onClick={() => shift(1)} className={navBtn} aria-label="次の月">
-              翌月 ›
+            <button onClick={() => shift(1)} className={navBtn} aria-label={t.nextMonth}>
+              {t.nextMonth} ›
             </button>
-            <button onClick={() => shift(12)} className={navBtn} aria-label="次の年">
-              翌年 »
+            <button onClick={() => shift(12)} className={navBtn} aria-label={t.nextYear}>
+              {t.nextYear} »
             </button>
           </div>
         </div>
         <p className="mb-3 flex items-center justify-center gap-2 text-center text-xs text-gray-400">
           {loaded ? (
-            "空いている日をタップして宿泊期間を選択"
+            t.tapToSelect
           ) : (
             <>
               <Spinner className="h-3 w-3" />
-              空き状況を確認しています…
+              {t.checkingAvailability}
             </>
           )}
         </p>
 
         {/* 曜日 */}
         <div className="grid grid-cols-7 text-center text-xs text-gray-400">
-          {WEEK.map((w, i) => (
+          {t.weekdays.map((w, i) => (
             <div key={w} className={i === 0 ? "text-red-400" : i === 6 ? "text-blue-400" : ""}>
               {w}
             </div>
@@ -204,13 +207,13 @@ export function ReserveCalendar({
         {/* 凡例 */}
         <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 border-t border-gray-100 pt-3 text-xs">
           <span className="flex items-center gap-1 text-gray-500">
-            <span className="inline-block h-3 w-3 rounded-full bg-teal-600" /> 選択中
+            <span className="inline-block h-3 w-3 rounded-full bg-teal-600" /> {t.legendSelected}
           </span>
           <span className="flex items-center gap-1 text-gray-500">
-            <span className="inline-block h-3 w-3 rounded-full border border-gray-300" /> 空室あり
+            <span className="inline-block h-3 w-3 rounded-full border border-gray-300" /> {t.legendAvailable}
           </span>
           <span className="flex items-center gap-1 text-gray-400">
-            <span className="inline-block h-3 w-3 rounded-full bg-gray-100" /> 満室・予約不可
+            <span className="inline-block h-3 w-3 rounded-full bg-gray-100" /> {t.legendFull}
           </span>
         </div>
       </div>
@@ -219,23 +222,25 @@ export function ReserveCalendar({
       <div className="rounded-2xl border border-gray-200 p-4">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <div className="text-sm">
-            <span className="text-gray-500">IN</span>{" "}
+            <span className="text-gray-500">{t.in}</span>{" "}
             <span className="font-semibold text-gray-900">{from ?? "—"}</span>
           </div>
           <div className="text-sm">
-            <span className="text-gray-500">OUT</span>{" "}
+            <span className="text-gray-500">{t.out}</span>{" "}
             <span className="font-semibold text-gray-900">{to ?? "—"}</span>
           </div>
-          {nights > 0 && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-sm text-teal-700">{nights}泊</span>}
+          {nights > 0 && (
+            <span className="rounded-full bg-teal-50 px-2 py-0.5 text-sm text-teal-700">{t.nightCount(nights)}</span>
+          )}
           <label className="ml-auto flex items-center gap-2 text-sm">
-            <span className="text-gray-500">人数</span>
+            <span className="text-gray-500">{t.guestsLabel}</span>
             <select
               value={guests}
               onChange={(e) => setGuests(Number(e.target.value))}
               className="rounded-lg border border-gray-300 px-2 py-1"
             >
               {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n}名</option>
+                <option key={n} value={n}>{t.guestOption(n)}</option>
               ))}
             </select>
           </label>
@@ -244,7 +249,7 @@ export function ReserveCalendar({
               onClick={() => { setFrom(null); setTo(null); }}
               className="text-sm text-gray-400 hover:text-gray-700"
             >
-              クリア
+              {t.clear}
             </button>
           )}
         </div>
@@ -264,26 +269,28 @@ export function ReserveCalendar({
               <div className="space-y-2 border-b border-gray-100 pb-4">
                 <h2 className="text-lg font-semibold text-gray-900">{p.name}</h2>
                 <div className="flex flex-wrap gap-1.5">
-                  {p.tags.map((t) => (
-                    <span key={t} className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-500">{t}</span>
+                  {p.tags.map((tag) => (
+                    <span key={tag} className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-500">
+                      {term(locale, tag)}
+                    </span>
                   ))}
                 </div>
               </div>
               <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-700">{roomLabel}</p>
+                  <p className="text-sm text-gray-700">{room}</p>
                   {belowMin ? (
                     <>
-                      <p className="mt-1 text-xs text-gray-500">{planMin}名〜{maxGuests}名でご利用可</p>
-                      <p className="text-xl font-bold text-gray-900">¥{perPerson.toLocaleString()}/人〜</p>
-                      <p className="mt-0.5 text-xs text-amber-600">このプランは最低{planMin}名からです</p>
+                      <p className="mt-1 text-xs text-gray-500">{t.guestRangeNote(planMin, maxGuests)}</p>
+                      <p className="text-xl font-bold text-gray-900">{t.perPersonFrom(perPerson.toLocaleString())}</p>
+                      <p className="mt-0.5 text-xs text-amber-600">{t.minGuestsNotice(planMin)}</p>
                     </>
                   ) : price ? (
                     <>
                       <p className="mt-1 text-xs text-gray-500">
-                        {price.nights}泊・税サービス料込
+                        {t.nightsTaxIncl(price.nights)}
                         {price.discountRate > 0 && (
-                          <span className="ml-1 text-teal-700">（長期割{Math.round(price.discountRate * 100)}%適用）</span>
+                          <span className="ml-1 text-teal-700">{t.longStayApplied(Math.round(price.discountRate * 100))}</span>
                         )}
                       </p>
                       <p className="text-xl font-bold text-gray-900">
@@ -295,25 +302,25 @@ export function ReserveCalendar({
                     </>
                   ) : (
                     <>
-                      <p className="mt-1 text-xs text-gray-500">{guests}名・1泊 合計 ¥{nightly.toLocaleString()}</p>
-                      <p className="text-xl font-bold text-gray-900">¥{perPerson.toLocaleString()}/人〜</p>
+                      <p className="mt-1 text-xs text-gray-500">{t.oneNightTotal(guests, nightly.toLocaleString())}</p>
+                      <p className="text-xl font-bold text-gray-900">{t.perPersonFrom(perPerson.toLocaleString())}</p>
                     </>
                   )}
                 </div>
                 {belowMin ? (
                   <span className="rounded-full bg-gray-200 px-6 py-2.5 text-center text-sm font-medium text-gray-500">
-                    最低{planMin}名から
+                    {t.minGuestsBadge(planMin)}
                   </span>
                 ) : from && to ? (
                   <Link
-                    href={`/reserve/${p.id}?${query.toString()}`}
+                    href={`${localePath(locale, `/reserve/${p.id}`)}?${query.toString()}`}
                     className="rounded-full bg-teal-600 px-6 py-2.5 text-center text-sm font-medium text-white transition hover:bg-teal-500"
                   >
-                    この日程で予約する
+                    {t.bookTheseDates}
                   </Link>
                 ) : (
                   <span className="rounded-full bg-gray-200 px-6 py-2.5 text-center text-sm font-medium text-gray-500">
-                    日程を選択
+                    {t.selectDates}
                   </span>
                 )}
               </div>

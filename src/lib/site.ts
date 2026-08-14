@@ -13,6 +13,9 @@ export const SITE = {
     locality: "広尾郡広尾町",
     street: "音調津733番地",
     full: "北海道広尾郡広尾町音調津733番地",
+    // 英語ページ用。DB の facility.address は日本語表記のみなので、
+    // 海外のお客様が地図アプリに入れられる形をこちらで持つ。
+    fullEn: "733 Otsunai, Hiroo-cho, Hiroo-gun, Hokkaido 089-2661, Japan",
   },
   phone: "070-1251-6275",
   email: "info@gh-nissei.jp",

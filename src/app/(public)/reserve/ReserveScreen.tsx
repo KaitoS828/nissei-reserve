@@ -1,0 +1,68 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { dict, type Locale } from "@/lib/i18n";
+import { SITE } from "@/lib/site";
+import type { Plan, Facility, Discount } from "@/types/db";
+import { ReserveCalendar } from "./ReserveCalendar";
+
+type PlanRow = Plan & {
+  plan_prices: {
+    price_per_night: number;
+    guest_prices: Record<string, number> | null;
+    room_type_id: string;
+    room_types: { capacity: number } | null;
+  }[];
+};
+
+// 日英で同じ中身を出すための画面本体。
+// page.tsx は任意のプロパティを受け取れないので、部品側に切り出している。
+export async function ReserveScreen({ locale }: { locale: Locale }) {
+  const t = dict(locale).reserve;
+  const supabase = createAdminClient();
+  const [{ data: planData }, { data: facilityData }] = await Promise.all([
+    supabase
+      .from("plans")
+      .select("*, plan_prices(price_per_night, guest_prices, room_type_id, room_types(capacity))")
+      .eq("is_active", true)
+      .order("sort_order"),
+    supabase.from("facility").select("*").limit(1).single(),
+  ]);
+
+  const planRows = (planData ?? []) as unknown as PlanRow[];
+  const facility = (facilityData ?? null) as Facility | null;
+
+  const roomTypeId = planRows[0]?.plan_prices[0]?.room_type_id ?? "";
+  const maxGuests = planRows[0]?.plan_prices[0]?.room_types?.capacity ?? 6;
+  const plans = planRows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    tags: (p.tags ?? []) as string[],
+    pricePerNight: p.plan_prices[0]?.price_per_night ?? 0,
+    guestPrices: p.plan_prices[0]?.guest_prices ?? null,
+    discounts: (p.discounts ?? []) as Discount[],
+  }));
+
+  return (
+    <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+      <aside className="order-last space-y-3 text-sm md:order-none">
+        <div>
+          <p className="font-semibold text-gray-900">{t.location}</p>
+          <p className="text-gray-600">
+            {locale === "en" ? SITE.address.fullEn : (facility?.address ?? "—")}
+          </p>
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900">{t.contact}</p>
+          <p className="text-gray-600">{facility?.phone ?? "—"}</p>
+        </div>
+      </aside>
+
+      <div>
+        {roomTypeId ? (
+          <ReserveCalendar plans={plans} roomTypeId={roomTypeId} maxGuests={maxGuests} locale={locale} />
+        ) : (
+          <p className="text-sm text-gray-500">{t.noPlans}</p>
+        )}
+      </div>
+    </div>
+  );
+}

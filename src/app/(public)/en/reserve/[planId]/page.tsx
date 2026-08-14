@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PlanScreen } from "./PlanScreen";
-import { planMetadata } from "./metadata";
+import { PlanScreen } from "@/app/(public)/reserve/[planId]/PlanScreen";
+import { planMetadata } from "@/app/(public)/reserve/[planId]/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +10,10 @@ export async function generateMetadata({
   params: Promise<{ planId: string }>;
 }): Promise<Metadata> {
   const { planId } = await params;
-  return planMetadata(planId, "ja");
+  return planMetadata(planId, "en");
 }
 
-export default async function PlanDetailPage({
+export default async function EnPlanDetailPage({
   params,
   searchParams,
 }: {
@@ -22,5 +22,5 @@ export default async function PlanDetailPage({
 }) {
   const { planId } = await params;
   const { from, to, guests } = await searchParams;
-  return <PlanScreen planId={planId} from={from} to={to} guests={guests} locale="ja" />;
+  return <PlanScreen planId={planId} from={from} to={to} guests={guests} locale="en" />;
 }

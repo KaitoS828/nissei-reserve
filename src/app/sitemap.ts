@@ -9,9 +9,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const now = new Date();
 
+  // 日英で内容が同じページは alternates を付ける。
+  // これが無いと Google が英語版を重複ページとみなす。
+  const bilingual = (path: string) => ({
+    languages: { ja: `${base}${path}`, en: `${base}/en${path}` },
+  });
+
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${base}/`, lastModified: now, changeFrequency: "monthly", priority: 1 },
-    { url: `${base}/reserve`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    {
+      url: `${base}/reserve`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+      alternates: bilingual("/reserve"),
+    },
+    {
+      url: `${base}/en/reserve`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+      alternates: bilingual("/reserve"),
+    },
     { url: `${base}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
@@ -26,12 +45,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [
       ...staticEntries,
-      ...(data ?? []).map((plan) => ({
-        url: `${base}/reserve/${plan.id}`,
-        lastModified: plan.updated_at ? new Date(plan.updated_at as string) : now,
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-      })),
+      ...(data ?? []).flatMap((plan) => {
+        const lastModified = plan.updated_at ? new Date(plan.updated_at as string) : now;
+        const alternates = bilingual(`/reserve/${plan.id}`);
+        return [
+          { url: `${base}/reserve/${plan.id}`, lastModified, changeFrequency: "weekly" as const, priority: 0.8, alternates },
+          { url: `${base}/en/reserve/${plan.id}`, lastModified, changeFrequency: "weekly" as const, priority: 0.8, alternates },
+        ];
+      }),
     ];
   } catch {
     return staticEntries;

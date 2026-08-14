@@ -1,7 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RegisterForm, type ExistingGuest } from "./RegisterForm";
 import { dict, type Locale } from "@/lib/i18n";
-import { LangSwitch } from "@/app/(public)/_components/LangSwitch";
 
 // 日英で同じ中身を出すための画面本体。
 export async function RegisterScreen({
@@ -49,12 +48,9 @@ export async function RegisterScreen({
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
-          <p className="mt-2 text-sm text-gray-600">{t.lead}</p>
-        </div>
-        <LangSwitch locale={locale} />
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
+        <p className="mt-2 text-sm text-gray-600">{t.lead}</p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 p-5 text-sm">

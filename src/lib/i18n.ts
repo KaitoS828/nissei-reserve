@@ -15,8 +15,85 @@ export function altPath(pathname: string, to: Locale): string {
   return to === "en" ? (bare === "/" ? "/en" : `/en${bare}`) : bare;
 }
 
+/** 自言語のURL。リンク先を組み立てるときに使う。 */
+export function localePath(locale: Locale, path: string): string {
+  return locale === "en" ? (path === "/" ? "/en" : `/en${path}`) : path;
+}
+
+/** pathname から今の言語を読む。クライアント側で locale を渡さずに済ませる用。 */
+export function localeOf(pathname: string): Locale {
+  return /^\/en(\/|$)/.test(pathname) ? "en" : "ja";
+}
+
+// タグとアメニティはマスタ由来の定型語で、宿の文章ではない。
+// ここで訳しておくと、DBを触らずに英語ページの中身が英語になる。
+// 知らない語はそのまま出す（訳が無いことを隠さない）。
+const TERMS_EN: Record<string, string> = {
+  "1棟貸し": "Whole house",
+  禁煙: "Non-smoking",
+  長期割: "Long-stay discount",
+  日帰り: "Day use",
+  無料WiFi: "Free Wi-Fi",
+  "無料Wi-Fi": "Free Wi-Fi",
+  洗浄機付トイレ: "Washlet toilet",
+  エアコン: "Air conditioning",
+  冷蔵庫: "Refrigerator",
+  電気ポット: "Electric kettle",
+  "コーヒーメーカー/お茶セット": "Coffee maker and tea set",
+  ドライヤー: "Hair dryer",
+  洗濯機: "Washing machine",
+  乾燥機: "Clothes dryer",
+  電子レンジ: "Microwave",
+  バス: "Bathtub",
+  トイレ: "Toilet",
+  タオル: "Towels",
+  バスタオル: "Bath towels",
+  ボディーソープ: "Body soap",
+  シャンプー: "Shampoo",
+  コンディショナー: "Conditioner",
+  ハミガキセット: "Toothbrush set",
+  スリッパ: "Slippers",
+  敷地内無料駐車場: "Free on-site parking",
+  キッチン: "Kitchen",
+  貸切サウナ: "Private sauna",
+};
+
+/** タグ・アメニティなど定型語の訳。訳が無ければ元の語をそのまま返す。 */
+export function term(locale: Locale, value: string): string {
+  return locale === "en" ? (TERMS_EN[value] ?? value) : value;
+}
+
 type Dict = {
+  site: { name: string; badge: string; about: string; terms: string; privacy: string };
   nav: { reserve: string; lookup: string; checkin: string; account: string; login: string };
+  reserve: {
+    location: string; contact: string; noPlans: string;
+    prevYear: string; prevMonth: string; nextMonth: string; nextYear: string;
+    monthLabel: (year: number, month0: number) => string;
+    weekdays: string[];
+    tapToSelect: string; checkingAvailability: string;
+    legendSelected: string; legendAvailable: string; legendFull: string;
+    in: string; out: string; nightCount: (n: number) => string;
+    guestsLabel: string; guestOption: (n: number) => string; clear: string;
+    roomLabel: string;
+    guestRangeNote: (min: number, max: number) => string;
+    perPersonFrom: (yen: string) => string;
+    minGuestsNotice: (n: number) => string; minGuestsBadge: (n: number) => string;
+    nightsTaxIncl: (n: number) => string;
+    longStayApplied: (pct: number) => string;
+    oneNightTotal: (guests: number, yen: string) => string;
+    bookTheseDates: string; selectDates: string;
+  };
+  plan: {
+    backHome: string; checkIn: string; checkOut: string;
+    guestsRange: (min: number, max: number) => string;
+    checkAvailability: string; full: string; book: string;
+    available: string;
+    aboutPlan: string; aboutRoom: string; roomFeatures: string; features: string[];
+    amenities: string; longStay: string;
+    discountLine: (min: number, max: number | null, pct: number) => string;
+    contentInJapanese: string;
+  };
   common: {
     reservationCode: string; email: string; guests: string; nights: string;
     plan: string; dates: string; submit: string; back: string; loading: string;
@@ -47,7 +124,40 @@ type Dict = {
 };
 
 const ja: Dict = {
+  site: { name: "一棟貸し宿「日靜」", badge: "日靜", about: "About Us", terms: "利用規約", privacy: "プライバシーポリシー" },
   nav: { reserve: "予約", lookup: "予約照会", checkin: "チェックイン", account: "マイページ", login: "ログイン" },
+  reserve: {
+    location: "所在地", contact: "お問い合わせ",
+    noPlans: "現在ご予約いただけるプランがありません。",
+    prevYear: "前の年", prevMonth: "前の月", nextMonth: "次の月", nextYear: "次の年",
+    monthLabel: (y, m) => `${y}年${m + 1}月`,
+    weekdays: ["日", "月", "火", "水", "木", "金", "土"],
+    tapToSelect: "空いている日をタップして宿泊期間を選択",
+    checkingAvailability: "空き状況を確認しています…",
+    legendSelected: "選択中", legendAvailable: "空室あり", legendFull: "満室・予約不可",
+    in: "IN", out: "OUT", nightCount: (n) => `${n}泊`,
+    guestsLabel: "人数", guestOption: (n) => `${n}名`, clear: "クリア",
+    roomLabel: "日靜（1日1組限定）",
+    guestRangeNote: (min, max) => `${min}名〜${max}名でご利用可`,
+    perPersonFrom: (yen) => `¥${yen}/人〜`,
+    minGuestsNotice: (n) => `このプランは最低${n}名からです`,
+    minGuestsBadge: (n) => `最低${n}名から`,
+    nightsTaxIncl: (n) => `${n}泊・税サービス料込`,
+    longStayApplied: (pct) => `（長期割${pct}%適用）`,
+    oneNightTotal: (guests, yen) => `${guests}名・1泊 合計 ¥${yen}`,
+    bookTheseDates: "この日程で予約する", selectDates: "日程を選択",
+  },
+  plan: {
+    backHome: "← ホーム", checkIn: "チェックイン", checkOut: "チェックアウト",
+    guestsRange: (min, max) => `人数（${min}〜${max}名）`,
+    checkAvailability: "空室・料金を確認", full: "満室", book: "予約する",
+    available: "✓ 空室があります",
+    aboutPlan: "プラン紹介", aboutRoom: "客室紹介", roomFeatures: "部屋特徴",
+    features: ["無料WiFi", "洗浄機付トイレ"],
+    amenities: "設備・アメニティ", longStay: "長期割引",
+    discountLine: (min, max, pct) => `📅 ${max ? `${min}〜${max}泊` : `${min}泊以上`}　${pct}％割引`,
+    contentInJapanese: "",
+  },
   common: {
     reservationCode: "予約番号", email: "メールアドレス", guests: "人数", nights: "泊",
     plan: "プラン", dates: "日程", submit: "送信する", back: "戻る", loading: "読み込んでいます…",
@@ -106,7 +216,43 @@ const ja: Dict = {
 };
 
 const en: Dict = {
+  site: { name: "Nissei — private house & sauna", badge: "日靜", about: "About Us", terms: "Terms", privacy: "Privacy" },
   nav: { reserve: "Book", lookup: "Find booking", checkin: "Check-in", account: "My page", login: "Log in" },
+  reserve: {
+    location: "Address", contact: "Contact",
+    noPlans: "There are no plans available for booking at the moment.",
+    prevYear: "Previous year", prevMonth: "Previous month", nextMonth: "Next month", nextYear: "Next year",
+    monthLabel: (y, m) =>
+      `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][m]} ${y}`,
+    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    tapToSelect: "Tap an available date to choose your stay",
+    checkingAvailability: "Checking availability…",
+    legendSelected: "Selected", legendAvailable: "Available", legendFull: "Fully booked",
+    in: "IN", out: "OUT", nightCount: (n) => (n === 1 ? "1 night" : `${n} nights`),
+    guestsLabel: "Guests", guestOption: (n) => (n === 1 ? "1 guest" : `${n} guests`), clear: "Clear",
+    roomLabel: "The whole house, one group per day",
+    guestRangeNote: (min, max) => `For ${min}–${max} guests`,
+    perPersonFrom: (yen) => `From ¥${yen} per person`,
+    minGuestsNotice: (n) => `This plan starts at ${n} guests`,
+    minGuestsBadge: (n) => `From ${n} guests`,
+    nightsTaxIncl: (n) => `${n === 1 ? "1 night" : `${n} nights`}, tax and service included`,
+    longStayApplied: (pct) => ` (${pct}% long-stay discount applied)`,
+    oneNightTotal: (guests, yen) => `${guests === 1 ? "1 guest" : `${guests} guests`}, 1 night: ¥${yen}`,
+    bookTheseDates: "Book these dates", selectDates: "Select your dates",
+  },
+  plan: {
+    backHome: "← Home", checkIn: "Check-in", checkOut: "Check-out",
+    guestsRange: (min, max) => `Guests (${min}–${max})`,
+    checkAvailability: "Check availability", full: "Fully booked", book: "Book now",
+    available: "✓ Available for these dates",
+    aboutPlan: "About this plan", aboutRoom: "The house", roomFeatures: "Room features",
+    features: ["Free Wi-Fi", "Washlet toilet"],
+    amenities: "Amenities", longStay: "Long-stay discounts",
+    discountLine: (min, max, pct) =>
+      `📅 ${max ? `${min}–${max} nights` : `${min} nights or more`} — ${pct}% off`,
+    contentInJapanese:
+      "The plan and room descriptions below are written by the owner in Japanese. Please contact us in English if anything is unclear.",
+  },
   common: {
     reservationCode: "Booking number", email: "Email address", guests: "Guests", nights: "night(s)",
     plan: "Plan", dates: "Dates", submit: "Submit", back: "Back", loading: "Loading…",
