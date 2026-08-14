@@ -1,6 +1,8 @@
 // Resend でメール送信（パッケージ不要、REST API を fetch）
 // 未設定・失敗しても予約フローを止めないよう、呼び出し側で握りつぶす。
 
+import { dict, type Locale } from "@/lib/i18n";
+
 type SendArgs = { to: string | string[]; subject: string; html: string };
 
 export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolean> {
@@ -61,16 +63,20 @@ function esc(s: string | number | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
-const wrap = (inner: string) => `
+// オーナー宛は日本語固定なので既定は ja。お客様宛だけ locale を渡す。
+const wrap = (inner: string, locale: Locale = "ja") => {
+  const t = dict(locale).email;
+  return `
   <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1f2937">
     <div style="border-bottom:2px solid #0d9488;padding:16px 0">
-      <strong style="font-size:18px">一棟貸し宿「日靜」</strong>
+      <strong style="font-size:18px">${t.brand}</strong>
     </div>
     <div style="padding:20px 0">${inner}</div>
     <div style="border-top:1px solid #e5e7eb;padding:12px 0;color:#9ca3af;font-size:12px">
-      北海道広尾郡広尾町音調津733番地 日靜 / ☎ 070-1251-6275
+      ${t.footer}
     </div>
   </div>`;
+};
 
 const row = (k: string, v: string) =>
   `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">${k}</td><td style="padding:4px 0;font-weight:600">${v}</td></tr>`;
@@ -128,13 +134,20 @@ export function ownerCancellationHtml(p: {
 }
 
 export function cancellationHtml(p: {
-  name: string; code: string; refund: number;
+  name: string; code: string; refund: number; locale?: Locale;
 }): string {
+  const locale = p.locale ?? "ja";
+  const t = dict(locale).email;
   return wrap(`
-    <p>${esc(p.name)} 様</p>
-    <p>ご予約（予約番号 ${esc(p.code)}）のキャンセルを承りました。</p>
+    <p>${esc(t.honorific(p.name))}</p>
+    <p>${esc(t.cancelLead(p.code))}</p>
     <table style="margin:12px 0;font-size:14px">
-      ${row("返金額", `¥${p.refund.toLocaleString()}`)}
+      ${row(t.refundLabel, `¥${p.refund.toLocaleString()}`)}
     </table>
-    <p>返金は Stripe を通じて数日内に処理されます。またのご利用をお待ちしております。</p>`);
+    <p>${t.cancelClosing}</p>`, locale);
+}
+
+/** キャンセル受付メールの件名。 */
+export function cancellationSubject(code: string, locale: Locale = "ja"): string {
+  return dict(locale).email.cancelSubject(code);
 }

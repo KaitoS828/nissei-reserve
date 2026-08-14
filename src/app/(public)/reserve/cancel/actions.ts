@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { computeRefund } from "@/lib/cancel";
-import { sendEmail, cancellationHtml, ownerCancellationHtml, ownerEmails } from "@/lib/email";
+import { sendEmail, cancellationHtml, cancellationSubject, ownerCancellationHtml, ownerEmails } from "@/lib/email";
 import { notifyOwner, cancellationMessage, notifyFailure } from "@/lib/notify";
 import { gcalDeleteEvent } from "@/lib/gcal";
 import { revokeDoorPin } from "@/lib/smart-lock";
@@ -79,9 +79,16 @@ export async function confirmCancel(formData: FormData) {
     .eq("id", resv!.id);
 
   // 通知（失敗しても止めない）
-  const name = [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || "お客";
+  // 名前未登録のときの既定値。お客様宛メールの宛名に出るので言語を合わせる。
+  const name =
+    [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") ||
+    (locale === "en" ? "Guest" : "お客");
   if (custEmail) {
-    await sendEmail({ to: custEmail, subject: `【日靜】キャンセル受付（${code}）`, html: cancellationHtml({ name, code, refund: refundAmount }) })
+    await sendEmail({
+      to: custEmail,
+      subject: cancellationSubject(code, locale),
+      html: cancellationHtml({ name, code, refund: refundAmount, locale }),
+    })
       .then(async (ok) => { if (!ok) await notifyFailure("キャンセル案内メール", "送信に失敗", { 予約: code, 宛先: custEmail }); })
       .catch((e) => notifyFailure("キャンセル案内メール", e, { 予約: code }));
   }

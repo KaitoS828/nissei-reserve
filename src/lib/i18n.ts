@@ -153,6 +153,14 @@ type Dict = {
     doneTitle: string; doneLead: string; refunded: string;
     errors: Record<string, string>;
   };
+  email: {
+    brand: string; footer: string;
+    honorific: (name: string) => string;
+    cancelSubject: (code: string) => string;
+    cancelLead: (code: string) => string;
+    refundLabel: string;
+    cancelClosing: string;
+  };
   receipt: {
     print: string; title: string; issuedOn: (d: string) => string;
     honorific: (name: string) => string; amount: string;
@@ -317,6 +325,15 @@ const ja: Dict = {
       refund_failed: "返金処理に失敗しました。お手数ですがお問い合わせください",
       generic: "処理できませんでした。お手数ですがお問い合わせください",
     },
+  },
+  email: {
+    brand: "一棟貸し宿「日靜」",
+    footer: "北海道広尾郡広尾町音調津733番地 日靜 / ☎ 070-1251-6275",
+    honorific: (name) => `${name} 様`,
+    cancelSubject: (code) => `【日靜】キャンセル受付（${code}）`,
+    cancelLead: (code) => `ご予約（予約番号 ${code}）のキャンセルを承りました。`,
+    refundLabel: "返金額",
+    cancelClosing: "返金は Stripe を通じて数日内に処理されます。またのご利用をお待ちしております。",
   },
   receipt: {
     print: "PDFで保存・印刷", title: "領　収　書",
@@ -521,6 +538,16 @@ const en: Dict = {
       refund_failed: "The refund could not be processed. Please contact us.",
       generic: "We could not complete that. Please contact us.",
     },
+  },
+  email: {
+    brand: "Nissei — private house & sauna",
+    footer: "733 Otsunai, Hiroo-cho, Hiroo-gun, Hokkaido 089-2661, Japan / ☎ +81 70-1251-6275",
+    honorific: (name) => `Dear ${name},`,
+    cancelSubject: (code) => `[Nissei] Your booking is cancelled (${code})`,
+    cancelLead: (code) => `We have cancelled your booking (booking number ${code}).`,
+    refundLabel: "Refund amount",
+    cancelClosing:
+      "Your refund will be processed through Stripe within a few days. We hope to welcome you another time.",
   },
   receipt: {
     print: "Save as PDF / print", title: "RECEIPT",
