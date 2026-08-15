@@ -89,9 +89,10 @@ export default async function ReservationsPage({
   const { status, error, done, q, month, range } = await searchParams;
   const supabase = createAdminClient();
 
-  // 既定は「これから」。日々の運用では近い予約から見たいので、先の予約が
-  // 先頭に来る降順は既定にしない。月を指定したときはその月をそのまま出す。
-  const view = month ? "all" : (range ?? "upcoming");
+  // 既定は「すべて」。「これから」を既定にすると、チェックアウト済みの予約が
+  // 一覧から消えて「予約が無くなった」ように見えるため。
+  // 月を指定したときはその月をそのまま出す。
+  const view = month ? "all" : (range ?? "all");
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
 
   let query = supabase
@@ -237,12 +238,12 @@ export default async function ReservationsPage({
       {!month && (
         <div className="flex flex-wrap gap-2">
           {[
+            { key: "all", label: "すべて" },
             { key: "upcoming", label: "これから" },
             { key: "past", label: "過去" },
-            { key: "all", label: "すべて" },
           ].map((t) => {
             const params = new URLSearchParams();
-            if (t.key !== "upcoming") params.set("range", t.key);
+            if (t.key !== "all") params.set("range", t.key);
             if (status) params.set("status", status);
             if (q) params.set("q", q);
             const href = `/admin/reservations${params.size ? `?${params}` : ""}`;
@@ -329,14 +330,25 @@ export default async function ReservationsPage({
         </form>
       </details>
 
-      {/* フィルタ */}
+      {/* フィルタ。期間の選択を消さないよう range と検索語は引き継ぐ */}
       <div className="flex flex-wrap gap-2">
-        <Link href="/admin/reservations" className={`rounded-full px-3 py-1 text-xs ${!status ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}>すべて</Link>
-        {STATUS.map((s) => (
-          <Link key={s.value} href={`/admin/reservations?status=${s.value}`} className={`rounded-full px-3 py-1 text-xs ${status === s.value ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}>
-            {s.label}
-          </Link>
-        ))}
+        {[{ value: "", label: "すべて" }, ...STATUS].map((s) => {
+          const params = new URLSearchParams();
+          if (s.value) params.set("status", s.value);
+          if (range) params.set("range", range);
+          if (q) params.set("q", q);
+          if (month) params.set("month", month);
+          const active = s.value ? status === s.value : !status;
+          return (
+            <Link
+              key={s.value || "all"}
+              href={`/admin/reservations${params.size ? `?${params}` : ""}`}
+              className={`rounded-full px-3 py-1 text-xs ${active ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
+            >
+              {s.label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* 一覧（年 → 月 でフォルダ分け） */}
