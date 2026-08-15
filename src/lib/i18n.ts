@@ -17,6 +17,18 @@ export function altPath(pathname: string, to: Locale): string {
   return to === "en" ? (bare === "/" ? "/en" : `/en${bare}`) : bare;
 }
 
+// 英語版があるパス（配下も含む）。無いパスへ /en を付けると 404 になるので、
+// 切替リンクとナビゲーションはここを見て出し分ける。
+// 英語ページを追加したらここに足す。
+const EN_PREFIXES = ["/reserve", "/checkin", "/register"];
+
+/** このパスに英語版があるか。/en 付き・無しのどちらを渡してもよい。 */
+export function hasEnglishVersion(pathname: string): boolean {
+  const bare = pathname.replace(/^\/en(?=\/|$)/, "") || "/";
+  if (bare === "/") return true;
+  return EN_PREFIXES.some((p) => bare === p || bare.startsWith(`${p}/`));
+}
+
 /** 自言語のURL。リンク先を組み立てるときに使う。 */
 export function localePath(locale: Locale, path: string): string {
   return locale === "en" ? (path === "/" ? "/en" : `/en${path}`) : path;
