@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dict, localePath, type Locale } from "@/lib/i18n";
+import { jstStamp } from "@/lib/datetime";
 import type { ReservationStatus } from "@/types/db";
 
 const field =
@@ -48,7 +49,8 @@ export async function LookupScreen({
     }
   }
 
-  const stamp = (v: string) => v.slice(0, 16).replace("T", " ");
+  // DBは UTC。素の文字列を切り出すと9時間ずれた時刻をお客様に見せてしまう。
+  const stamp = (v: string) => jstStamp(v) ?? "—";
 
   return (
     <div className="mx-auto max-w-xl space-y-6">

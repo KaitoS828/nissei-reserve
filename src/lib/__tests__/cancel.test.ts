@@ -16,7 +16,16 @@ describe("chargeRate", () => {
   });
 
   it("チェックイン日を過ぎている場合も最大料率を返す", () => {
-    assert.equal(chargeRate(POLICY, -1), 0);
+    // 0 を返すと、宿泊が終わった予約をキャンセルして全額返金できてしまう
+    assert.equal(chargeRate(POLICY, -1), 1);
+    assert.equal(chargeRate(POLICY, -2), 1);
+    assert.equal(chargeRate(POLICY, -365), 1);
+  });
+
+  it("当日の閾値が無いポリシーでも、期日を過ぎたら一番厳しい料率になる", () => {
+    // {"7":0,"3":0.5} のように 0 日の指定が無い場合でも 0 に落ちない
+    assert.equal(chargeRate({ "7": 0, "3": 0.5 }, 1), 0.5);
+    assert.equal(chargeRate({ "7": 0, "3": 0.5 }, -1), 0.5);
   });
 
   it("ポリシー未設定なら請求0（全額返金）", () => {

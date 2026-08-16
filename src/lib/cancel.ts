@@ -11,7 +11,11 @@ export function chargeRate(
   for (const k of keys) {
     if (daysBefore >= k) return policy[String(k)];
   }
-  return 0;
+  // どの閾値にも満たない = 一番期日が近い（当日以降）。
+  // ここで 0 を返すと、宿泊が終わった予約をキャンセルして全額返金できてしまう。
+  // 一番小さい閾値の料率＝最も厳しい料率を適用する。
+  const strictest = keys[keys.length - 1];
+  return strictest === undefined ? 0 : policy[String(strictest)];
 }
 
 export function daysUntil(checkIn: string, today = new Date()): number {

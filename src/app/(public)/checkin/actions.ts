@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { auditLog } from "@/lib/audit";
 import { dict, isLocale, type Locale } from "@/lib/i18n";
+import { jstStamp } from "@/lib/datetime";
 
 // ドアPINは URL に載せない（共有・履歴・Referer に残るため）。
 // 照会は GET ではなく Server Action で受けて、結果を state で返す。
@@ -30,16 +31,6 @@ export type CheckinState =
     };
 
 // 予約の存在を推測されないよう、番号違いもメール違いも同じ文言にする。
-
-/** UTC の timestamptz を「YYYY-MM-DD HH:MM」(JST) にする。 */
-function jst(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(new Date(iso));
-}
 
 type Loaded = {
   id: string;
@@ -98,8 +89,8 @@ async function load(code: string, email: string, locale: Locale): Promise<Loaded
       checkOut: resv.check_out as string,
       nights: (resv.nights as number | null) ?? 1,
       numGuests: resv.num_guests as number,
-      validFrom: jst(issued?.valid_from ?? null),
-      validUntil: jst(issued?.valid_until ?? null),
+      validFrom: jstStamp(issued?.valid_from ?? null),
+      validUntil: jstStamp(issued?.valid_until ?? null),
       doorPin: issued?.door_pin ?? null,
       checkedIn: resv.status === "checked_in",
       phone: (facility?.phone as string | null) ?? null,
