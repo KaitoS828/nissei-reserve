@@ -478,6 +478,18 @@ function ReservationCard({
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
   const activeKey = r.access_keys?.status === "issued" ? r.access_keys : null;
+
+  // 名簿は旅館業法で全員分の記録が要る。展開しないと分からないと取りこぼすので、
+  // 一覧の行に出す。キャンセル・ノーショーは記録の必要がないため出さない。
+  const showRegistry = r.status !== "cancelled" && r.status !== "no_show";
+  const filled = registry.length;
+  const registryMeta = !showRegistry
+    ? null
+    : filled === 0
+      ? { label: "名簿 未", cls: "bg-amber-50 text-amber-700" }
+      : filled < r.num_guests
+        ? { label: `名簿 ${filled}/${r.num_guests}`, cls: "bg-amber-50 text-amber-700" }
+        : { label: `名簿 ${filled}/${r.num_guests}`, cls: "bg-emerald-50 text-emerald-700" };
   return (
             <details className="rounded-2xl border border-gray-200 bg-white p-5">
               {/* 日付 → 状態 → 名前 → 予約番号 の順。日付を先頭に固定幅で置いて、
@@ -494,6 +506,11 @@ function ReservationCard({
                   <span className="font-medium text-gray-900">{custName(r.customers)}</span>
                   <span className="ml-2 font-mono text-xs text-gray-400">{r.code}</span>
                 </span>
+                {registryMeta && (
+                  <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${registryMeta.cls}`}>
+                    {registryMeta.label}
+                  </span>
+                )}
                 <span className="shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500">
                   {sourceLabel(r.source)}
                 </span>
