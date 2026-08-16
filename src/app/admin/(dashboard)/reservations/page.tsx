@@ -109,15 +109,18 @@ export default async function ReservationsPage({
     query = query.order("check_in", { ascending: false });
   }
   if (status) query = query.eq("status", status);
-  // 月指定はチェックイン日で絞る
-  if (month && /^\d{4}-\d{2}$/.test(month)) {
-    const [y, m] = month.split("-").map(Number);
-    const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-    query = query.gte("check_in", `${month}-01`).lte("check_in", last);
-  }
+
+  // 月チップ用。期間や月の指定に関係なく同じ並びを出したいので、
+  // ここでは状態だけ揃えて全期間を取る。
+  let monthsQuery = supabase
+    .from("reservations")
+    .select("check_in, code, customers(id, last_name, first_name, email)")
+    .is("archived_at", null);
+  if (status) monthsQuery = monthsQuery.eq("status", status);
 
   const [
     { data: resData },
+    { data: monthRows },
     { data: types },
     { data: rooms },
     { data: plans },
@@ -125,6 +128,7 @@ export default async function ReservationsPage({
     { data: facility },
   ] = await Promise.all([
     query,
+    monthsQuery,
     supabase.from("room_types").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("rooms").select("*").eq("is_active", true).order("name"),
     supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
@@ -134,15 +138,54 @@ export default async function ReservationsPage({
 
   let reservations = (resData ?? []) as ReservationWithRefs[];
   // 氏名は埋め込み先にあるので、取得後に絞る（予約番号でも引けるようにする）
-  if (q) {
-    const needle = q.trim().toLowerCase();
-    reservations = reservations.filter((r) =>
-      [custName(r.customers), r.code, r.customers?.email ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle),
-    );
+  const needle = q?.trim().toLowerCase() ?? "";
+  const matchesQuery = (r: {
+    code: string;
+    customers: Pick<Customer, "id" | "last_name" | "first_name" | "email"> | null;
+  }) =>
+    !needle ||
+    [custName(r.customers), r.code, r.customers?.email ?? ""]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle);
+
+  if (q) reservations = reservations.filter(matchesQuery);
+
+  // 月ごとの件数。チップの表示と、その月に予約があるかの判断に使う。
+  type MonthRow = {
+    check_in: string;
+    code: string;
+    customers: Pick<Customer, "id" | "last_name" | "first_name" | "email"> | null;
+  };
+  const monthCounts = new Map<string, number>();
+  for (const r of (monthRows ?? []) as unknown as MonthRow[]) {
+    if (!matchesQuery(r)) continue;
+    const key = r.check_in.slice(0, 7);
+    monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
   }
+  // 年 → 月 の並び。新しい年を上に出す。
+  const monthsByYear = new Map<string, string[]>();
+  for (const key of [...monthCounts.keys()].sort().reverse()) {
+    const y = key.slice(0, 4);
+    monthsByYear.set(y, [...(monthsByYear.get(y) ?? []), key]);
+  }
+
+  // 月の絞り込みは取得後に行う。チップの件数が月指定に引きずられないようにするため。
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    reservations = reservations.filter((r) => r.check_in.slice(0, 7) === month);
+  }
+
+  // 絞り込みリンクは現在の条件を引き継ぐ。null を渡した項目だけ外す。
+  const buildHref = (over: Partial<Record<"range" | "status" | "q" | "month", string | null>>) => {
+    const next: Record<string, string | null | undefined> = { range, status, q, month, ...over };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(next)) {
+      if (!v) continue;
+      if (k === "range" && v === "all") continue;
+      p.set(k, v);
+    }
+    return `/admin/reservations${p.size ? `?${p}` : ""}`;
+  };
 
   const ids = reservations.map((r) => r.id);
   const [{ data: deliveries }, { data: registered }] = await Promise.all([
@@ -216,24 +259,57 @@ export default async function ReservationsPage({
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4">
         {status && <input type="hidden" name="status" value={status} />}
+        {range && <input type="hidden" name="range" value={range} />}
+        {month && <input type="hidden" name="month" value={month} />}
         <label className="space-y-1">
           <span className="block text-xs text-gray-600">お名前・予約番号・メール</span>
           <input name="q" defaultValue={q ?? ""} placeholder="一部でも可" className={field} />
         </label>
-        <label className="space-y-1">
-          <span className="block text-xs text-gray-600">チェックインの月</span>
-          <input type="month" name="month" defaultValue={month ?? ""} className={field} />
-        </label>
         <SubmitButton className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-700">
           絞り込む
         </SubmitButton>
-        {(q || month) && (
+        {(q || month || status || range) && (
           <Link href="/admin/reservations" className="px-2 py-2 text-sm text-gray-600 hover:text-gray-900">
             条件をクリア
           </Link>
         )}
         <span className="ml-auto self-center text-sm text-gray-500">{reservations.length}件</span>
       </form>
+
+      {/* 月で辿る。予約がある月だけ出すので、空振りしない。 */}
+      {monthCounts.size > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-gray-200 bg-white p-4">
+          <Link
+            href={buildHref({ month: null })}
+            className={`rounded-full px-3 py-1 text-sm ${
+              !month ? "bg-gray-900 font-medium text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            すべての月
+          </Link>
+          {[...monthsByYear.entries()].map(([year, keys]) => (
+            <div key={year} className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-medium text-gray-400">{year}年</span>
+              {keys.map((key) => (
+                <Link
+                  key={key}
+                  href={buildHref({ month: key })}
+                  className={`rounded-full px-2.5 py-1 text-sm ${
+                    month === key
+                      ? "bg-cyan-600 font-medium text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {Number(key.slice(5))}月
+                  <span className={`ml-1 text-xs ${month === key ? "text-cyan-100" : "text-gray-400"}`}>
+                    {monthCounts.get(key)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {!month && (
         <div className="flex flex-wrap gap-2">
@@ -242,15 +318,10 @@ export default async function ReservationsPage({
             { key: "upcoming", label: "これから" },
             { key: "past", label: "過去" },
           ].map((t) => {
-            const params = new URLSearchParams();
-            if (t.key !== "all") params.set("range", t.key);
-            if (status) params.set("status", status);
-            if (q) params.set("q", q);
-            const href = `/admin/reservations${params.size ? `?${params}` : ""}`;
             return (
               <Link
                 key={t.key}
-                href={href}
+                href={buildHref({ range: t.key === "all" ? null : t.key })}
                 className={`rounded-full px-3 py-1 text-sm transition ${
                   view === t.key
                     ? "bg-cyan-600 font-medium text-white"
@@ -333,16 +404,11 @@ export default async function ReservationsPage({
       {/* フィルタ。期間の選択を消さないよう range と検索語は引き継ぐ */}
       <div className="flex flex-wrap gap-2">
         {[{ value: "", label: "すべて" }, ...STATUS].map((s) => {
-          const params = new URLSearchParams();
-          if (s.value) params.set("status", s.value);
-          if (range) params.set("range", range);
-          if (q) params.set("q", q);
-          if (month) params.set("month", month);
           const active = s.value ? status === s.value : !status;
           return (
             <Link
               key={s.value || "all"}
-              href={`/admin/reservations${params.size ? `?${params}` : ""}`}
+              href={buildHref({ status: s.value || null })}
               className={`rounded-full px-3 py-1 text-xs ${active ? "bg-cyan-600 text-white" : "bg-gray-100 text-gray-700"}`}
             >
               {s.label}
