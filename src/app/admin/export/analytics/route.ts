@@ -56,6 +56,7 @@ export async function GET(req: Request) {
       .select(
         "id,code,status,payment_status,amount,check_in,check_out,nights,num_guests,source,customers(last_name,first_name,email,phone),plans(name),room_types(name)",
       )
+      .is("archived_at", null)
       .order("check_in", { ascending: true }),
     supabase
       .from("operating_costs")
@@ -70,18 +71,32 @@ export async function GET(req: Request) {
   const allCosts = (costData ?? []) as OperatingCost[];
 
   const years = [...new Set(all.map((r) => r.check_in.slice(0, 4)))].sort().reverse();
+  const isAllPeriod = yearParam === "all";
   const thisYear = String(new Date().getFullYear());
-  const year = yearParam && years.includes(yearParam) ? yearParam : (years.includes(thisYear) ? thisYear : years[0] ?? thisYear);
-  const month = monthParam && /^\d{2}$/.test(monthParam) ? monthParam : "";
+  const year = isAllPeriod
+    ? "all"
+    : yearParam && years.includes(yearParam)
+      ? yearParam
+      : (years.includes(thisYear) ? thisYear : years[0] ?? thisYear);
+  const month = !isAllPeriod && monthParam && /^\d{2}$/.test(monthParam) ? monthParam : "";
 
-  const rows = all.filter((r) =>
-    month ? r.check_in.slice(0, 7) === `${year}-${month}` : r.check_in.slice(0, 4) === year,
-  );
-  const periodCosts = allCosts.filter((c) =>
-    month ? c.year_month === `${year}-${month}` : c.year_month.startsWith(`${year}-`),
-  );
+  let rows: Row[] = [];
+  let periodCosts: OperatingCost[] = [];
+  let periodLabel = "";
 
-  const periodLabel = month ? `${year}年${Number(month)}月` : `${year}年`;
+  if (isAllPeriod) {
+    rows = all;
+    periodCosts = allCosts;
+    periodLabel = "全期間（全データ）";
+  } else if (month) {
+    rows = all.filter((r) => r.check_in.slice(0, 7) === `${year}-${month}`);
+    periodCosts = allCosts.filter((c) => c.year_month === `${year}-${month}`);
+    periodLabel = `${year}年${Number(month)}月`;
+  } else {
+    rows = all.filter((r) => r.check_in.slice(0, 4) === year);
+    periodCosts = allCosts.filter((c) => c.year_month.startsWith(`${year}-`));
+    periodLabel = `${year}年（通年）`;
+  }
 
   // 予約・売上集計
   const total = rows.length;
@@ -96,9 +111,36 @@ export async function GET(req: Request) {
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
 
-  // 月別集計（年間）
+  // 月別集計
   const monthlyRows: unknown[][] = [];
-  if (!month) {
+  if (isAllPeriod) {
+    // 全期間に存在する年月を昇順で抽出
+    const allMonths = [
+      ...new Set([
+        ...all.map((r) => r.check_in.slice(0, 7)),
+        ...allCosts.map((c) => c.year_month),
+      ]),
+    ].filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
+
+    for (const ym of allMonths) {
+      const mRows = all.filter((r) => r.check_in.slice(0, 7) === ym);
+      const mRevenue = mRows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + r.amount, 0);
+      const mCost = allCosts.filter((c) => c.year_month === ym).reduce((s, c) => s + c.amount, 0);
+      const mProfit = mRevenue - mCost;
+      const mNights = mRows.filter((r) => !["cancelled", "no_show"].includes(r.status)).reduce((s, r) => s + (r.nights ?? 0), 0);
+      const mCancel = mRows.filter((r) => r.status === "cancelled").length;
+      monthlyRows.push([
+        ym,
+        mRevenue,
+        mCost,
+        mProfit,
+        mRows.length,
+        mNights,
+        mCancel,
+        mRows.length ? `${Math.round((mCancel / mRows.length) * 100)}%` : "0%",
+      ]);
+    }
+  } else if (!month) {
     for (let i = 1; i <= 12; i++) {
       const mm = String(i).padStart(2, "0");
       const targetMonth = `${year}-${mm}`;
@@ -144,7 +186,7 @@ export async function GET(req: Request) {
 
   if (!month) {
     summaryBlock.push(
-      ["--- 月別売上・コスト推移 ---"],
+      [isAllPeriod ? "--- 全期間 月別売上・コスト推移 ---" : `--- ${year}年 月別売上・コスト推移 ---`],
       ["対象年月", "確定売上(円)", "経費コスト(円)", "粗利益(円)", "予約件数", "宿泊泊数", "キャンセル件数", "キャンセル率"],
       ...monthlyRows,
       [],
@@ -214,6 +256,7 @@ export async function GET(req: Request) {
     fullData.slice(1),
   );
 
-  const filename = `集計・分析_${periodLabel.replace(/年|月/g, "-").replace(/-$/, "")}`;
-  return csvResponse(filename, csv, `analytics_${year}${month ? `_${month}` : ""}`);
+  const filePrefix = isAllPeriod ? "集計・分析_全期間" : `集計・分析_${periodLabel.replace(/年|月/g, "-").replace(/-$/, "")}`;
+  const asciiName = isAllPeriod ? "analytics_all" : `analytics_${year}${month ? `_${month}` : ""}`;
+  return csvResponse(filePrefix, csv, asciiName);
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationStatus, OperatingCost } from "@/types/db";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { CostManager } from "./CostManager";
+import { archiveReservationFromAnalytics, unarchiveReservationFromAnalytics } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ type Row = {
   num_guests: number;
   source: string | null;
   note: string | null;
+  archived_at: string | null;
   room_types: { name: string } | null;
   customers: {
     last_name: string | null;
@@ -65,7 +68,7 @@ export default async function AnalyticsPage({
   const [{ data: resvData }, { data: costData, error: costError }] = await Promise.all([
     supabase
       .from("reservations")
-      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, customers(last_name, first_name), room_types(name)")
+      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, archived_at, customers(last_name, first_name), room_types(name)")
       .order("check_in", { ascending: false }),
     supabase
       .from("operating_costs")
@@ -84,9 +87,13 @@ export default async function AnalyticsPage({
   const year = yearParam && years.includes(yearParam) ? yearParam : (years.includes(thisYear) ? thisYear : years[0] ?? thisYear);
   const month = monthParam && /^\d{2}$/.test(monthParam) ? monthParam : "";
 
-  const rows = all.filter((r) =>
+  // 該当期間の予約（有効と除外済みを分離）
+  const periodAll = all.filter((r) =>
     month ? r.check_in.slice(0, 7) === `${year}-${month}` : r.check_in.slice(0, 4) === year,
   );
+  const rows = periodAll.filter((r) => !r.archived_at);
+  const excludedRows = periodAll.filter((r) => !!r.archived_at);
+
   const periodLabel = month ? `${year}年${Number(month)}月` : `${year}年`;
 
   // 経費（コスト）の絞り込み
@@ -107,8 +114,8 @@ export default async function AnalyticsPage({
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
 
-  // 選んだ年の12ヶ月の売上とコスト
-  const yearRows = all.filter((r) => r.check_in.slice(0, 4) === year);
+  // 選んだ年の12ヶ月の売上とコスト（集計対象のみ）
+  const yearRows = all.filter((r) => !r.archived_at && r.check_in.slice(0, 4) === year);
   const yearCosts = allCosts.filter((c) => c.year_month.startsWith(`${year}-`));
 
   const monthlyStats = Array.from({ length: 12 }, (_, i) => {
@@ -170,15 +177,28 @@ export default async function AnalyticsPage({
             売上・経費（コスト）・粗利益・予約の集計（{periodLabel}／チェックイン日集計）
           </p>
         </div>
-        <a
-          href={`/admin/export/analytics?year=${year}${month ? `&month=${month}` : ""}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-        >
-          <svg className="h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          CSVダウンロード
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/admin/export/analytics?year=${year}${month ? `&month=${month}` : ""}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+            title={`${periodLabel}のデータをCSV出力`}
+          >
+            <svg className="h-4 w-4 text-cyan-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {periodLabel}をCSV出力
+          </a>
+          <a
+            href="/admin/export/analytics?year=all"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-100"
+            title="全期間・全データをまとめてCSV出力"
+          >
+            <svg className="h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            全期間（全データ）CSV出力
+          </a>
+        </div>
       </header>
 
       {/* 期間選択フィルター */}
@@ -361,13 +381,35 @@ export default async function AnalyticsPage({
                         </span>
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <Link
-                          href={`/admin/reservations?q=${r.code}`}
-                          className="text-cyan-700 hover:underline font-medium"
-                          target="_blank"
-                        >
-                          予約を開く ↗
-                        </Link>
+                        <div className="inline-flex items-center justify-end gap-2.5">
+                          <Link
+                            href={`/admin/reservations?q=${r.code}`}
+                            className="text-cyan-700 hover:underline font-medium"
+                            target="_blank"
+                          >
+                            詳細 ↗
+                          </Link>
+                          <form action={archiveReservationFromAnalytics} className="inline">
+                            <input type="hidden" name="id" value={r.id} />
+                            <input type="hidden" name="code" value={r.code} />
+                            <input type="hidden" name="year" value={year} />
+                            <input type="hidden" name="month" value={month} />
+                            <ConfirmButton
+                              danger
+                              title="集計から削除（除外）します"
+                              message={
+                                <>
+                                  <p>予約番号: <strong>{r.code}</strong>（{custName} 様）を集計から削除します。</p>
+                                  <p className="mt-2 text-xs text-gray-500">※ 売上や予約件数などの集計から除外されます。後から「集計外の予約」から復元することも可能です。</p>
+                                </>
+                              }
+                              confirmLabel="集計から削除する"
+                              className="text-red-600 hover:underline"
+                            >
+                              集計から削除
+                            </ConfirmButton>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -379,6 +421,90 @@ export default async function AnalyticsPage({
           )}
         </div>
       </details>
+
+      {/* 集計外（除外済み）の予約リスト */}
+      {excludedRows.length > 0 && (
+        <details className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/70 p-6">
+          <summary className="cursor-pointer font-medium text-gray-600 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <span>🚫 集計外の予約（除外・アーカイブ済み）</span>
+              <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs text-gray-700">
+                {excludedRows.length}件
+              </span>
+            </span>
+            <span className="text-xs text-gray-500">クリックで開閉</span>
+          </summary>
+
+          <div className="mt-4 border-t border-gray-200 pt-4 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 font-medium">
+                  <th className="py-2 px-2">予約番号</th>
+                  <th className="py-2 px-2">宿泊日</th>
+                  <th className="py-2 px-2">予約者名</th>
+                  <th className="py-2 px-2 text-right">金額</th>
+                  <th className="py-2 px-2">経路</th>
+                  <th className="py-2 px-2">ステータス</th>
+                  <th className="py-2 px-2 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-700">
+                {excludedRows.map((r) => {
+                  const custName = r.customers
+                    ? [r.customers.last_name, r.customers.first_name].filter(Boolean).join(" ") || "（無名）"
+                    : "—";
+
+                  return (
+                    <tr key={r.id} className="hover:bg-white transition opacity-80">
+                      <td className="py-2 px-2 font-mono font-medium line-through text-gray-500">{r.code}</td>
+                      <td className="py-2 px-2 whitespace-nowrap">
+                        {r.check_in} 〜 {r.check_out}
+                      </td>
+                      <td className="py-2 px-2">{custName}</td>
+                      <td className="py-2 px-2 text-right font-medium tabular-nums text-gray-500">
+                        ¥{r.amount.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-2 text-gray-500">
+                        {SOURCE_LABELS[r.source ?? ""] ?? r.source ?? "—"}
+                      </td>
+                      <td className="py-2 px-2">
+                        <span className="inline-block rounded bg-gray-200 px-2 py-0.5 text-[11px] text-gray-600">
+                          除外中
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-right">
+                        <div className="inline-flex items-center justify-end gap-2.5">
+                          <Link
+                            href={`/admin/reservations?q=${r.code}`}
+                            className="text-gray-600 hover:underline"
+                            target="_blank"
+                          >
+                            詳細 ↗
+                          </Link>
+                          <form action={unarchiveReservationFromAnalytics} className="inline">
+                            <input type="hidden" name="id" value={r.id} />
+                            <input type="hidden" name="code" value={r.code} />
+                            <input type="hidden" name="year" value={year} />
+                            <input type="hidden" name="month" value={month} />
+                            <ConfirmButton
+                              title="集計対象に復元します"
+                              message={`予約番号: ${r.code} を再び集計対象に復元します。よろしいですか？`}
+                              confirmLabel="集計に戻す"
+                              className="text-emerald-700 hover:underline font-medium"
+                            >
+                              集計に戻す
+                            </ConfirmButton>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

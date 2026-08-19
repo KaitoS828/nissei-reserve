@@ -134,3 +134,71 @@ export async function deleteOperatingCost(formData: FormData) {
   revalidatePath(PATH);
   redirect(`${PATH}?${queryParam}&done=${encodeURIComponent("コストを削除しました")}`);
 }
+
+export async function archiveReservationFromAnalytics(formData: FormData) {
+  const supabase = createAdminClient();
+
+  const id = String(formData.get("id") ?? "");
+  const code = String(formData.get("code") ?? id);
+  const year = String(formData.get("year") ?? "");
+  const month = String(formData.get("month") ?? "");
+  const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
+
+  if (!id) redirectError("対象の予約IDが指定されていません", queryParam);
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    redirectError(`集計からの除外に失敗しました: ${error.message}`, queryParam);
+  }
+
+  await auditLog(supabase, {
+    action: "reservation.archive",
+    entityType: "reservations",
+    entityId: id,
+    summary: `予約 ${code} を集計から除外（アーカイブ）`,
+  }).catch(() => {});
+
+  revalidatePath(PATH);
+  revalidatePath("/admin/reservations");
+  revalidatePath("/admin/calendar");
+  redirect(`${PATH}?${queryParam}&done=${encodeURIComponent(`予約 ${code} を集計から除外しました`)}`);
+}
+
+export async function unarchiveReservationFromAnalytics(formData: FormData) {
+  const supabase = createAdminClient();
+
+  const id = String(formData.get("id") ?? "");
+  const code = String(formData.get("code") ?? id);
+  const year = String(formData.get("year") ?? "");
+  const month = String(formData.get("month") ?? "");
+  const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
+
+  if (!id) redirectError("対象の予約IDが指定されていません", queryParam);
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({ archived_at: null })
+    .eq("id", id);
+
+  if (error) {
+    redirectError(`集計への復元に失敗しました: ${error.message}`, queryParam);
+  }
+
+  await auditLog(supabase, {
+    action: "reservation.unarchive",
+    entityType: "reservations",
+    entityId: id,
+    summary: `予約 ${code} を集計に対象として復元`,
+  }).catch(() => {});
+
+  revalidatePath(PATH);
+  revalidatePath("/admin/reservations");
+  revalidatePath("/admin/calendar");
+  redirect(`${PATH}?${queryParam}&done=${encodeURIComponent(`予約 ${code} を集計対象に復元しました`)}`);
+}
+
+
