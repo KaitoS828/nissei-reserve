@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { OperatingCost } from "@/types/db";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -40,6 +41,8 @@ export function CostManager({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const isYearly = !currentMonth;
+
   // 対象年月（月未指定なら現在の月をデフォルト）
   const activeYearMonth = currentMonth
     ? `${currentYear}-${currentMonth}`
@@ -60,16 +63,51 @@ export function CostManager({
     .filter((c) => !BASE_CATEGORIES.includes(c.category))
     .reduce((sum, c) => sum + c.amount, 0);
 
+  // 通年表示用の月別集計（1月〜12月）
+  const monthlySummaries = Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, "0");
+    const ym = `${currentYear}-${mm}`;
+    const mCosts = costs.filter((c) => c.year_month === ym);
+    const mBase = mCosts
+      .filter((c) => BASE_CATEGORIES.includes(c.category))
+      .reduce((sum, c) => sum + c.amount, 0);
+    const mVar = mCosts
+      .filter((c) => !BASE_CATEGORIES.includes(c.category))
+      .reduce((sum, c) => sum + c.amount, 0);
+    const mTotal = mCosts.reduce((sum, c) => sum + c.amount, 0);
+    return {
+      month: mm,
+      label: `${Number(mm)}月`,
+      yearMonth: ym,
+      base: mBase,
+      variable: mVar,
+      total: mTotal,
+      count: mCosts.length,
+      costs: mCosts,
+    };
+  });
+
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            コスト（経費）管理
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              コスト（経費）管理
+            </h2>
+            {currentMonth ? (
+              <span className="rounded-full bg-cyan-100 px-2.5 py-0.5 text-xs font-semibold text-cyan-800">
+                {currentYear}年{Number(currentMonth)}月
+              </span>
+            ) : (
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                {currentYear}年（通年まとめ）
+              </span>
+            )}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-600">
             <span>
-              {currentMonth ? `${currentYear}年${Number(currentMonth)}月` : `${currentYear}年（通年）`}の経費合計:{" "}
+              {currentMonth ? `${currentYear}年${Number(currentMonth)}月` : `${currentYear}年`}の経費合計:{" "}
               <strong className="text-gray-900 text-sm">¥{totalCost.toLocaleString()}</strong>
             </span>
             <span className="text-gray-300">|</span>
@@ -83,6 +121,15 @@ export function CostManager({
           </div>
         </div>
 
+        {currentMonth && (
+          <Link
+            href={`/admin/analytics?year=${currentYear}`}
+            className="text-xs font-medium text-cyan-700 hover:underline"
+          >
+            ← 通年の集計・まとめを見る
+          </Link>
+        )}
+
         {!dbReady && (
           <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 border border-amber-200">
             ※ コスト管理テーブルの作成が必要です。
@@ -90,15 +137,95 @@ export function CostManager({
         )}
       </div>
 
-      {/* 1. ベース費用（家賃・電気代・ガス代・水道代）一括入力フォーム */}
+      {/* --- A. 通年表示（月毎にまとめた一覧 & タップで月別管理へ） --- */}
+      {isYearly && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              各月をタップまたは「管理する →」を押すと、その月の経費詳細・固定費入力画面へ移動します。
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
+                  <th className="py-2.5 px-3">対象月</th>
+                  <th className="py-2.5 px-3 text-right">固定・インフラ費</th>
+                  <th className="py-2.5 px-3 text-right">変動・個別経費</th>
+                  <th className="py-2.5 px-3 text-right">経費合計</th>
+                  <th className="py-2.5 px-3 text-center">登録件数</th>
+                  <th className="py-2.5 px-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-800">
+                {monthlySummaries.map((m) => {
+                  const hasData = m.count > 0;
+                  return (
+                    <tr
+                      key={m.month}
+                      className="hover:bg-cyan-50/40 transition group cursor-pointer"
+                      onClick={() => {
+                        window.location.href = `/admin/analytics?year=${currentYear}&month=${m.month}`;
+                      }}
+                    >
+                      <td className="py-3 px-3 font-semibold text-gray-900">
+                        <Link
+                          href={`/admin/analytics?year=${currentYear}&month=${m.month}`}
+                          className="group-hover:text-cyan-700 transition"
+                        >
+                          {currentYear}年{m.label}
+                        </Link>
+                      </td>
+                      <td className="py-3 px-3 text-right tabular-nums text-gray-600">
+                        {m.base > 0 ? `¥${m.base.toLocaleString()}` : <span className="text-gray-300">¥0</span>}
+                      </td>
+                      <td className="py-3 px-3 text-right tabular-nums text-gray-600">
+                        {m.variable > 0 ? `¥${m.variable.toLocaleString()}` : <span className="text-gray-300">¥0</span>}
+                      </td>
+                      <td className="py-3 px-3 text-right font-bold tabular-nums text-gray-900">
+                        {hasData ? (
+                          `¥${m.total.toLocaleString()}`
+                        ) : (
+                          <span className="text-gray-300 font-normal">¥0</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        {hasData ? (
+                          <span className="inline-block rounded-full bg-cyan-50 px-2 py-0.5 text-xs font-medium text-cyan-700">
+                            {m.count}件
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">未登録</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <Link
+                          href={`/admin/analytics?year=${currentYear}&month=${m.month}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-700 hover:text-cyan-800 hover:underline"
+                        >
+                          {m.label}の管理を開く →
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* --- B. 月別表示時、または通年時のクイック入力フォーム --- */}
+      {/* 1. ベース費用（家賃・電気代・ガス代・水道代・Wi-Fi）一括入力フォーム */}
       <div className="rounded-xl border border-cyan-100 bg-cyan-50/40 p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-cyan-900">
-              毎月のベース費用（家賃・光熱費・水道・Wi-Fi）
+              {currentMonth ? `${currentYear}年${Number(currentMonth)}月のベース費用（家賃・光熱費・水道・Wi-Fi）` : "毎月のベース費用（家賃・光熱費・水道・Wi-Fi）"}
             </h3>
             <p className="text-xs text-cyan-700 mt-0.5">
-              対象年月の家賃と光熱費・通信費を一括で入力・更新できます。
+              家賃と光熱費・通信費を一括で入力・更新できます。
             </p>
           </div>
         </div>
@@ -206,7 +333,7 @@ export function CostManager({
       </div>
 
       {/* 2. 個別の変動経費（清掃費、消耗品、修繕など）追加フォーム */}
-      <details className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+      <details className="rounded-xl border border-gray-200 bg-gray-50/70 p-4" open={!isYearly}>
         <summary className="cursor-pointer font-medium text-sm text-gray-800 hover:text-cyan-800 flex items-center justify-between">
           <span>＋ 個別の経費を追加（清掃費・消耗品・アメニティ・修繕費など）</span>
           <span className="text-xs text-gray-500 font-normal">随時追加・登録</span>
@@ -280,156 +407,158 @@ export function CostManager({
         </form>
       </details>
 
-      {/* 3. 登録済みコスト一覧 */}
-      {costs.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
-                <th className="py-2.5 px-3">対象年月</th>
-                <th className="py-2.5 px-3">区分</th>
-                <th className="py-2.5 px-3">項目</th>
-                <th className="py-2.5 px-3 text-right">金額</th>
-                <th className="py-2.5 px-3">発生日</th>
-                <th className="py-2.5 px-3">備考</th>
-                <th className="py-2.5 px-3 text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-800">
-              {costs.map((c) => {
-                const isBase = BASE_CATEGORIES.includes(c.category);
+      {/* 3. 登録済みコスト一覧（月別表示時はその月の明細、通年時は明細アコーディオン） */}
+      {!isYearly ? (
+        costs.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
+                  <th className="py-2.5 px-3">対象年月</th>
+                  <th className="py-2.5 px-3">区分</th>
+                  <th className="py-2.5 px-3">項目</th>
+                  <th className="py-2.5 px-3 text-right">金額</th>
+                  <th className="py-2.5 px-3">発生日</th>
+                  <th className="py-2.5 px-3">備考</th>
+                  <th className="py-2.5 px-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-800">
+                {costs.map((c) => {
+                  const isBase = BASE_CATEGORIES.includes(c.category);
 
-                if (editingId === c.id) {
+                  if (editingId === c.id) {
+                    return (
+                      <tr key={c.id} className="bg-cyan-50/50">
+                        <td colSpan={7} className="p-3">
+                          <form action={updateOperatingCost} className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6 items-end">
+                            <input type="hidden" name="id" value={c.id} />
+                            <label className="space-y-1">
+                              <span className="text-[11px] text-gray-500">年月</span>
+                              <input
+                                type="month"
+                                name="year_month"
+                                required
+                                defaultValue={c.year_month}
+                                className={field}
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[11px] text-gray-500">項目</span>
+                              <input
+                                type="text"
+                                name="category"
+                                required
+                                defaultValue={c.category}
+                                className={field}
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[11px] text-gray-500">金額</span>
+                              <input
+                                type="number"
+                                name="amount"
+                                min={0}
+                                required
+                                defaultValue={c.amount}
+                                className={field}
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[11px] text-gray-500">発生日</span>
+                              <input
+                                type="date"
+                                name="recorded_date"
+                                defaultValue={c.recorded_date ?? ""}
+                                className={field}
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <span className="text-[11px] text-gray-500">備考</span>
+                              <input
+                                type="text"
+                                name="description"
+                                defaultValue={c.description ?? ""}
+                                className={field}
+                              />
+                            </label>
+                            <div className="flex gap-2">
+                              <SubmitButton className="rounded bg-cyan-600 px-3 py-2 text-xs font-medium text-white hover:bg-cyan-700">
+                                保存
+                              </SubmitButton>
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(null)}
+                                className="rounded border border-gray-300 bg-white px-3 py-2 text-xs text-gray-600 hover:bg-gray-50"
+                              >
+                                取消
+                              </button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   return (
-                    <tr key={c.id} className="bg-cyan-50/50">
-                      <td colSpan={7} className="p-3">
-                        <form action={updateOperatingCost} className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6 items-end">
-                          <input type="hidden" name="id" value={c.id} />
-                          <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">年月</span>
-                            <input
-                              type="month"
-                              name="year_month"
-                              required
-                              defaultValue={c.year_month}
-                              className={field}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">項目</span>
-                            <input
-                              type="text"
-                              name="category"
-                              required
-                              defaultValue={c.category}
-                              className={field}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">金額</span>
-                            <input
-                              type="number"
-                              name="amount"
-                              min={0}
-                              required
-                              defaultValue={c.amount}
-                              className={field}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">発生日</span>
-                            <input
-                              type="date"
-                              name="recorded_date"
-                              defaultValue={c.recorded_date ?? ""}
-                              className={field}
-                            />
-                          </label>
-                          <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">備考</span>
-                            <input
-                              type="text"
-                              name="description"
-                              defaultValue={c.description ?? ""}
-                              className={field}
-                            />
-                          </label>
-                          <div className="flex gap-2">
-                            <SubmitButton className="rounded bg-cyan-600 px-3 py-2 text-xs font-medium text-white hover:bg-cyan-700">
-                              保存
-                            </SubmitButton>
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(null)}
-                              className="rounded border border-gray-300 bg-white px-3 py-2 text-xs text-gray-600 hover:bg-gray-50"
+                    <tr key={c.id} className="hover:bg-gray-50/80 transition">
+                      <td className="py-2.5 px-3 font-medium text-gray-900">{c.year_month}</td>
+                      <td className="py-2.5 px-3">
+                        <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${
+                          isBase ? "bg-cyan-100 text-cyan-800" : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {isBase ? "固定・インフラ" : "変動・個別"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800">
+                        {c.category}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-gray-900 tabular-nums">
+                        ¥{c.amount.toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-500">
+                        {c.recorded_date ?? "—"}
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-600 truncate max-w-xs" title={c.description ?? ""}>
+                        {c.description ?? "—"}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(c.id)}
+                            className="text-xs text-cyan-700 hover:underline"
+                          >
+                            編集
+                          </button>
+                          <form action={deleteOperatingCost} className="inline">
+                            <input type="hidden" name="id" value={c.id} />
+                            <input type="hidden" name="year" value={currentYear} />
+                            <input type="hidden" name="month" value={currentMonth} />
+                            <ConfirmButton
+                              danger
+                              title="コストを削除します"
+                              message={`「${c.year_month} / ${c.category} (¥${c.amount.toLocaleString()})」を削除します。よろしいですか？`}
+                              confirmLabel="削除する"
+                              className="text-xs text-red-600 hover:underline"
                             >
-                              取消
-                            </button>
-                          </div>
-                        </form>
+                              削除
+                            </ConfirmButton>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   );
-                }
-
-                return (
-                  <tr key={c.id} className="hover:bg-gray-50/80 transition">
-                    <td className="py-2.5 px-3 font-medium text-gray-900">{c.year_month}</td>
-                    <td className="py-2.5 px-3">
-                      <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${
-                        isBase ? "bg-cyan-100 text-cyan-800" : "bg-gray-100 text-gray-700"
-                      }`}>
-                        {isBase ? "固定・インフラ" : "変動・個別"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-medium text-gray-800">
-                      {c.category}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-gray-900 tabular-nums">
-                      ¥{c.amount.toLocaleString()}
-                    </td>
-                    <td className="py-2.5 px-3 text-xs text-gray-500">
-                      {c.recorded_date ?? "—"}
-                    </td>
-                    <td className="py-2.5 px-3 text-xs text-gray-600 truncate max-w-xs" title={c.description ?? ""}>
-                      {c.description ?? "—"}
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingId(c.id)}
-                          className="text-xs text-cyan-700 hover:underline"
-                        >
-                          編集
-                        </button>
-                        <form action={deleteOperatingCost} className="inline">
-                          <input type="hidden" name="id" value={c.id} />
-                          <input type="hidden" name="year" value={currentYear} />
-                          <input type="hidden" name="month" value={currentMonth} />
-                          <ConfirmButton
-                            danger
-                            title="コストを削除します"
-                            message={`「${c.year_month} / ${c.category} (¥${c.amount.toLocaleString()})」を削除します。よろしいですか？`}
-                            confirmLabel="削除する"
-                            className="text-xs text-red-600 hover:underline"
-                          >
-                            削除
-                          </ConfirmButton>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="text-center py-6 text-xs text-gray-400">
-          この期間に登録されたコスト（経費）はありません。上のフォームから登録できます。
-        </p>
-      )}
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-center py-6 text-xs text-gray-400">
+            この月に登録されたコスト（経費）はありません。上のフォームから登録できます。
+          </p>
+        )
+      ) : null}
     </div>
   );
 }
