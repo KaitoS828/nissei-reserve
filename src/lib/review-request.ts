@@ -19,7 +19,7 @@ function jpDate(date: string): string {
   return `${y}年${m}月${d}日(${w})`;
 }
 
-export function reviewRequestSubject(_guestName?: string | null): string {
+export function reviewRequestSubject(): string {
   return "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い";
 }
 

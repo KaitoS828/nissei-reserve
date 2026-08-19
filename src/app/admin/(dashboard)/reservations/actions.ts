@@ -88,7 +88,6 @@ export async function createReservation(formData: FormData) {
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
   const note = String(formData.get("note") ?? "").trim() || null;
-  const amountInput = Number(formData.get("amount") ?? 0);
 
   if (!roomTypeId || !checkIn || !checkOut) {
     redirectError("客室タイプ・チェックイン・チェックアウトは必須です");
@@ -113,9 +112,16 @@ export async function createReservation(formData: FormData) {
 
   const customerId = await resolveCustomerId(supabase, formData, facilityId);
 
-  // 金額: 入力があればそれを、無ければ客室タイプの基本料金×泊数
-  let amount = amountInput;
-  if (!amount || amount <= 0) {
+  const source = String(formData.get("source") ?? "admin") || "admin";
+  const rawAmount = formData.get("amount");
+  const paymentStatus = (String(formData.get("payment_status") ?? "unpaid") || "unpaid") as PaymentStatus;
+
+  // 金額: 入力があればそれを（0円も含む）、空欄なら客室タイプの基本料金×泊数
+  let amount = 0;
+  if (rawAmount !== null && String(rawAmount).trim() !== "") {
+    amount = Number(rawAmount);
+    if (isNaN(amount) || amount < 0) amount = 0;
+  } else {
     amount = (roomType?.base_price ?? 0) * nights.length;
   }
 
@@ -131,8 +137,8 @@ export async function createReservation(formData: FormData) {
     num_guests: numGuests,
     amount,
     status: "confirmed", // 管理者手動登録は確定扱い
-    payment_status: (String(formData.get("payment_status") ?? "unpaid") || "unpaid") as PaymentStatus,
-    source: "admin",
+    payment_status: paymentStatus,
+    source,
     note,
   });
   if (error) redirectError(error.message);
@@ -156,6 +162,7 @@ export async function updateReservation(formData: FormData) {
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
   const amount = Number(formData.get("amount") ?? 0);
+  const source = String(formData.get("source") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
 
   if (!id || !roomTypeId || !checkIn || !checkOut) {
@@ -196,6 +203,7 @@ export async function updateReservation(formData: FormData) {
       amount,
       status,
       payment_status: paymentStatus,
+      ...(source ? { source } : {}),
       note,
     })
     .eq("id", id);

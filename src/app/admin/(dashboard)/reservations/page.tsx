@@ -74,11 +74,18 @@ const paymentLabel = (s: PaymentStatus) =>
   PAYMENT.find((x) => x.value === s)?.label ?? s;
 const SOURCE_LABEL: Record<string, string> = {
   web: "Web",
-  admin: "管理画面",
+  admin: "管理画面（知人・直予約）",
   phone: "電話",
   ical: "iCal",
-  walkin: "飛込み",
+  walkin: "飛込み・現地",
 };
+const SOURCES = [
+  { value: "admin", label: "管理画面（知人・直予約）" },
+  { value: "walkin", label: "飛込み・現地" },
+  { value: "phone", label: "電話" },
+  { value: "web", label: "Web予約" },
+  { value: "ical", label: "iCal" },
+];
 const sourceLabel = (s: string | null) => (s ? (SOURCE_LABEL[s] ?? s) : "—");
 
 const custName = (c: ReservationWithRefs["customers"]) =>
@@ -408,6 +415,14 @@ export default async function ReservationsPage({
             </select>
           </label>
           <label className="space-y-1">
+            <span className="text-xs text-gray-600">予約経路</span>
+            <select name="source" className={field} defaultValue="admin">
+              {SOURCES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
             <span className="text-xs text-gray-600">客室割当（任意）</span>
             <select name="room_id" className={field} defaultValue="">
               <option value="">（後で割当）</option>
@@ -416,7 +431,7 @@ export default async function ReservationsPage({
               ))}
             </select>
           </label>
-          <input name="note" placeholder="メモ（任意）" className={`${field} md:col-span-3`} />
+          <input name="note" placeholder="メモ（任意: 現金受領済、知り合い割引など）" className={`${field} md:col-span-3`} />
           <SubmitButton className={btnPrimary}>登録</SubmitButton>
         </form>
       </details>
@@ -734,7 +749,15 @@ function ReservationCard({
                       <span className="text-xs text-gray-600">金額</span>
                       <input type="number" name="amount" min={0} defaultValue={r.amount} className={field} />
                     </label>
-                    <input name="note" defaultValue={r.note ?? ""} placeholder="メモ（任意）" className={`${field} md:col-span-3`} />
+                    <label className="space-y-1">
+                      <span className="text-xs text-gray-600">予約経路</span>
+                      <select name="source" defaultValue={r.source ?? "admin"} className={field}>
+                        {SOURCES.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <input name="note" defaultValue={r.note ?? ""} placeholder="メモ（任意: 現金受領済、知り合い割引など）" className={`${field} md:col-span-2`} />
                     <SubmitButton className={btnPrimary}>保存</SubmitButton>
                   </form>
                 </EditToggle>

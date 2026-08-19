@@ -78,11 +78,22 @@ export default async function AnalyticsPage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-gray-900">集計・分析</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          予約・売上・キャンセルの集計（{periodLabel}／チェックイン日で集計）
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">集計・分析</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            予約・売上・キャンセルの集計（{periodLabel}／チェックイン日で集計）
+          </p>
+        </div>
+        <a
+          href={`/admin/export/analytics?year=${year}${month ? `&month=${month}` : ""}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+        >
+          <svg className="h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          CSVダウンロード
+        </a>
       </header>
 
       <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
