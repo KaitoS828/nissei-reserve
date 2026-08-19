@@ -1,0 +1,29 @@
+name: Sync iCal (Airbnb & External Calendars)
+
+on:
+  schedule:
+    # 毎時 0分に自動実行 (1時間ごと)
+    - cron: '0 * * * *'
+  workflow_dispatch: # GitHub管理画面から手動実行も可能
+
+jobs:
+  sync-ical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger iCal Import API
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST "https://reserve.gh-nissei.jp/api/ical/import" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response Body: $body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::iCal sync failed with status $http_code"
+            exit 1
+          fi
