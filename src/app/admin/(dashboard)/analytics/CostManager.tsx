@@ -4,14 +4,19 @@ import { useState } from "react";
 import type { OperatingCost } from "@/types/db";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { createOperatingCost, updateOperatingCost, deleteOperatingCost } from "./actions";
+import {
+  saveBaseMonthlyCosts,
+  createOperatingCost,
+  updateOperatingCost,
+  deleteOperatingCost,
+} from "./actions";
 
-const DEFAULT_CATEGORIES = [
+const BASE_CATEGORIES = ["家賃", "電気代", "ガス代", "水道代", "Wi-Fi通信費"];
+
+const DEFAULT_VARIABLE_CATEGORIES = [
   "清掃・リネン費",
-  "水道光熱費",
   "消耗品・アメニティ",
   "システム利用料・手数料",
-  "通信・Wi-Fi費",
   "施設維持・修繕費",
   "広告宣伝費",
   "その他経費",
@@ -34,11 +39,26 @@ export function CostManager({
   dbReady?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const defaultYearMonth = currentMonth
+
+  // 対象年月（月未指定なら現在の月をデフォルト）
+  const activeYearMonth = currentMonth
     ? `${currentYear}-${currentMonth}`
     : `${currentYear}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
+  // 現在の年月におけるベースコストの既存値を取得
+  const monthCosts = costs.filter((c) => c.year_month === activeYearMonth);
+  const getBaseAmount = (cat: string) => {
+    const item = monthCosts.find((c) => c.category === cat);
+    return item ? String(item.amount) : "";
+  };
+
   const totalCost = costs.reduce((sum, c) => sum + c.amount, 0);
+  const baseCostTotal = costs
+    .filter((c) => BASE_CATEGORIES.includes(c.category))
+    .reduce((sum, c) => sum + c.amount, 0);
+  const variableCostTotal = costs
+    .filter((c) => !BASE_CATEGORIES.includes(c.category))
+    .reduce((sum, c) => sum + c.amount, 0);
 
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6">
@@ -47,10 +67,20 @@ export function CostManager({
           <h2 className="text-lg font-semibold text-gray-900">
             コスト（経費）管理
           </h2>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {currentMonth ? `${currentYear}年${Number(currentMonth)}月` : `${currentYear}年（通年）`}の登録経費合計:{" "}
-            <span className="font-bold text-gray-900">¥{totalCost.toLocaleString()}</span>
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+            <span>
+              {currentMonth ? `${currentYear}年${Number(currentMonth)}月` : `${currentYear}年（通年）`}の経費合計:{" "}
+              <strong className="text-gray-900 text-sm">¥{totalCost.toLocaleString()}</strong>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">
+              固定・インフラ: <strong>¥{baseCostTotal.toLocaleString()}</strong>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="text-gray-500">
+              変動・個別: <strong>¥{variableCostTotal.toLocaleString()}</strong>
+            </span>
+          </div>
         </div>
 
         {!dbReady && (
@@ -60,11 +90,138 @@ export function CostManager({
         )}
       </div>
 
-      {/* 新規登録フォーム */}
-      <details className="rounded-xl border border-gray-200 bg-gray-50/70 p-4" open={costs.length === 0}>
-        <summary className="cursor-pointer font-medium text-sm text-cyan-800 hover:text-cyan-900">
-          ＋ 新しいコスト（経費）を入力する
+      {/* 1. ベース費用（家賃・電気代・ガス代・水道代）一括入力フォーム */}
+      <div className="rounded-xl border border-cyan-100 bg-cyan-50/40 p-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-cyan-900 flex items-center gap-1.5">
+              <span>🏠</span> 毎月のベース費用（家賃・光熱費・水道）
+            </h3>
+            <p className="text-xs text-cyan-700 mt-0.5">
+              対象年月の家賃と光熱費を一括で入力・更新できます。
+            </p>
+          </div>
+        </div>
+
+        <form action={saveBaseMonthlyCosts} className="mt-3 space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-gray-700 shrink-0">対象年月:</label>
+            <input
+              type="month"
+              name="year_month"
+              required
+              defaultValue={activeYearMonth}
+              className="w-44 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-cyan-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {/* 家賃 */}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
+              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <span>🏠</span> 家賃
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <input
+                  type="number"
+                  name="rent"
+                  min={0}
+                  placeholder="0"
+                  defaultValue={getBaseAmount("家賃")}
+                  className="w-full rounded border border-gray-300 pl-6 pr-2 py-1.5 text-sm text-gray-900 font-semibold focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* 電気代 */}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
+              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <span>⚡</span> 電気代
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <input
+                  type="number"
+                  name="electricity"
+                  min={0}
+                  placeholder="0"
+                  defaultValue={getBaseAmount("電気代")}
+                  className="w-full rounded border border-gray-300 pl-6 pr-2 py-1.5 text-sm text-gray-900 font-semibold focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* ガス代 */}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
+              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <span>🔥</span> ガス代
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <input
+                  type="number"
+                  name="gas"
+                  min={0}
+                  placeholder="0"
+                  defaultValue={getBaseAmount("ガス代")}
+                  className="w-full rounded border border-gray-300 pl-6 pr-2 py-1.5 text-sm text-gray-900 font-semibold focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* 水道代 */}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
+              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <span>💧</span> 水道代
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <input
+                  type="number"
+                  name="water"
+                  min={0}
+                  placeholder="0"
+                  defaultValue={getBaseAmount("水道代")}
+                  className="w-full rounded border border-gray-300 pl-6 pr-2 py-1.5 text-sm text-gray-900 font-semibold focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Wi-Fi通信費 */}
+            <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
+              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                <span>📶</span> Wi-Fi通信費
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <input
+                  type="number"
+                  name="wifi"
+                  min={0}
+                  placeholder="0"
+                  defaultValue={getBaseAmount("Wi-Fi通信費")}
+                  className="w-full rounded border border-gray-300 pl-6 pr-2 py-1.5 text-sm text-gray-900 font-semibold focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <SubmitButton className="rounded-lg bg-cyan-700 px-4 py-2 text-xs font-medium text-white hover:bg-cyan-800 shadow-sm">
+              ベース費用を一括保存
+            </SubmitButton>
+          </div>
+        </form>
+      </div>
+
+      {/* 2. 個別の変動経費（清掃費、消耗品、修繕など）追加フォーム */}
+      <details className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+        <summary className="cursor-pointer font-medium text-sm text-gray-800 hover:text-cyan-800 flex items-center justify-between">
+          <span>＋ 個別の経費を追加（清掃費・消耗品・アメニティ・修繕費など）</span>
+          <span className="text-xs text-gray-500 font-normal">随時追加・登録</span>
         </summary>
+
         <form action={createOperatingCost} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <label className="space-y-1">
             <span className="text-xs text-gray-600">対象年月 *</span>
@@ -72,7 +229,7 @@ export function CostManager({
               type="month"
               name="year_month"
               required
-              defaultValue={defaultYearMonth}
+              defaultValue={activeYearMonth}
               className={field}
             />
           </label>
@@ -84,12 +241,12 @@ export function CostManager({
               name="category"
               list="cost-categories"
               required
-              placeholder="清掃費、光熱費など"
+              placeholder="清掃費、消耗品など"
               defaultValue="清掃・リネン費"
               className={field}
             />
             <datalist id="cost-categories">
-              {DEFAULT_CATEGORIES.map((c) => (
+              {DEFAULT_VARIABLE_CATEGORIES.map((c) => (
                 <option key={c} value={c} />
               ))}
             </datalist>
@@ -127,20 +284,21 @@ export function CostManager({
               />
             </div>
             <SubmitButton className={`${btnPrimary} shrink-0 w-full sm:w-auto`}>
-              コストを追加
+              経費を追加
             </SubmitButton>
           </div>
         </form>
       </details>
 
-      {/* 登録済みコスト一覧 */}
+      {/* 3. 登録済みコスト一覧 */}
       {costs.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
                 <th className="py-2.5 px-3">対象年月</th>
-                <th className="py-2.5 px-3">カテゴリ</th>
+                <th className="py-2.5 px-3">区分</th>
+                <th className="py-2.5 px-3">項目</th>
                 <th className="py-2.5 px-3 text-right">金額</th>
                 <th className="py-2.5 px-3">発生日</th>
                 <th className="py-2.5 px-3">備考</th>
@@ -149,10 +307,12 @@ export function CostManager({
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-800">
               {costs.map((c) => {
+                const isBase = BASE_CATEGORIES.includes(c.category);
+
                 if (editingId === c.id) {
                   return (
                     <tr key={c.id} className="bg-cyan-50/50">
-                      <td colSpan={6} className="p-3">
+                      <td colSpan={7} className="p-3">
                         <form action={updateOperatingCost} className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6 items-end">
                           <input type="hidden" name="id" value={c.id} />
                           <label className="space-y-1">
@@ -166,7 +326,7 @@ export function CostManager({
                             />
                           </label>
                           <label className="space-y-1">
-                            <span className="text-[11px] text-gray-500">カテゴリ</span>
+                            <span className="text-[11px] text-gray-500">項目</span>
                             <input
                               type="text"
                               name="category"
@@ -226,9 +386,14 @@ export function CostManager({
                   <tr key={c.id} className="hover:bg-gray-50/80 transition">
                     <td className="py-2.5 px-3 font-medium text-gray-900">{c.year_month}</td>
                     <td className="py-2.5 px-3">
-                      <span className="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-                        {c.category}
+                      <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${
+                        isBase ? "bg-cyan-100 text-cyan-800" : "bg-gray-100 text-gray-700"
+                      }`}>
+                        {isBase ? "固定・インフラ" : "変動・個別"}
                       </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-gray-800">
+                      {c.category}
                     </td>
                     <td className="py-2.5 px-3 text-right font-semibold text-gray-900 tabular-nums">
                       ¥{c.amount.toLocaleString()}
