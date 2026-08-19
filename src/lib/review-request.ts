@@ -19,11 +19,8 @@ function jpDate(date: string): string {
   return `${y}年${m}月${d}日(${w})`;
 }
 
-export function reviewRequestSubject(guestName: string | null): string {
-  const name = guestName?.trim();
-  return name
-    ? `【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い（${name}様）`
-    : "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い";
+export function reviewRequestSubject(_guestName?: string | null): string {
+  return "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い";
 }
 
 const escapeHtml = (s: string) =>
@@ -66,7 +63,8 @@ export function reviewRequestHtml(input: ReviewRequestInput): string {
             Googleクチコミを投稿する
           </a>
         </div>
-        <p style="margin:8px 0 0;font-size:12px;color:#6b7280;text-align:center">
+        <p style="margin:12px 0 0;font-size:12px;color:#6b7280;text-align:center">
+          ※ご投稿にはGoogleアカウントへのログインが必要となります。<br>
           リンクが開かない場合はこちら：<br>
           <a href="${escapeHtml(reviewUrl)}" style="color:#0f766e;word-break:break-all">${escapeHtml(reviewUrl)}</a>
         </p>
@@ -122,7 +120,7 @@ export function reviewRequestText(input: ReviewRequestInput): string {
 もしよろしければ、実際にご滞在されたご感想や旅のエピソードをGoogleのクチコミにてお聞かせいただけますと大変励みになります。
 （1分ほどで簡単にご投稿いただけます）
 
-▼ Googleクチコミの投稿はこちら
+▼ Googleクチコミの投稿はこちら（※Googleへのログインが必要です）
 ${reviewUrl}`,
   );
 
