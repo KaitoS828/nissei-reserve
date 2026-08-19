@@ -210,6 +210,7 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
 
   const id = String(formData.get("id") ?? "");
   const code = String(formData.get("code") ?? id);
+  const excludeReason = String(formData.get("exclude_reason") ?? "").trim() || null;
   const year = String(formData.get("year") ?? "");
   const month = String(formData.get("month") ?? "");
   const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
@@ -218,7 +219,10 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
 
   const { error } = await supabase
     .from("reservations")
-    .update({ archived_at: new Date().toISOString() })
+    .update({
+      archived_at: new Date().toISOString(),
+      ...(excludeReason ? { cancel_reason: excludeReason } : {}),
+    })
     .eq("id", id);
 
   if (error) {
@@ -229,7 +233,7 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
     action: "reservation.archive",
     entityType: "reservations",
     entityId: id,
-    summary: `予約 ${code} を集計から除外（アーカイブ）`,
+    summary: `予約 ${code} を集計から除外（理由: ${excludeReason ?? "未指定"}）`,
   }).catch(() => {});
 
   revalidatePath(PATH);

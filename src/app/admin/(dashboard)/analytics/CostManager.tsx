@@ -94,11 +94,11 @@ export function CostManager({
       <div className="rounded-xl border border-cyan-100 bg-cyan-50/40 p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-cyan-900 flex items-center gap-1.5">
-              <span>🏠</span> 毎月のベース費用（家賃・光熱費・水道）
+            <h3 className="text-sm font-semibold text-cyan-900">
+              毎月のベース費用（家賃・光熱費・水道・Wi-Fi）
             </h3>
             <p className="text-xs text-cyan-700 mt-0.5">
-              対象年月の家賃と光熱費を一括で入力・更新できます。
+              対象年月の家賃と光熱費・通信費を一括で入力・更新できます。
             </p>
           </div>
         </div>
@@ -118,9 +118,7 @@ export function CostManager({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {/* 家賃 */}
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
-              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                <span>🏠</span> 家賃
-              </label>
+              <label className="text-xs font-medium text-gray-700">家賃</label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
                 <input
@@ -136,9 +134,7 @@ export function CostManager({
 
             {/* 電気代 */}
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
-              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                <span>⚡</span> 電気代
-              </label>
+              <label className="text-xs font-medium text-gray-700">電気代</label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
                 <input
@@ -154,9 +150,7 @@ export function CostManager({
 
             {/* ガス代 */}
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
-              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                <span>🔥</span> ガス代
-              </label>
+              <label className="text-xs font-medium text-gray-700">ガス代</label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
                 <input
@@ -172,9 +166,7 @@ export function CostManager({
 
             {/* 水道代 */}
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
-              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                <span>💧</span> 水道代
-              </label>
+              <label className="text-xs font-medium text-gray-700">水道代</label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
                 <input
@@ -190,9 +182,7 @@ export function CostManager({
 
             {/* Wi-Fi通信費 */}
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
-              <label className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                <span>📶</span> Wi-Fi通信費
-              </label>
+              <label className="text-xs font-medium text-gray-700">Wi-Fi通信費</label>
               <div className="relative">
                 <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
                 <input

@@ -19,6 +19,7 @@ type Row = {
   num_guests: number;
   source: string | null;
   note: string | null;
+  cancel_reason: string | null;
   archived_at: string | null;
   room_types: { name: string } | null;
   customers: {
@@ -68,7 +69,7 @@ export default async function AnalyticsPage({
   const [{ data: resvData }, { data: costData, error: costError }] = await Promise.all([
     supabase
       .from("reservations")
-      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, archived_at, customers(last_name, first_name), room_types(name)")
+      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, cancel_reason, archived_at, customers(last_name, first_name), room_types(name)")
       .order("check_in", { ascending: false }),
     supabase
       .from("operating_costs")
@@ -323,7 +324,7 @@ export default async function AnalyticsPage({
       <details className="rounded-2xl border border-gray-200 bg-white p-6">
         <summary className="cursor-pointer font-medium text-gray-900 flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <span>📋 対象期間の予約明細を確認</span>
+            <span>対象期間の予約明細を確認</span>
             <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
               {rows.length}件
             </span>
@@ -398,10 +399,19 @@ export default async function AnalyticsPage({
                               danger
                               title="集計から削除（除外）します"
                               message={
-                                <>
+                                <div className="space-y-3 text-left">
                                   <p>予約番号: <strong>{r.code}</strong>（{custName} 様）を集計から削除します。</p>
-                                  <p className="mt-2 text-xs text-gray-500">※ 売上や予約件数などの集計から除外されます。後から「集計外の予約」から復元することも可能です。</p>
-                                </>
+                                  <label className="block text-xs text-gray-700 space-y-1">
+                                    <span>除外理由（一言メモ・任意）:</span>
+                                    <input
+                                      type="text"
+                                      name="exclude_reason"
+                                      placeholder="例: テスト予約、知人無料、二重登録など"
+                                      className="w-full rounded border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:border-cyan-500 focus:outline-none"
+                                    />
+                                  </label>
+                                  <p className="text-[11px] text-gray-500">※ 売上や予約件数などの集計から除外されます。後から「集計外の予約」から復元することも可能です。</p>
+                                </div>
                               }
                               confirmLabel="集計から削除する"
                               className="text-red-600 hover:underline"
@@ -427,7 +437,7 @@ export default async function AnalyticsPage({
         <details className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/70 p-6">
           <summary className="cursor-pointer font-medium text-gray-600 flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <span>🚫 集計外の予約（除外・アーカイブ済み）</span>
+              <span>集計外の予約（除外・アーカイブ済み）</span>
               <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs text-gray-700">
                 {excludedRows.length}件
               </span>
@@ -444,6 +454,7 @@ export default async function AnalyticsPage({
                   <th className="py-2 px-2">予約者名</th>
                   <th className="py-2 px-2 text-right">金額</th>
                   <th className="py-2 px-2">経路</th>
+                  <th className="py-2 px-2">除外理由</th>
                   <th className="py-2 px-2">ステータス</th>
                   <th className="py-2 px-2 text-right">操作</th>
                 </tr>
@@ -453,6 +464,7 @@ export default async function AnalyticsPage({
                   const custName = r.customers
                     ? [r.customers.last_name, r.customers.first_name].filter(Boolean).join(" ") || "（無名）"
                     : "—";
+                  const reason = r.cancel_reason || r.note || "—";
 
                   return (
                     <tr key={r.id} className="hover:bg-white transition opacity-80">
@@ -466,6 +478,9 @@ export default async function AnalyticsPage({
                       </td>
                       <td className="py-2 px-2 text-gray-500">
                         {SOURCE_LABELS[r.source ?? ""] ?? r.source ?? "—"}
+                      </td>
+                      <td className="py-2 px-2 text-gray-600 max-w-xs truncate" title={reason}>
+                        {reason}
                       </td>
                       <td className="py-2 px-2">
                         <span className="inline-block rounded bg-gray-200 px-2 py-0.5 text-[11px] text-gray-600">
