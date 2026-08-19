@@ -7,9 +7,20 @@ import { auditLog } from "@/lib/audit";
 
 const PATH = "/admin/analytics";
 
-function redirectError(msg: string, query = ""): never {
-  const q = query ? `&${query}` : "";
-  redirect(`${PATH}?error=${encodeURIComponent(msg)}${q}`);
+function redirectError(msg: string, params?: { year?: string; month?: string }): never {
+  const sp = new URLSearchParams();
+  if (params?.year) sp.set("year", params.year);
+  if (params?.month) sp.set("month", params.month);
+  sp.set("error", msg);
+  redirect(`${PATH}?${sp.toString()}`);
+}
+
+function redirectDone(msg: string, params?: { year?: string; month?: string }): never {
+  const sp = new URLSearchParams();
+  if (params?.year) sp.set("year", params.year);
+  if (params?.month) sp.set("month", params.month);
+  sp.set("done", msg);
+  redirect(`${PATH}?${sp.toString()}`);
 }
 
 export async function saveBaseMonthlyCosts(formData: FormData) {
@@ -18,10 +29,10 @@ export async function saveBaseMonthlyCosts(formData: FormData) {
   const yearMonth = String(formData.get("year_month") ?? "").trim();
   const currentYear = yearMonth.slice(0, 4);
   const currentMonth = yearMonth.slice(5, 7);
-  const queryParam = `year=${currentYear}&month=${currentMonth}`;
+  const paramObj = { year: currentYear, month: currentMonth };
 
   if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
-    redirectError("年月は YYYY-MM 形式で入力してください", queryParam);
+    redirectError("年月は YYYY-MM 形式で入力してください", paramObj);
   }
 
   const baseItems: { category: string; key: string }[] = [
@@ -49,18 +60,10 @@ export async function saveBaseMonthlyCosts(formData: FormData) {
 
     const existingId = existingMap.get(item.category);
     if (existingId) {
-      if (amount === 0 && !formData.has(`keep_zero_${item.key}`)) {
-        // 0円が明示的に入力された場合は更新、空ならスキップ
-        await supabase
-          .from("operating_costs")
-          .update({ amount, updated_at: new Date().toISOString() })
-          .eq("id", existingId);
-      } else {
-        await supabase
-          .from("operating_costs")
-          .update({ amount, updated_at: new Date().toISOString() })
-          .eq("id", existingId);
-      }
+      await supabase
+        .from("operating_costs")
+        .update({ amount, updated_at: new Date().toISOString() })
+        .eq("id", existingId);
     } else if (amount > 0 || String(rawVal).trim() !== "") {
       await supabase.from("operating_costs").insert({
         year_month: yearMonth,
@@ -75,11 +78,11 @@ export async function saveBaseMonthlyCosts(formData: FormData) {
     action: "operating_cost_base_save",
     entityType: "operating_cost",
     entityId: yearMonth,
-    summary: `${yearMonth} のベース費用（家賃・電気・ガス・水道）を保存`,
+    summary: `${yearMonth} のベース費用（家賃・電気・ガス・水道・Wi-Fi）を保存`,
   }).catch(() => {});
 
   revalidatePath(PATH);
-  redirect(`${PATH}?year=${currentYear}&month=${currentMonth}&done=${encodeURIComponent(`${yearMonth} のベース費用を保存しました`)}`);
+  redirectDone(`${yearMonth} のベース費用を保存しました`, paramObj);
 }
 
 export async function createOperatingCost(formData: FormData) {
@@ -93,13 +96,13 @@ export async function createOperatingCost(formData: FormData) {
 
   const currentYear = yearMonth.slice(0, 4);
   const currentMonth = yearMonth.slice(5, 7);
-  const queryParam = `year=${currentYear}&month=${currentMonth}`;
+  const paramObj = { year: currentYear, month: currentMonth };
 
   if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
-    redirectError("年月は YYYY-MM 形式で入力してください", queryParam);
+    redirectError("年月は YYYY-MM 形式で入力してください", paramObj);
   }
   if (isNaN(amount) || amount < 0) {
-    redirectError("金額は0以上の数値を入力してください", queryParam);
+    redirectError("金額は0以上の数値を入力してください", paramObj);
   }
 
   const { data, error } = await supabase
@@ -115,7 +118,7 @@ export async function createOperatingCost(formData: FormData) {
     .single();
 
   if (error) {
-    redirectError(`コストの登録に失敗しました: ${error.message}`, queryParam);
+    redirectError(`コストの登録に失敗しました: ${error.message}`, paramObj);
   }
 
   await auditLog(supabase, {
@@ -126,7 +129,7 @@ export async function createOperatingCost(formData: FormData) {
   }).catch(() => {});
 
   revalidatePath(PATH);
-  redirect(`${PATH}?year=${currentYear}&month=${currentMonth}&done=${encodeURIComponent("コストを登録しました")}`);
+  redirectDone("コストを登録しました", paramObj);
 }
 
 export async function updateOperatingCost(formData: FormData) {
@@ -141,11 +144,11 @@ export async function updateOperatingCost(formData: FormData) {
 
   const currentYear = yearMonth.slice(0, 4);
   const currentMonth = yearMonth.slice(5, 7);
-  const queryParam = `year=${currentYear}&month=${currentMonth}`;
+  const paramObj = { year: currentYear, month: currentMonth };
 
-  if (!id) redirectError("対象のコストIDが指定されていません", queryParam);
+  if (!id) redirectError("対象のコストIDが指定されていません", paramObj);
   if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
-    redirectError("年月は YYYY-MM 形式で入力してください", queryParam);
+    redirectError("年月は YYYY-MM 形式で入力してください", paramObj);
   }
 
   const { error } = await supabase
@@ -161,7 +164,7 @@ export async function updateOperatingCost(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirectError(`コストの更新に失敗しました: ${error.message}`, queryParam);
+    redirectError(`コストの更新に失敗しました: ${error.message}`, paramObj);
   }
 
   await auditLog(supabase, {
@@ -172,7 +175,7 @@ export async function updateOperatingCost(formData: FormData) {
   }).catch(() => {});
 
   revalidatePath(PATH);
-  redirect(`${PATH}?year=${currentYear}&month=${currentMonth}&done=${encodeURIComponent("コストを更新しました")}`);
+  redirectDone("コストを更新しました", paramObj);
 }
 
 export async function deleteOperatingCost(formData: FormData) {
@@ -181,9 +184,9 @@ export async function deleteOperatingCost(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const year = String(formData.get("year") ?? "");
   const month = String(formData.get("month") ?? "");
-  const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
+  const paramObj = { year: year || undefined, month: month || undefined };
 
-  if (!id) redirectError("対象のコストIDが指定されていません", queryParam);
+  if (!id) redirectError("対象のコストIDが指定されていません", paramObj);
 
   const { error } = await supabase
     .from("operating_costs")
@@ -191,7 +194,7 @@ export async function deleteOperatingCost(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirectError(`コストの削除に失敗しました: ${error.message}`, queryParam);
+    redirectError(`コストの削除に失敗しました: ${error.message}`, paramObj);
   }
 
   await auditLog(supabase, {
@@ -202,7 +205,7 @@ export async function deleteOperatingCost(formData: FormData) {
   }).catch(() => {});
 
   revalidatePath(PATH);
-  redirect(`${PATH}?${queryParam}&done=${encodeURIComponent("コストを削除しました")}`);
+  redirectDone("コストを削除しました", paramObj);
 }
 
 export async function archiveReservationFromAnalytics(formData: FormData) {
@@ -213,9 +216,9 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
   const excludeReason = String(formData.get("exclude_reason") ?? "").trim() || null;
   const year = String(formData.get("year") ?? "");
   const month = String(formData.get("month") ?? "");
-  const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
+  const paramObj = { year: year || undefined, month: month || undefined };
 
-  if (!id) redirectError("対象の予約IDが指定されていません", queryParam);
+  if (!id) redirectError("対象の予約IDが指定されていません", paramObj);
 
   const { error } = await supabase
     .from("reservations")
@@ -226,7 +229,7 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirectError(`集計からの除外に失敗しました: ${error.message}`, queryParam);
+    redirectError(`集計からの除外に失敗しました: ${error.message}`, paramObj);
   }
 
   await auditLog(supabase, {
@@ -239,7 +242,7 @@ export async function archiveReservationFromAnalytics(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/reservations");
   revalidatePath("/admin/calendar");
-  redirect(`${PATH}?${queryParam}&done=${encodeURIComponent(`予約 ${code} を集計から除外しました`)}`);
+  redirectDone(`予約 ${code} を集計から除外しました`, paramObj);
 }
 
 export async function unarchiveReservationFromAnalytics(formData: FormData) {
@@ -249,9 +252,9 @@ export async function unarchiveReservationFromAnalytics(formData: FormData) {
   const code = String(formData.get("code") ?? id);
   const year = String(formData.get("year") ?? "");
   const month = String(formData.get("month") ?? "");
-  const queryParam = year ? `year=${year}${month ? `&month=${month}` : ""}` : "";
+  const paramObj = { year: year || undefined, month: month || undefined };
 
-  if (!id) redirectError("対象の予約IDが指定されていません", queryParam);
+  if (!id) redirectError("対象の予約IDが指定されていません", paramObj);
 
   const { error } = await supabase
     .from("reservations")
@@ -259,7 +262,7 @@ export async function unarchiveReservationFromAnalytics(formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirectError(`集計への復元に失敗しました: ${error.message}`, queryParam);
+    redirectError(`集計への復元に失敗しました: ${error.message}`, paramObj);
   }
 
   await auditLog(supabase, {
@@ -272,7 +275,5 @@ export async function unarchiveReservationFromAnalytics(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/reservations");
   revalidatePath("/admin/calendar");
-  redirect(`${PATH}?${queryParam}&done=${encodeURIComponent(`予約 ${code} を集計対象に復元しました`)}`);
+  redirectDone(`予約 ${code} を集計対象に復元しました`, paramObj);
 }
-
-

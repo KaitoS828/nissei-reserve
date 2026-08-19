@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Spinner } from "./SubmitButton";
 
@@ -22,6 +22,26 @@ function ConfirmDialog({
   onCancel: () => void;
 }) {
   const { pending } = useFormStatus();
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!pending) {
+      setElapsed(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [pending]);
+
+  // 15秒以上固まったら自動でリロードしてフリーズを回避
+  useEffect(() => {
+    if (elapsed >= 15) {
+      window.location.reload();
+    }
+  }, [elapsed]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -43,11 +63,26 @@ function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            disabled={pending}
+            disabled={pending && elapsed < 5}
             className="w-full rounded-lg border border-gray-300 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             やめる
           </button>
+
+          {pending && elapsed >= 8 && (
+            <div className="pt-2 text-center space-y-1.5 border-t border-gray-100">
+              <p className="text-xs text-amber-700 font-medium">
+                処理に時間がかかっています（{elapsed}秒経過）
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="text-xs text-cyan-700 underline font-semibold hover:text-cyan-900"
+              >
+                画面を再読み込みする
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
