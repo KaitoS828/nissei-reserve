@@ -2,8 +2,8 @@ name: Sync iCal (Airbnb & External Calendars)
 
 on:
   schedule:
-    # 毎時 0分に自動実行 (1時間ごと)
-    - cron: '0 * * * *'
+    # 15分ごとに自動実行 (00分, 15分, 30分, 45分)
+    - cron: '*/15 * * * *'
   workflow_dispatch: # GitHub管理画面から手動実行も可能
 
 jobs:
