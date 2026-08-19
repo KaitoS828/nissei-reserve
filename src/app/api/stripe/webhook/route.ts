@@ -131,8 +131,9 @@ export async function POST(req: NextRequest) {
           const host = req.headers.get("host");
           const origin = host ? `https://${host}` : "https://reserve.gh-nissei.jp";
           const subject = bookingGuideSubject(info.name);
+          const lookupUrl = `${origin}/reserve/lookup?code=${encodeURIComponent(info.code)}&email=${encodeURIComponent(cust.email)}`;
           const html = bookingGuideHtml(
-            guideInput(guideRow as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
+            guideInput(guideRow as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret), lookupUrl),
           );
           const ok = await sendEmail({ to: cust.email, subject, html }).catch(() => false);
           if (!ok) await notifyFailure("予約時メールの自動送信", "送信に失敗", { 予約: info.code, 宛先: cust.email });

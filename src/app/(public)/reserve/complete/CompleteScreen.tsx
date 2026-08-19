@@ -36,11 +36,6 @@ export async function CompleteScreen({
     resv = data ? (data as unknown as ResvSummary) : null;
   }
 
-  const accountLink = (
-    <Link href="/account" className="text-teal-700 underline">
-      {dict(locale).nav.account}
-    </Link>
-  );
   const checkinLink = (
     <Link href={localePath(locale, "/checkin")} className="text-teal-700 underline">
       {dict(locale).checkin.title}
@@ -87,7 +82,6 @@ export async function CompleteScreen({
       <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left text-sm text-gray-700">
         <p className="font-semibold text-gray-900">{t.guideTitle}</p>
         <p>📌 {t.guideCode}</p>
-        <p>🔑 {t.guideAccount.before}{accountLink}{t.guideAccount.after}</p>
         <p>📧 {t.guideEmail}</p>
         <p>🚪 {t.guideDoor.before}{checkinLink}{t.guideDoor.after}</p>
         <p>

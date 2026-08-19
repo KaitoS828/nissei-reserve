@@ -76,6 +76,9 @@ async function handle(req: NextRequest) {
     const guestName =
       [r.customers?.last_name, r.customers?.first_name].filter(Boolean).join(" ") || null;
     const subject = reminderSubject(guestName);
+    const lookupUrl = to
+      ? `${origin}/reserve/lookup?code=${encodeURIComponent(r.code)}&email=${encodeURIComponent(to)}`
+      : null;
 
     const ok = await sendEmail({
       to,
@@ -91,6 +94,7 @@ async function handle(req: NextRequest) {
         registeredGuests: count ?? 0,
         doorPin: r.access_keys?.status === "issued" ? r.access_keys.door_pin : null,
         registerUrl: registerUrl(origin, secret),
+        lookupUrl,
         phone: (facility?.phone as string | null) ?? null,
       }),
     }).catch(() => false);

@@ -22,11 +22,24 @@ export default async function AccountPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/account/login");
 
-  // RLS により自分の予約のみ取得
-  const { data } = await supabase
-    .from("reservations")
-    .select("code, check_in, check_out, nights, num_guests, amount, status, plans(name)")
-    .order("check_in", { ascending: false });
+  // Step 1: 自分の customer レコードを取得（RLS: auth_user_id = auth.uid() でフィルタ済）
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  // Step 2: 多層防御 — customer_id を明示的に指定し RLS のバックアップとする
+  // customer が存在しない場合は空配列を返す（他人の予約は絶対に返さない）
+  const { data } = customer
+    ? await supabase
+        .from("reservations")
+        .select("code, check_in, check_out, nights, num_guests, amount, status, plans(name)")
+        .eq("customer_id", customer.id)
+        .is("archived_at", null)
+        .order("check_in", { ascending: false })
+    : { data: [] };
+
   const reservations = (data ?? []) as unknown as MyResv[];
 
   return (

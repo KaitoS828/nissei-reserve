@@ -12,6 +12,7 @@ const base: ReminderInput = {
   registeredGuests: 2,
   doorPin: "129053",
   registerUrl: "https://reserve.gh-nissei.jp/register/abc123",
+  lookupUrl: "https://reserve.gh-nissei.jp/reserve/lookup?code=R-20260814-KFKZ&email=test%40example.com",
   phone: "070-1251-6275",
 };
 
@@ -57,9 +58,9 @@ describe("reminderText", () => {
     assert.ok(!text.includes("宿泊者名簿のご記入をお願い"));
   });
 
-  it("PIN 未発行なら番号を載せず、当日までに連絡すると伝える", () => {
+  it("PIN 未発行なら番号を載せず、連絡すると伝える", () => {
     const text = reminderText({ ...base, doorPin: null });
-    assert.ok(text.includes("当日までにご連絡"));
+    assert.ok(text.includes("ドアコードは"));
     assert.ok(!text.includes("129053"));
   });
 

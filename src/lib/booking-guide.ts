@@ -22,6 +22,7 @@ export type BookingGuideInput = {
   planName: string | null;
   doorPin: string | null;
   registerUrl: string | null;
+  lookupUrl: string | null; // 予約照会URL（鍵番号確認・キャンセルもここから）
   phone: string | null;
 };
 
@@ -66,7 +67,15 @@ export function bookingGuideText(input: BookingGuideInput): string {
 人数: ${input.numGuests}名
 プラン: ${input.planName ?? "—"}
 チェックイン: ${input.checkInTime} 以降
-チェックアウト: ${input.checkOutTime} まで`,
+チェックアウト: ${input.checkOutTime} まで${
+      input.lookupUrl
+        ? `
+
+▼ 予約確認・ドアコード確認・キャンセルはこちら
+${input.lookupUrl}
+（予約番号とこのメールアドレスでログインできます）`
+        : ""
+    }`,
   );
 
   // 旅館業法で宿泊者名簿の作成が必要。ご宿泊前に全員ぶんお願いする。
@@ -95,7 +104,8 @@ ${input.registerUrl}
 ${jpDate(input.checkOut)} ${input.checkOutTime} まで有効です。
 他の方には共有なさらないようお願いいたします。`
       : `■ 玄関の解錠方法
-ドアコードは追ってご連絡いたします。`,
+ドアコードは前日のご案内メールでお知らせします。${input.lookupUrl ? `
+予約照会ページ（${input.lookupUrl}）からもご確認いただけます。` : ""}`,
   );
 
   blocks.push(

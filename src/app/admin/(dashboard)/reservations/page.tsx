@@ -19,14 +19,17 @@ import {
   issueDoorPinManually,
   revokeDoorPinManually,
   sendBookingGuideEmail,
+  sendReviewRequestEmail,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
 import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
+import { ReviewRequestGuide } from "./ReviewRequestGuide";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
+import { reviewRequestSubject, reviewRequestText } from "@/lib/review-request";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import {
   guideInput,
@@ -192,9 +195,9 @@ export default async function ReservationsPage({
     ids.length
       ? supabase
           .from("guest_message_deliveries")
-          .select("reservation_id, sent_at, status")
+          .select("reservation_id, message_type, sent_at, status")
           .in("reservation_id", ids)
-          .eq("message_type", "booking_guide")
+          .in("message_type", ["booking_guide", "review_request"])
           .order("sent_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     ids.length
@@ -210,9 +213,14 @@ export default async function ReservationsPage({
 
   // 送信済みかどうかが分からないと二重送信するので、最後に送れた日時を持つ
   const lastSent = new Map<string, string>();
-  for (const d of (deliveries ?? []) as { reservation_id: string; sent_at: string; status: string }[]) {
-    if (d.status === "sent" && !lastSent.has(d.reservation_id)) {
-      lastSent.set(d.reservation_id, jstDateTime(d.sent_at));
+  const lastSentReview = new Map<string, string>();
+  for (const d of (deliveries ?? []) as { reservation_id: string; message_type: string; sent_at: string; status: string }[]) {
+    if (d.status === "sent") {
+      if (d.message_type === "booking_guide" && !lastSent.has(d.reservation_id)) {
+        lastSent.set(d.reservation_id, jstDateTime(d.sent_at));
+      } else if (d.message_type === "review_request" && !lastSentReview.has(d.reservation_id)) {
+        lastSentReview.set(d.reservation_id, jstDateTime(d.sent_at));
+      }
     }
   }
   const registry = new Map<string, RegistryGuest[]>();
@@ -222,20 +230,32 @@ export default async function ReservationsPage({
     registry.set(g.reservation_id, list);
   }
 
-  // 予約時メールの案内文をここで組む。名簿フォームのURLは予約ごとの secret_code で作る。
+  // 予約時メールおよびレビュー依頼メールの案内文をここで組む
   const h = await headers();
   const origin = originFromHeaders(h);
   const guides = new Map<string, { subject: string; body: string }>();
+  const reviewRequests = new Map<string, { subject: string; body: string }>();
   await Promise.all(
     reservations
       .filter((r) => r.status !== "cancelled")
       .map(async (r) => {
         const secret = await ensureSecretCode(supabase, r.id);
+        const guestName = custName(r.customers);
         guides.set(r.id, {
-          subject: bookingGuideSubject(custName(r.customers)),
+          subject: bookingGuideSubject(guestName),
           body: bookingGuideText(
             guideInput(r as unknown as GuideRow, facility as GuideFacility, registerUrl(origin, secret)),
           ),
+        });
+        reviewRequests.set(r.id, {
+          subject: reviewRequestSubject(guestName),
+          body: reviewRequestText({
+            guestName,
+            code: r.code,
+            checkIn: r.check_in,
+            checkOut: r.check_out,
+            phone: (facility?.phone as string | null) ?? null,
+          }),
         });
       }),
   );
@@ -446,6 +466,8 @@ export default async function ReservationsPage({
                 customerList={customerList}
                 guide={guides.get(r.id) ?? null}
                 lastSentAt={lastSent.get(r.id) ?? null}
+                reviewRequest={reviewRequests.get(r.id) ?? null}
+                lastSentReviewAt={lastSentReview.get(r.id) ?? null}
                 registry={registry.get(r.id) ?? []}
               />
             </div>
@@ -464,6 +486,8 @@ function ReservationCard({
   customerList,
   guide,
   lastSentAt,
+  reviewRequest,
+  lastSentReviewAt,
   registry,
 }: {
   r: ReservationWithRefs;
@@ -473,6 +497,8 @@ function ReservationCard({
   customerList: Customer[];
   guide: { subject: string; body: string } | null;
   lastSentAt: string | null;
+  reviewRequest: { subject: string; body: string } | null;
+  lastSentReviewAt: string | null;
   registry: RegistryGuest[];
 }) {
   const meta = statusMeta(r.status);
@@ -624,6 +650,17 @@ function ReservationCard({
                     sendAction={sendBookingGuideEmail}
                     reservationId={r.id}
                     hasDoorPin={activeKey !== null}
+                  />
+                )}
+
+                {reviewRequest && r.status !== "cancelled" && (
+                  <ReviewRequestGuide
+                    subject={reviewRequest.subject}
+                    body={reviewRequest.body}
+                    email={r.customers?.email ?? null}
+                    lastSentAt={lastSentReviewAt}
+                    sendAction={sendReviewRequestEmail}
+                    reservationId={r.id}
                   />
                 )}
 

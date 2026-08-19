@@ -13,6 +13,7 @@ const base: BookingGuideInput = {
   planName: "素泊まりプラン",
   doorPin: "129053",
   registerUrl: "https://reserve.gh-nissei.jp/register/abc123",
+  lookupUrl: "https://reserve.gh-nissei.jp/reserve/lookup?code=R-20260809-JHDV&email=test%40example.com",
   phone: "070-1251-6275",
 };
 
@@ -82,14 +83,14 @@ describe("bookingGuideText", () => {
     assert.ok(!text.includes("null"));
   });
 
-  it("PIN 未発行なら番号を載せず、追って連絡すると伝える", () => {
+  it("PIN 未発行なら番号を載せず、案内する", () => {
     const text = bookingGuideText({ ...base, doorPin: null });
-    assert.ok(text.includes("追ってご連絡"));
+    assert.ok(text.includes("ドアコードは"));
     assert.ok(!text.includes("129053"));
   });
 
   it("フォームURLが無ければURLを載せず、別途案内すると伝える", () => {
-    const text = bookingGuideText({ ...base, registerUrl: null });
+    const text = bookingGuideText({ ...base, registerUrl: null, lookupUrl: null });
     assert.ok(text.includes("別途ご案内"));
     assert.ok(!text.includes("https://"));
     // 名簿のお願い自体は消さない（法令要件なので）

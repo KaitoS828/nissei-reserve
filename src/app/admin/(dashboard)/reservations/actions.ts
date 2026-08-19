@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { sendEmail } from "@/lib/email";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
+import { reviewRequestHtml, reviewRequestSubject } from "@/lib/review-request";
 import {
   GUIDE_SELECT,
   guideInput,
@@ -344,7 +345,10 @@ export async function sendBookingGuideEmail(formData: FormData) {
   const h = await headers();
   const origin = originFromHeaders(h);
   const secret = await ensureSecretCode(supabase, id);
-  const input = guideInput(row, facility as GuideFacility, registerUrl(origin, secret));
+  const lookupUrl = to
+    ? `${origin}/reserve/lookup?code=${encodeURIComponent(row.code)}&email=${encodeURIComponent(to)}`
+    : null;
+  const input = guideInput(row, facility as GuideFacility, registerUrl(origin, secret), lookupUrl);
   const subject = bookingGuideSubject(guestFullName(row.customers));
 
   const ok = await sendEmail({ to, subject, html: bookingGuideHtml(input) });
@@ -372,6 +376,71 @@ export async function sendBookingGuideEmail(formData: FormData) {
   revalidatePath(PATH);
   // 押した結果が画面に出ないと、送れたのか分からない
   redirect(`${PATH}?done=${encodeURIComponent(`${to} へ送信しました`)}`);
+}
+
+// チェックアウト後のGoogleレビュー（口コミ）依頼メールを送信する
+export async function sendReviewRequestEmail(formData: FormData) {
+  const id = String(formData.get("id"));
+  const supabase = createAdminClient();
+
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("id, code, check_in, check_out, customers(last_name, first_name, email)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!resv) redirectError("予約が見つかりません");
+
+  const row = resv as unknown as {
+    id: string;
+    code: string;
+    check_in: string;
+    check_out: string;
+    customers: { last_name: string | null; first_name: string | null; email: string | null } | null;
+  };
+
+  const to = row.customers?.email?.trim();
+  if (!to) redirectError("この予約にはメールアドレスが登録されていません");
+
+  const { data: facility } = await supabase
+    .from("facility")
+    .select("phone")
+    .limit(1)
+    .maybeSingle();
+
+  const guestName = guestFullName(row.customers);
+  const subject = reviewRequestSubject(guestName);
+  const html = reviewRequestHtml({
+    guestName,
+    code: row.code,
+    checkIn: row.check_in,
+    checkOut: row.check_out,
+    phone: (facility?.phone as string | null) ?? null,
+  });
+
+  const ok = await sendEmail({ to, subject, html });
+
+  await supabase.from("guest_message_deliveries").insert({
+    reservation_id: id,
+    message_type: "review_request",
+    channel: "email",
+    sent_to: to,
+    subject,
+    status: ok ? "sent" : "failed",
+    error: ok ? null : "送信に失敗しました",
+    sent_at: new Date().toISOString(),
+  });
+
+  await auditLog(supabase, {
+    action: "review_request_send",
+    entityType: "reservation",
+    entityId: id,
+    summary: `${row.code} のGoogleレビュー依頼メールを ${to} へ${ok ? "送信" : "送信失敗"}`,
+  }).catch(() => {});
+
+  if (!ok) redirectError("メールの送信に失敗しました。設定をご確認ください");
+  revalidatePath(PATH);
+  redirect(`${PATH}?done=${encodeURIComponent(`${to} へレビュー依頼メールを送信しました`)}`);
 }
 
 export async function unarchiveReservation(formData: FormData) {

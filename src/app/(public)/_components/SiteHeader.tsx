@@ -12,8 +12,6 @@ const NAV = [
   { href: "/reserve", key: "reserve", hasEn: true },
   { href: "/reserve/lookup", key: "lookup", hasEn: true },
   { href: "/checkin", key: "checkin", hasEn: true },
-  { href: "/account", key: "account", hasEn: false },
-  { href: "/account/login", key: "login", hasEn: false },
 ] as const;
 
 export function SiteHeader() {

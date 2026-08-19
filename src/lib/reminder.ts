@@ -12,6 +12,7 @@ export type ReminderInput = {
   registeredGuests: number;
   doorPin: string | null;
   registerUrl: string | null;
+  lookupUrl: string | null; // 予約照会URL
   phone: string | null;
 };
 
@@ -55,7 +56,8 @@ export function reminderText(input: ReminderInput): string {
 玄関ドアに付いているキーパッドに上記の番号を入力してください。
 他の方には共有なさらないようお願いいたします。`
       : `■ 玄関の解錠方法
-ドアコードは当日までにご連絡いたします。`,
+ドアコードは本日中にご連絡いたします。${input.lookupUrl ? `または下記の予約照会ページでもご確認いただけます。
+${input.lookupUrl}` : ""}`,
   );
 
   // 揃っているのに催促すると失礼になるので、足りないときだけ出す

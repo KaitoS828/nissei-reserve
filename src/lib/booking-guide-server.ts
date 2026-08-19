@@ -45,6 +45,7 @@ export function guideInput(
   r: GuideRow,
   facility: GuideFacility,
   registerUrl: string | null,
+  lookupUrl: string | null = null,
 ): BookingGuideInput {
   return {
     guestName: guestFullName(r.customers),
@@ -59,6 +60,7 @@ export function guideInput(
     // 失効・取消済みのPINを案内に載せない
     doorPin: r.access_keys?.status === "issued" ? r.access_keys.door_pin : null,
     registerUrl,
+    lookupUrl,
     phone: facility?.phone ?? null,
   };
 }
