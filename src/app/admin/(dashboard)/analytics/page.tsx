@@ -32,9 +32,9 @@ const STATUS_ORDER: { key: ReservationStatus; label: string; cls: string; badgeC
   { key: "pending", label: "仮予約", cls: "bg-gray-500", badgeCls: "bg-gray-100 text-gray-700" },
   { key: "confirmed", label: "確定", cls: "bg-cyan-600", badgeCls: "bg-cyan-100 text-cyan-800" },
   { key: "checked_in", label: "滞在中", cls: "bg-emerald-500", badgeCls: "bg-emerald-100 text-emerald-800" },
-  { key: "checked_out", label: "完了", cls: "bg-gray-400", badgeCls: "bg-gray-100 text-gray-600" },
+  { key: "checked_out", label: "完了", cls: "bg-amber-400", badgeCls: "bg-amber-100 text-amber-900 border border-amber-200" },
   { key: "cancelled", label: "キャンセル", cls: "bg-red-500", badgeCls: "bg-red-100 text-red-700" },
-  { key: "no_show", label: "ノーショー", cls: "bg-amber-500", badgeCls: "bg-amber-100 text-amber-800" },
+  { key: "no_show", label: "ノーショー", cls: "bg-purple-500", badgeCls: "bg-purple-100 text-purple-800" },
 ];
 
 const PAYMENT_LABELS: Record<string, string> = {

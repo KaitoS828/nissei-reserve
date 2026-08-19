@@ -55,9 +55,9 @@ const STATUS: { value: ReservationStatus; label: string; cls: string }[] = [
   { value: "pending", label: "仮予約", cls: "bg-gray-100 text-gray-700" },
   { value: "confirmed", label: "確定", cls: "bg-cyan-50 text-cyan-700" },
   { value: "checked_in", label: "チェックイン", cls: "bg-emerald-50 text-emerald-700" },
-  { value: "checked_out", label: "チェックアウト", cls: "bg-gray-100 text-gray-600" },
+  { value: "checked_out", label: "チェックアウト", cls: "bg-amber-100 text-amber-900 border border-amber-200" },
   { value: "cancelled", label: "キャンセル", cls: "bg-red-50 text-red-600" },
-  { value: "no_show", label: "ノーショー", cls: "bg-amber-50 text-amber-700" },
+  { value: "no_show", label: "ノーショー", cls: "bg-purple-100 text-purple-800" },
 ];
 const statusMeta = (s: ReservationStatus) =>
   STATUS.find((x) => x.value === s) ?? STATUS[0];

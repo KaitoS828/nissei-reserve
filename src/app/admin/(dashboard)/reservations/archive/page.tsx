@@ -11,9 +11,9 @@ const STATUS: Record<ReservationStatus, { label: string; cls: string }> = {
   pending: { label: "仮予約", cls: "bg-gray-100 text-gray-700" },
   confirmed: { label: "確定", cls: "bg-cyan-50 text-cyan-700" },
   checked_in: { label: "チェックイン", cls: "bg-emerald-50 text-emerald-700" },
-  checked_out: { label: "チェックアウト", cls: "bg-gray-100 text-gray-600" },
+  checked_out: { label: "チェックアウト", cls: "bg-amber-100 text-amber-900 border border-amber-200" },
   cancelled: { label: "キャンセル", cls: "bg-red-50 text-red-600" },
-  no_show: { label: "ノーショー", cls: "bg-amber-50 text-amber-700" },
+  no_show: { label: "ノーショー", cls: "bg-purple-100 text-purple-800" },
 };
 const custName = (c: ReservationWithRefs["customers"]) =>
   c ? [c.last_name, c.first_name].filter(Boolean).join(" ") || "（無名）" : "—";
