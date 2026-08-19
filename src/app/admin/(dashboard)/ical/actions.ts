@@ -76,3 +76,27 @@ export async function importIcal(formData: FormData) {
     )}`,
   );
 }
+
+export async function syncIcalFromAnywhere(formData: FormData) {
+  const redirectTo = String(formData.get("redirect_to") ?? "/admin/calendar").trim() || "/admin/calendar";
+  const result = await importAllIcalSources().then((r) => ({
+    imported: r.imported,
+    error: r.errors[0] ?? null,
+  }));
+
+  revalidatePath("/admin/ical");
+  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/blocked");
+  revalidatePath("/admin");
+
+  const [path, query] = redirectTo.split("?");
+  const sp = new URLSearchParams(query ?? "");
+  if (result.error) {
+    sp.set("error", `iCal同期エラー: ${result.error}`);
+  } else {
+    sp.set("done", `iCal同期完了: ${result.imported}件の外部予約ブロックを同期しました`);
+  }
+
+  redirect(`${path}?${sp.toString()}`);
+}
+

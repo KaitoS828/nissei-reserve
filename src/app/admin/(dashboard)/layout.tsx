@@ -12,6 +12,7 @@ const NAV = [
       { href: "/admin/calendar", label: "予約カレンダー" },
       { href: "/admin/reservations", label: "予約リスト" },
       { href: "/admin/guests", label: "宿泊者名簿" },
+      { href: "/admin/links", label: "各種リンク" },
     ],
   },
   {

@@ -121,8 +121,9 @@ export default async function IcalPage({
 
       {sources.length > 0 && (
         <form action={importIcal}>
-          <SubmitButton className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700">
-            有効な連携先をすべて取り込む
+          <SubmitButton className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-800 shadow-sm">
+            <span>🔄</span>
+            <span>有効な連携先をすべて手動同期する</span>
           </SubmitButton>
         </form>
       )}
@@ -186,8 +187,9 @@ export default async function IcalPage({
               <div className="flex flex-wrap gap-2">
                 <form action={importIcal}>
                   <input type="hidden" name="id" value={source.id} />
-                  <SubmitButton className="rounded-lg border border-cyan-300 px-3 py-1.5 text-sm text-cyan-700 transition hover:bg-cyan-50">
-                    この連携先を取り込む
+                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300 bg-cyan-50/50 px-3 py-1.5 text-sm font-medium text-cyan-800 transition hover:bg-cyan-100">
+                    <span>🔄</span>
+                    <span>この連携先を取り込む</span>
                   </SubmitButton>
                 </form>
                 <form action={toggleIcalSource}>

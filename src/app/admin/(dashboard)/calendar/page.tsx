@@ -6,6 +6,7 @@ import { OCCUPYING_STATUSES } from "@/lib/availability";
 import { formatCheckInTime } from "@/lib/reservations";
 import { createReservation } from "../reservations/actions";
 import { toggleBlockedDate } from "../blocked/actions";
+import { syncIcalFromAnywhere } from "../ical/actions";
 import { CustomerPicker } from "../reservations/CustomerPicker";
 import { DateField } from "../reservations/DateField";
 
@@ -31,9 +32,9 @@ const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; new?: string; error?: string }>;
+  searchParams: Promise<{ month?: string; new?: string; error?: string; done?: string }>;
 }) {
-  const { month, new: newDate, error } = await searchParams;
+  const { month, new: newDate, error, done } = await searchParams;
   const now = new Date();
   let year = now.getFullYear();
   let month0 = now.getMonth();
@@ -125,22 +126,35 @@ export default async function CalendarPage({
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">予約カレンダー</h1>
           <p className="mt-1 text-sm text-gray-600">
             各日の予約と空き室数（全{totalRooms}室）／「× 予約不可に設定」で休業日にできます
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href={`/admin/calendar?month=${monthStr(prev.year, prev.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">← 前月</Link>
-          <span className="min-w-28 text-center font-medium text-gray-900">{year}年{month0 + 1}月</span>
-          <Link href={`/admin/calendar?month=${monthStr(next.year, next.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100">翌月 →</Link>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <form action={syncIcalFromAnywhere}>
+            <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
+            <SubmitButton className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-cyan-800">
+              <span>🔄</span>
+              <span>iCal手動取り込み</span>
+            </SubmitButton>
+          </form>
+
+          <div className="flex items-center gap-1 border-l border-gray-200 pl-2.5">
+            <Link href={`/admin/calendar?month=${monthStr(prev.year, prev.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">← 前月</Link>
+            <span className="min-w-24 text-center text-sm font-semibold text-gray-900">{year}年{month0 + 1}月</span>
+            <Link href={`/admin/calendar?month=${monthStr(next.year, next.month0)}`} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">翌月 →</Link>
+          </div>
         </div>
       </header>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
+      {done && (
+        <p className="rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-800">{done}</p>
       )}
 
       {showNewForm && (
