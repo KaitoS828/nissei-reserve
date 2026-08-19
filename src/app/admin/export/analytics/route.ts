@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toCsv, csvResponse } from "@/lib/csv";
-import type { ReservationStatus } from "@/types/db";
+import type { ReservationStatus, OperatingCost } from "@/types/db";
 
 export const dynamic = "force-dynamic";
 
@@ -49,16 +49,26 @@ export async function GET(req: Request) {
   const monthParam = searchParams.get("month");
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("reservations")
-    .select(
-      "id,code,status,payment_status,amount,check_in,check_out,nights,num_guests,source,customers(last_name,first_name,email,phone),plans(name),room_types(name)",
-    )
-    .order("check_in", { ascending: true });
 
-  if (error) return new Response(error.message, { status: 500 });
+  const [{ data: resvData, error: resvError }, { data: costData }] = await Promise.all([
+    supabase
+      .from("reservations")
+      .select(
+        "id,code,status,payment_status,amount,check_in,check_out,nights,num_guests,source,customers(last_name,first_name,email,phone),plans(name),room_types(name)",
+      )
+      .order("check_in", { ascending: true }),
+    supabase
+      .from("operating_costs")
+      .select("*")
+      .order("year_month", { ascending: true })
+      .order("recorded_date", { ascending: true }),
+  ]);
 
-  const all = (data ?? []) as unknown as Row[];
+  if (resvError) return new Response(resvError.message, { status: 500 });
+
+  const all = (resvData ?? []) as unknown as Row[];
+  const allCosts = (costData ?? []) as OperatingCost[];
+
   const years = [...new Set(all.map((r) => r.check_in.slice(0, 4)))].sort().reverse();
   const thisYear = String(new Date().getFullYear());
   const year = yearParam && years.includes(yearParam) ? yearParam : (years.includes(thisYear) ? thisYear : years[0] ?? thisYear);
@@ -67,14 +77,21 @@ export async function GET(req: Request) {
   const rows = all.filter((r) =>
     month ? r.check_in.slice(0, 7) === `${year}-${month}` : r.check_in.slice(0, 4) === year,
   );
+  const periodCosts = allCosts.filter((c) =>
+    month ? c.year_month === `${year}-${month}` : c.year_month.startsWith(`${year}-`),
+  );
 
   const periodLabel = month ? `${year}年${Number(month)}月` : `${year}年`;
 
-  // 予約集計データ明細
+  // 予約・売上集計
   const total = rows.length;
   const revenue = rows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + r.amount, 0);
+  const totalCost = periodCosts.reduce((s, c) => s + c.amount, 0);
+  const grossProfit = revenue - totalCost;
+  const profitMargin = revenue > 0 ? `${Math.round((grossProfit / revenue) * 100)}%` : "0%";
+
   const cancelled = rows.filter((r) => r.status === "cancelled").length;
-  const cancelRate = total ? Math.round((cancelled / total) * 100) : 0;
+  const cancelRate = total ? `${Math.round((cancelled / total) * 100)}%` : "0%";
   const totalNights = rows
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
@@ -87,12 +104,16 @@ export async function GET(req: Request) {
       const targetMonth = `${year}-${mm}`;
       const mRows = all.filter((r) => r.check_in.slice(0, 7) === targetMonth);
       const mRevenue = mRows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + r.amount, 0);
+      const mCost = allCosts.filter((c) => c.year_month === targetMonth).reduce((s, c) => s + c.amount, 0);
+      const mProfit = mRevenue - mCost;
       const mNights = mRows.filter((r) => !["cancelled", "no_show"].includes(r.status)).reduce((s, r) => s + (r.nights ?? 0), 0);
       const mCancel = mRows.filter((r) => r.status === "cancelled").length;
       monthlyRows.push([
         `${year}年${i}月`,
-        mRows.length,
         mRevenue,
+        mCost,
+        mProfit,
+        mRows.length,
         mNights,
         mCancel,
         mRows.length ? `${Math.round((mCancel / mRows.length) * 100)}%` : "0%",
@@ -107,7 +128,47 @@ export async function GET(req: Request) {
     return [label, count, pct];
   });
 
-  // CSV構築
+  // サマリーブロック
+  const summaryBlock: unknown[][] = [
+    ["【集計期間】", periodLabel],
+    ["【確定売上】", `¥${revenue.toLocaleString()}`],
+    ["【経費合計（コスト）】", `¥${totalCost.toLocaleString()}`],
+    ["【粗利益】", `¥${grossProfit.toLocaleString()}`],
+    ["【粗利益率】", profitMargin],
+    ["【総予約数】", `${total}件`],
+    ["【延べ宿泊数】", `${totalNights}泊`],
+    ["【キャンセル数】", `${cancelled}件`],
+    ["【キャンセル率】", cancelRate],
+    [],
+  ];
+
+  if (!month) {
+    summaryBlock.push(
+      ["--- 月別売上・コスト推移 ---"],
+      ["対象年月", "確定売上(円)", "経費コスト(円)", "粗利益(円)", "予約件数", "宿泊泊数", "キャンセル件数", "キャンセル率"],
+      ...monthlyRows,
+      [],
+    );
+  }
+
+  summaryBlock.push(
+    ["--- ステータス内訳 ---"],
+    ["ステータス", "件数", "構成比"],
+    ...statusSummary,
+    [],
+  );
+
+  // コスト一覧明細
+  if (periodCosts.length > 0) {
+    summaryBlock.push(
+      ["--- 登録経費（コスト）明細 ---"],
+      ["対象年月", "カテゴリ", "金額(円)", "発生日", "備考"],
+      ...periodCosts.map((c) => [c.year_month, c.category, c.amount, c.recorded_date ?? "", c.description ?? ""]),
+      [],
+    );
+  }
+
+  // 予約一覧明細
   const csvHeaders = [
     "予約番号",
     "ステータス",
@@ -145,36 +206,9 @@ export async function GET(req: Request) {
     ];
   });
 
-  // サマリー部分と明細部分を結合
-  const summaryBlock: unknown[][] = [
-    ["【集計期間】", periodLabel],
-    ["【総予約数】", `${total}件`],
-    ["【確定売上】", `¥${revenue.toLocaleString()}`],
-    ["【延べ宿泊数】", `${totalNights}泊`],
-    ["【キャンセル数】", `${cancelled}件`],
-    ["【キャンセル率】", `${cancelRate}%`],
-    [],
-  ];
-
-  if (!month) {
-    summaryBlock.push(
-      ["--- 月別売上推移 ---"],
-      ["対象年月", "総予約件数", "確定売上(円)", "宿泊泊数", "キャンセル件数", "キャンセル率"],
-      ...monthlyRows,
-      [],
-    );
-  }
-
-  summaryBlock.push(
-    ["--- ステータス内訳 ---"],
-    ["ステータス", "件数", "構成比"],
-    ...statusSummary,
-    [],
-    ["--- 対象予約一覧明細 ---"],
-  );
+  summaryBlock.push(["--- 対象予約一覧明細 ---"]);
 
   const fullData = [...summaryBlock, csvHeaders, ...reservationRows];
-  // toCsv の第1引数はヘッダー、第2引数は行データ
   const csv = toCsv(
     fullData[0] as string[],
     fullData.slice(1),

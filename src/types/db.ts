@@ -201,3 +201,14 @@ export type ReservationWithRefs = Reservation & {
   // reservation_id に unique 制約があるので、PostgREST は配列でなく単一オブジェクトを返す
   access_keys?: { door_pin: string; status: AccessKeyStatus } | null;
 };
+
+export type OperatingCost = {
+  id: string;
+  year_month: string; // 'YYYY-MM'
+  category: string;
+  amount: number;
+  description: string | null;
+  recorded_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
