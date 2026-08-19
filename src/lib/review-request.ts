@@ -1,7 +1,7 @@
 // チェックアウト後のゲストへ送るGoogleレビュー（クチコミ）依頼メール。
 // 管理画面からの手動送信や、チェックアウト後の送信で使用。
 
-export const DEFAULT_GOOGLE_REVIEW_URL = "https://share.google/NC1u6uGGW0OWEesu7";
+export const DEFAULT_GOOGLE_REVIEW_URL = "https://g.page/r/Ce-mx4FEUkKbEAE/review";
 
 export type ReviewRequestInput = {
   guestName: string | null;
