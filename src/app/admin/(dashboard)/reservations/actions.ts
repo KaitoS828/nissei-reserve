@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { sendEmail } from "@/lib/email";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
-import { reviewRequestHtml, reviewRequestSubject } from "@/lib/review-request";
+import { reviewRequestHtml, reviewRequestSubject, reviewRequestCustomHtml } from "@/lib/review-request";
 import {
   GUIDE_SELECT,
   guideInput,
@@ -408,15 +408,20 @@ export async function sendReviewRequestEmail(formData: FormData) {
     .limit(1)
     .maybeSingle();
 
+  const customSubject = String(formData.get("custom_subject") ?? "").trim();
+  const customBody = String(formData.get("custom_body") ?? "").trim();
+
   const guestName = guestFullName(row.customers);
-  const subject = reviewRequestSubject(guestName);
-  const html = reviewRequestHtml({
-    guestName,
-    code: row.code,
-    checkIn: row.check_in,
-    checkOut: row.check_out,
-    phone: (facility?.phone as string | null) ?? null,
-  });
+  const subject = customSubject || reviewRequestSubject(guestName);
+  const html = customBody
+    ? reviewRequestCustomHtml(customBody)
+    : reviewRequestHtml({
+        guestName,
+        code: row.code,
+        checkIn: row.check_in,
+        checkOut: row.check_out,
+        phone: (facility?.phone as string | null) ?? null,
+      });
 
   const ok = await sendEmail({ to, subject, html });
 
