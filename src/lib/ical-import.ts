@@ -84,7 +84,10 @@ export async function importIcalSource(sourceId: string): Promise<ImportResult> 
   const marker = icalMarker(sourceId);
 
   try {
-    const res = await fetch(source.url as string, { cache: "no-store" });
+    const res = await fetch(source.url as string, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000), // 外部サーバーが遅くても最大5秒でタイムアウト
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const rows = parseIcal(await res.text())
@@ -131,12 +134,26 @@ export async function importAllIcalSources(): Promise<{ imported: number; errors
   const supabase = createAdminClient();
   const { data } = await supabase.from("ical_sources").select("id").eq("is_active", true);
 
+  const sources = (data ?? []) as { id: string }[];
+  if (sources.length === 0) return { imported: 0, errors: [] };
+
+  // 直列ではなく並列（Promise.allSettled）で全ソースを同時に高速取得
+  const results = await Promise.allSettled(
+    sources.map((s) => importIcalSource(s.id))
+  );
+
   let imported = 0;
   const errors: string[] = [];
-  for (const source of data ?? []) {
-    const result = await importIcalSource(source.id as string);
-    imported += result.imported;
-    if (result.error) errors.push(result.error);
+
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      imported += r.value.imported;
+      if (r.value.error) errors.push(r.value.error);
+    } else {
+      errors.push(r.reason?.message ?? "unknown_error");
+    }
   }
+
   return { imported, errors };
 }
+

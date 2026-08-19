@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 export function Spinner({ className = "h-3.5 w-3.5" }: { className?: string }) {
@@ -21,6 +22,26 @@ export function SubmitButton({
   pendingLabel?: string;
 }) {
   const { pending } = useFormStatus();
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!pending) {
+      setElapsed(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [pending]);
+
+  // 12秒以上固まったら自動で画面をリロードしてフリーズを回避
+  useEffect(() => {
+    if (elapsed >= 12) {
+      window.location.reload();
+    }
+  }, [elapsed]);
 
   return (
     <button
