@@ -4,6 +4,14 @@ import { SITE } from "@/lib/site";
 import type { Plan, Facility, Discount } from "@/types/db";
 import { ReserveCalendar } from "./ReserveCalendar";
 
+type FacilitySettings = {
+  hero_title?: string;
+  hero_sub?: string;
+  hero_description?: string;
+  hero_images?: unknown;
+  features?: unknown;
+};
+
 type PlanRow = Plan & {
   plan_prices: {
     price_per_night: number;
@@ -29,6 +37,9 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
 
   const planRows = (planData ?? []) as unknown as PlanRow[];
   const facility = (facilityData ?? null) as Facility | null;
+  const settings = (facility?.settings as FacilitySettings) ?? {};
+  const heroImages = Array.isArray(settings.hero_images) ? (settings.hero_images as string[]) : [];
+  const features = Array.isArray(settings.features) ? (settings.features as string[]) : [];
 
   const roomTypeId = planRows[0]?.plan_prices[0]?.room_type_id ?? "";
   const maxGuests = planRows[0]?.plan_prices[0]?.room_types?.capacity ?? 6;
@@ -42,26 +53,73 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
   }));
 
   return (
-    <div className="grid gap-6 md:grid-cols-[200px_1fr]">
-      <aside className="order-last space-y-3 text-sm md:order-none">
-        <div>
-          <p className="font-semibold text-gray-900">{t.location}</p>
-          <p className="text-gray-600">
-            {locale === "en" ? SITE.address.fullEn : (facility?.address ?? "—")}
-          </p>
-        </div>
-        <div>
-          <p className="font-semibold text-gray-900">{t.contact}</p>
-          <p className="text-gray-600">{facility?.phone ?? "—"}</p>
-        </div>
-      </aside>
+    <div className="space-y-6">
+      {locale === "ja" && (settings.hero_title || settings.hero_sub || settings.hero_description) && (
+        <section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6">
+          <div className="space-y-2 border-b border-gray-100 pb-4">
+            {settings.hero_sub && (
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                {settings.hero_sub}
+              </span>
+            )}
+            {settings.hero_title && (
+              <h1 className="font-serif text-2xl font-bold tracking-widest text-gray-900">
+                {settings.hero_title}
+              </h1>
+            )}
+            {settings.hero_description && (
+              <p className="whitespace-pre-wrap text-sm font-light leading-relaxed text-gray-600">
+                {settings.hero_description}
+              </p>
+            )}
+            {features.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {features.map((f, i) => (
+                  <span
+                    key={i}
+                    className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700"
+                  >
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
-      <div>
-        {roomTypeId ? (
-          <ReserveCalendar plans={plans} roomTypeId={roomTypeId} maxGuests={maxGuests} locale={locale} />
-        ) : (
-          <p className="text-sm text-gray-500">{t.noPlans}</p>
-        )}
+          {heroImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {heroImages.slice(0, 4).map((img, i) => (
+                <div key={i} className="h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+        <aside className="order-last space-y-3 text-sm md:order-none">
+          <div>
+            <p className="font-semibold text-gray-900">{t.location}</p>
+            <p className="text-gray-600">
+              {locale === "en" ? SITE.address.fullEn : (facility?.address ?? "—")}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{t.contact}</p>
+            <p className="text-gray-600">{facility?.phone ?? "—"}</p>
+          </div>
+        </aside>
+
+        <div>
+          {roomTypeId ? (
+            <ReserveCalendar plans={plans} roomTypeId={roomTypeId} maxGuests={maxGuests} locale={locale} />
+          ) : (
+            <p className="text-sm text-gray-500">{t.noPlans}</p>
+          )}
+        </div>
       </div>
     </div>
   );

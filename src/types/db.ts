@@ -119,6 +119,7 @@ export type Facility = {
   public_site_enabled?: boolean;
   stripe_connect_account_id?: string | null;
   admin_note?: string | null;
+  settings?: Record<string, unknown> | null;
 };
 
 export type Organization = {

@@ -51,7 +51,7 @@ export async function gcalCreateEvent(p: CreatePayload): Promise<string | null> 
     const event = await calendar.events.insert({
       calendarId: CALENDAR_ID,
       requestBody: {
-        summary: `【日靜】${p.customer ?? p.code}`,
+        summary: `[nissei] 予約 ${p.code}${p.customer ? ` ${p.customer}` : ""}`,
         description: [
           `予約番号: ${p.code}`,
           p.plan ? `プラン: ${p.plan}` : null,
