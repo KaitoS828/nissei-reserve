@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationWithRefs, RoomType, Plan, Customer } from "@/types/db";
 import { OCCUPYING_STATUSES } from "@/lib/availability";
 import { formatCheckInTime } from "@/lib/reservations";
-import { createReservation } from "../reservations/actions";
+import { createReservation, syncGcalFromReservations } from "../reservations/actions";
 import { toggleBlockedDate } from "../blocked/actions";
 import { syncIcalFromAnywhere } from "../ical/actions";
 import { CustomerPicker } from "../reservations/CustomerPicker";
@@ -139,6 +139,14 @@ export default async function CalendarPage({
             <SubmitButton className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-cyan-800">
               <span>🔄</span>
               <span>iCal手動取り込み</span>
+            </SubmitButton>
+          </form>
+
+          <form action={syncGcalFromReservations}>
+            <input type="hidden" name="redirect_to" value={`/admin/calendar?month=${monthStr(year, month0)}`} />
+            <SubmitButton className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition hover:text-cyan-800">
+              <span>📅</span>
+              <span>Googleカレンダー手動同期</span>
             </SubmitButton>
           </form>
 

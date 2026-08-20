@@ -522,3 +522,49 @@ export async function unarchiveReservation(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
 }
+
+// まだGoogleカレンダーに反映されていない予約（作成時の同期失敗・過去分など）をまとめて反映する
+export async function syncGcalFromReservations(formData: FormData) {
+  const redirectTo = String(formData.get("redirect_to") ?? "/admin/calendar").trim() || "/admin/calendar";
+  const supabase = createAdminClient();
+
+  const { data: rows } = await supabase
+    .from("reservations")
+    .select("id, code, check_in, check_out, num_guests, amount, customers(last_name, first_name)")
+    .in("status", OCCUPYING_STATUSES as unknown as string[])
+    .is("archived_at", null)
+    .is("gcal_event_id", null);
+
+  let synced = 0;
+  for (const r of rows ?? []) {
+    const cust = r.customers as unknown as { last_name: string | null; first_name: string | null } | null;
+    const customerName = [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || undefined;
+    const eventId = await gcalCreateEvent({
+      code: r.code as string,
+      customer: customerName,
+      check_in: r.check_in as string,
+      check_out: r.check_out as string,
+      guests: r.num_guests as number,
+      amount: r.amount as number,
+    }).catch(() => null);
+    if (eventId) {
+      await supabase.from("reservations").update({ gcal_event_id: eventId }).eq("id", r.id);
+      synced++;
+    }
+  }
+
+  revalidatePath(PATH);
+  revalidatePath("/admin/calendar");
+
+  const [path, query] = redirectTo.split("?");
+  const sp = new URLSearchParams(query ?? "");
+  const total = rows?.length ?? 0;
+  if (total === 0) {
+    sp.set("done", "Googleカレンダー同期: 未反映の予約はありませんでした");
+  } else if (synced < total) {
+    sp.set("error", `Googleカレンダー同期: ${synced}/${total}件のみ反映できました（連携設定をご確認ください）`);
+  } else {
+    sp.set("done", `Googleカレンダー同期: ${synced}件の予約を反映しました`);
+  }
+  redirect(`${path}?${sp.toString()}`);
+}
