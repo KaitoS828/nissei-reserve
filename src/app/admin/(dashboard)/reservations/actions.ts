@@ -528,10 +528,12 @@ export async function syncGcalFromReservations(formData: FormData) {
   const redirectTo = String(formData.get("redirect_to") ?? "/admin/calendar").trim() || "/admin/calendar";
   const supabase = createAdminClient();
 
+  // 記録として残すため、チェックアウト済みの過去分もカレンダーに反映する。
+  // キャンセル・ノーショーは反映しない。
   const { data: rows } = await supabase
     .from("reservations")
     .select("id, code, check_in, check_out, num_guests, amount, customers(last_name, first_name)")
-    .in("status", OCCUPYING_STATUSES as unknown as string[])
+    .in("status", [...OCCUPYING_STATUSES, "checked_out"])
     .is("archived_at", null)
     .is("gcal_event_id", null);
 
