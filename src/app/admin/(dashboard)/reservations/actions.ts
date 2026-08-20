@@ -172,9 +172,25 @@ export async function updateReservation(formData: FormData) {
     redirectError("チェックアウトはチェックインの翌日以降にしてください");
   }
 
-  // 在庫を消費するステータスのときだけ、自分自身を除いた空室チェックを行う
+  // 客室・日程・在庫消費ステータスへの変化がない編集（人数変更など）は、
+  // 元々空きが確保できていた滞在をなぞるだけなので再チェック不要。
+  // iCal取込等で事後にブロックが入ると、無関係な項目の編集まで失敗してしまうため。
+  const { data: before } = await supabase
+    .from("reservations")
+    .select("room_type_id, check_in, check_out, status")
+    .eq("id", id)
+    .maybeSingle();
+  const wasOccupying = before
+    ? (OCCUPYING_STATUSES as readonly string[]).includes(before.status)
+    : false;
+  const staySame =
+    before &&
+    before.room_type_id === roomTypeId &&
+    before.check_in === checkIn &&
+    before.check_out === checkOut;
+
   const occupies = (OCCUPYING_STATUSES as readonly string[]).includes(status);
-  if (occupies) {
+  if (occupies && !(staySame && wasOccupying)) {
     const ok = await canBook(roomTypeId, checkIn, checkOut, {
       excludeReservationId: id,
     });
