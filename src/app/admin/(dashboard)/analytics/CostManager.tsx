@@ -445,14 +445,23 @@ export function CostManager({
 
         <form action={saveBaseMonthlyCosts} className="mt-3 space-y-3">
           <div className="flex items-center gap-3">
-            <label className="text-xs font-medium text-gray-700 shrink-0">対象年月:</label>
-            <input
-              type="month"
-              name="year_month"
-              required
-              defaultValue={activeYearMonth}
-              className="w-44 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-cyan-500 focus:outline-none"
-            />
+            <span className="text-xs font-medium text-gray-700 shrink-0">対象年月:</span>
+            {currentMonth ? (
+              <>
+                <span className="rounded-md bg-cyan-100/80 border border-cyan-200 px-2.5 py-1 text-xs font-bold text-cyan-900">
+                  {currentYear}年{Number(currentMonth)}月
+                </span>
+                <input type="hidden" name="year_month" value={activeYearMonth} />
+              </>
+            ) : (
+              <input
+                type="month"
+                name="year_month"
+                required
+                defaultValue={activeYearMonth}
+                className="w-44 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-cyan-500 focus:outline-none"
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -644,17 +653,21 @@ export function CostManager({
               </div>
             </div>
 
-            <form action={createOperatingCost} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-gray-600">対象年月 *</span>
-                <input
-                  type="month"
-                  name="year_month"
-                  required
-                  defaultValue={activeYearMonth}
-                  className={field}
-                />
-              </label>
+            <form action={createOperatingCost} className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 ${isYearly ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+              {isYearly ? (
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-gray-600">対象年月 *</span>
+                  <input
+                    type="month"
+                    name="year_month"
+                    required
+                    defaultValue={activeYearMonth}
+                    className={field}
+                  />
+                </label>
+              ) : (
+                <input type="hidden" name="year_month" value={activeYearMonth} />
+              )}
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -756,15 +769,24 @@ export function CostManager({
 
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-gray-700 shrink-0">共通の対象年月:</label>
-                <input
-                  type="month"
-                  name="year_month"
-                  required
-                  value={bulkMonth}
-                  onChange={(e) => setBulkMonth(e.target.value)}
-                  className="w-40 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 focus:border-cyan-500 focus:outline-none"
-                />
+                <span className="text-xs font-semibold text-gray-700 shrink-0">対象年月:</span>
+                {isYearly ? (
+                  <input
+                    type="month"
+                    name="year_month"
+                    required
+                    value={bulkMonth}
+                    onChange={(e) => setBulkMonth(e.target.value)}
+                    className="w-40 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 focus:border-cyan-500 focus:outline-none"
+                  />
+                ) : (
+                  <>
+                    <span className="rounded-md bg-cyan-100/80 border border-cyan-200 px-2.5 py-1 text-xs font-bold text-cyan-900">
+                      {currentYear}年{Number(currentMonth)}月
+                    </span>
+                    <input type="hidden" name="year_month" value={activeYearMonth} />
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-3 text-xs">
