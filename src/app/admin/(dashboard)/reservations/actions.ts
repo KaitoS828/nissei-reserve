@@ -226,6 +226,7 @@ export async function updateReservation(formData: FormData) {
   if (error) redirectError(error.message);
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
+  redirect(PATH);
 }
 
 export async function archiveReservation(formData: FormData) {
