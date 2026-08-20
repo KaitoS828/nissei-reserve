@@ -40,7 +40,7 @@ export async function RegisterScreen({
   const { data: guestsData } = await supabase
     .from("reservation_guests")
     .select(
-      "guest_order, full_name, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url",
+      "guest_order, full_name, furigana, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url",
     )
     .eq("reservation_id", checkin.reservation_id)
     .order("guest_order");

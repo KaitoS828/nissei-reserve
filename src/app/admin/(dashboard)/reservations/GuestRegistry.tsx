@@ -3,6 +3,7 @@ import { genderLabel } from "@/lib/guests";
 export type RegistryGuest = {
   guest_order: number;
   full_name: string;
+  furigana: string | null;
   address: string | null;
   contact: string | null;
   occupation: string | null;
@@ -47,6 +48,9 @@ export function GuestRegistry({
                 {g.guest_order}人目
               </span>
               <span className="font-medium text-gray-900">{g.full_name}</span>
+              {g.furigana && (
+                <span className="text-xs text-gray-500">（{g.furigana}）</span>
+              )}
               {g.is_foreign_national && (
                 <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">
                   国内に住所なし

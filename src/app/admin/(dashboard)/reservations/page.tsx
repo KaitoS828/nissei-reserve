@@ -211,7 +211,7 @@ export default async function ReservationsPage({
       ? supabase
           .from("reservation_guests")
           .select(
-            "reservation_id, guest_order, full_name, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url",
+            "reservation_id, guest_order, full_name, furigana, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url",
           )
           .in("reservation_id", ids)
           .order("guest_order")

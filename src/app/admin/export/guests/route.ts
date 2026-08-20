@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 type Row = {
   guest_order: number;
   full_name: string;
+  furigana: string | null;
   address: string | null;
   contact: string | null;
   occupation: string | null;
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
   const { data } = await supabase
     .from("reservation_guests")
     .select(
-      "guest_order, full_name, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url, created_at, reservations(code, check_in, check_out, num_guests)",
+      "guest_order, full_name, furigana, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url, created_at, reservations(code, check_in, check_out, num_guests)",
     )
     .order("created_at", { ascending: false })
     .limit(5000);
@@ -62,7 +63,7 @@ export async function GET(req: Request) {
   const csv = toCsv(
     [
       "チェックイン", "チェックアウト", "予約番号", "人数",
-      "何人目", "氏名", "住所", "連絡先", "職業", "生年月日", "性別",
+      "何人目", "氏名", "フリガナ", "住所", "連絡先", "職業", "生年月日", "性別",
       "国内に住所なし", "国籍", "旅券番号", "旅券の写し", "記入日時",
     ],
     rows.map((g) => [
@@ -72,6 +73,7 @@ export async function GET(req: Request) {
       g.reservations?.num_guests ?? "",
       g.guest_order,
       g.full_name,
+      g.furigana ?? "",
       g.address ?? "",
       g.contact ?? "",
       g.occupation ?? "",

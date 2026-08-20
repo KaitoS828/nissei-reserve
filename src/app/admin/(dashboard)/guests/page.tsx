@@ -12,6 +12,7 @@ type GuestRow = {
   reservation_id: string;
   guest_order: number;
   full_name: string;
+  furigana: string | null;
   address: string | null;
   contact: string | null;
   occupation: string | null;
@@ -41,11 +42,11 @@ export default async function GuestsPage({
   let query = supabase
     .from("reservation_guests")
     .select(
-      "id, reservation_id, guest_order, full_name, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url, reservations(code, check_in, check_out, num_guests, status)",
+      "id, reservation_id, guest_order, full_name, furigana, address, contact, occupation, gender, birth_date, is_foreign_national, nationality, passport_number, passport_image_url, reservations(code, check_in, check_out, num_guests, status)",
     )
     .order("created_at", { ascending: false })
     .limit(500);
-  if (q) query = query.ilike("full_name", `%${q}%`);
+  if (q) query = query.or(`full_name.ilike.%${q}%,furigana.ilike.%${q}%`);
 
   const { data } = await query;
   let guests = (data ?? []) as unknown as GuestRow[];
@@ -170,6 +171,9 @@ export default async function GuestsPage({
                           {g.guest_order}人目
                         </span>
                         <span className="font-medium text-gray-900">{g.full_name}</span>
+                        {g.furigana && (
+                          <span className="text-xs text-gray-500">（{g.furigana}）</span>
+                        )}
                         {g.is_foreign_national && (
                           <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">
                             国内に住所なし

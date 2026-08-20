@@ -188,7 +188,8 @@ type Dict = {
   };
   register: {
     title: string; lead: string; status: string; person: string; representative: string;
-    fullName: string; address: string; addressHint: string; contact: string; contactHint: string;
+    fullName: string; furigana: string; furiganaHint: string;
+    address: string; addressHint: string; contact: string; contactHint: string;
     occupation: string; birthDate: string; gender: string; noAnswer: string;
     male: string; female: string; other: string;
     foreign: string; foreignNote: string; nationality: string; passportNo: string;
@@ -379,7 +380,8 @@ const ja: Dict = {
     title: "宿泊者名簿のご記入",
     lead: "旅館業法により、ご宿泊者全員分の記録が必要です。ご宿泊前にご記入をお願いいたします。",
     status: "ご記入状況", person: "人目の方", representative: "（代表者）",
-    fullName: "お名前", address: "ご住所", addressHint: "都道府県から番地まで",
+    fullName: "お名前", furigana: "ふりがな", furiganaHint: "例: やまだ たろう",
+    address: "ご住所", addressHint: "都道府県から番地まで",
     contact: "ご連絡先", contactHint: "電話番号またはメールアドレス",
     occupation: "ご職業", birthDate: "生年月日", gender: "性別", noAnswer: "未回答",
     male: "男性", female: "女性", other: "その他",
@@ -593,7 +595,8 @@ const en: Dict = {
     title: "Guest register",
     lead: "Japanese law requires us to record details for every guest staying with us. Please complete this before your stay.",
     status: "Completed", person: "Guest", representative: " (lead guest)",
-    fullName: "Full name", address: "Home address", addressHint: "Include country, city and street",
+    fullName: "Full name", furigana: "Name in Kana / Reading (Optional)", furiganaHint: "e.g. Yamada Taro",
+    address: "Home address", addressHint: "Include country, city and street",
     contact: "Contact", contactHint: "Phone number or email address",
     occupation: "Occupation", birthDate: "Date of birth", gender: "Gender", noAnswer: "Prefer not to say",
     male: "Male", female: "Female", other: "Other",

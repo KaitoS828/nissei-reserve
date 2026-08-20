@@ -9,6 +9,7 @@ import { submitGuestRegistration } from "./actions";
 export type ExistingGuest = {
   guest_order: number;
   full_name: string;
+  furigana: string | null;
   address: string | null;
   contact: string | null;
   occupation: string | null;
@@ -168,6 +169,16 @@ export function RegisterForm({
               <span className="text-sm text-gray-700">{t.fullName} <span className="text-red-500">*</span></span>
               <input name={`full_name_${i}`} defaultValue={g?.full_name ?? ""} className={cls(`full_name_${i}`)} />
               <Err name={`full_name_${i}`} />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-sm text-gray-700">{t.furigana}</span>
+              <input
+                name={`furigana_${i}`}
+                defaultValue={g?.furigana ?? ""}
+                placeholder={t.furiganaHint}
+                className={cls(`furigana_${i}`)}
+              />
             </label>
 
             <label className="block space-y-1">

@@ -68,6 +68,7 @@ export async function submitGuestRegistration(formData: FormData) {
     rows.push({
       guest_order: i,
       full_name: fullName,
+      furigana: nullable(formData, `furigana_${i}`),
       address,
       contact,
       occupation: nullable(formData, `occupation_${i}`),
