@@ -25,7 +25,7 @@ export async function getTypeAvailability(
   roomTypeId: string,
   from: DateStr,
   to: DateStr,
-  opts: { excludeReservationId?: string } = {},
+  opts: { excludeReservationId?: string; ignoreBlocked?: boolean } = {},
 ): Promise<Record<DateStr, number>> {
   const supabase = createAdminClient();
 
@@ -43,12 +43,14 @@ export async function getTypeAvailability(
       .is("archived_at", null)
       .lt("check_in", to)
       .gt("check_out", from),
-    supabase
-      .from("blocked_dates")
-      .select("start_date, end_date, room_type_id")
-      .or(`room_type_id.eq.${roomTypeId},room_type_id.is.null`)
-      .lte("start_date", to)
-      .gte("end_date", from),
+    opts.ignoreBlocked
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from("blocked_dates")
+          .select("start_date, end_date, room_type_id")
+          .or(`room_type_id.eq.${roomTypeId},room_type_id.is.null`)
+          .lte("start_date", to)
+          .gte("end_date", from),
   ]);
 
   const roomCount = roomsRes.count ?? 0;
@@ -65,7 +67,7 @@ export async function canBook(
   roomTypeId: string,
   from: DateStr,
   to: DateStr,
-  opts: { excludeReservationId?: string } = {},
+  opts: { excludeReservationId?: string; ignoreBlocked?: boolean } = {},
 ): Promise<boolean> {
   const avail = await getTypeAvailability(roomTypeId, from, to, opts);
   return eachNight(from, to).every((n) => (avail[n] ?? 0) > 0);

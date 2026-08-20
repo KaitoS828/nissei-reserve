@@ -88,6 +88,7 @@ export async function createReservation(formData: FormData) {
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
   const note = String(formData.get("note") ?? "").trim() || null;
+  const source = String(formData.get("source") ?? "admin") || "admin";
 
   if (!roomTypeId || !checkIn || !checkOut) {
     redirectError("客室タイプ・チェックイン・チェックアウトは必須です");
@@ -97,10 +98,13 @@ export async function createReservation(formData: FormData) {
     redirectError("チェックアウトはチェックインの翌日以降にしてください");
   }
 
-  // 空室チェック
-  const ok = await canBook(roomTypeId, checkIn, checkOut);
+  // 空室チェック。「管理画面（知人・直予約）」は人間が実際の予約を把握して登録するため、
+  // iCal取込等のカレンダーブロックは無視し、実際の予約との重複だけを見る。
+  const ok = await canBook(roomTypeId, checkIn, checkOut, {
+    ignoreBlocked: source === "admin",
+  });
   if (!ok) {
-    redirectError("指定期間に空きがありません");
+    redirectError("指定期間に空きがありません（既に予約が入っています）");
   }
 
   const { data: roomType } = await supabase
@@ -112,7 +116,6 @@ export async function createReservation(formData: FormData) {
 
   const customerId = await resolveCustomerId(supabase, formData, facilityId);
 
-  const source = String(formData.get("source") ?? "admin") || "admin";
   const rawAmount = formData.get("amount");
   const paymentStatus = (String(formData.get("payment_status") ?? "unpaid") || "unpaid") as PaymentStatus;
 
