@@ -132,6 +132,74 @@ export async function createOperatingCost(formData: FormData) {
   redirectDone("コストを登録しました", paramObj);
 }
 
+export async function createBulkOperatingCosts(formData: FormData) {
+  const supabase = createAdminClient();
+
+  const rawItems = String(formData.get("items_json") ?? "").trim();
+  const fallbackYearMonth = String(formData.get("year_month") ?? "").trim();
+
+  let items: Array<{
+    year_month?: string;
+    category?: string;
+    amount?: number | string;
+    description?: string | null;
+    recorded_date?: string | null;
+  }> = [];
+
+  try {
+    items = JSON.parse(rawItems);
+  } catch {
+    redirectError("入力データの形式が不正です");
+  }
+
+  const validRows = items
+    .map((item) => {
+      const ym = (item.year_month || fallbackYearMonth).trim();
+      const cat = (item.category ?? "").trim() || "その他経費";
+      const amt = Number(item.amount);
+      const desc = (item.description ?? "").trim() || null;
+      const recDate = (item.recorded_date ?? "").trim() || null;
+      return {
+        year_month: ym,
+        category: cat,
+        amount: amt,
+        description: desc,
+        recorded_date: recDate,
+      };
+    })
+    .filter((row) => /^\d{4}-\d{2}$/.test(row.year_month) && !isNaN(row.amount) && row.amount > 0);
+
+  const targetYm = validRows[0]?.year_month || fallbackYearMonth;
+  const currentYear = targetYm ? targetYm.slice(0, 4) : undefined;
+  const currentMonth = targetYm ? targetYm.slice(5, 7) : undefined;
+  const paramObj = { year: currentYear, month: currentMonth };
+
+  if (validRows.length === 0) {
+    redirectError("登録する経費（金額が1円以上）を1件以上入力してください", paramObj);
+  }
+
+  const { error } = await supabase
+    .from("operating_costs")
+    .insert(validRows)
+    .select("id");
+
+  if (error) {
+    redirectError(`一括登録に失敗しました: ${error.message}`, paramObj);
+  }
+
+  const totalAmount = validRows.reduce((s, r) => s + r.amount, 0);
+
+  await auditLog(supabase, {
+    action: "operating_cost_bulk_create",
+    entityType: "operating_cost",
+    entityId: "bulk",
+    summary: `${validRows.length}件の経費を一括登録（合計 ¥${totalAmount.toLocaleString()}）`,
+  }).catch(() => {});
+
+  revalidatePath(PATH);
+  redirectDone(`${validRows.length}件の経費をまとめて登録しました（合計: ¥${totalAmount.toLocaleString()}）`, paramObj);
+}
+
 export async function updateOperatingCost(formData: FormData) {
   const supabase = createAdminClient();
 

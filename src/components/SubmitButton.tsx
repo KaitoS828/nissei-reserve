@@ -16,10 +16,12 @@ export function SubmitButton({
   children,
   className = "",
   pendingLabel,
+  disabled = false,
 }: {
   children: React.ReactNode;
   className?: string;
   pendingLabel?: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   const [elapsed, setElapsed] = useState(0);
@@ -43,12 +45,14 @@ export function SubmitButton({
     }
   }, [elapsed]);
 
+  const isDisabled = pending || disabled;
+
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={isDisabled}
       aria-busy={pending}
-      className={`inline-flex items-center justify-center gap-2 disabled:cursor-progress disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     >
       {pending && <Spinner />}
       {pending ? (pendingLabel ?? children) : children}
