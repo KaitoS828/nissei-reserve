@@ -20,6 +20,7 @@ import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
 import { auditLog } from "@/lib/audit";
 import { issueDoorPin, revokeDoorPin } from "@/lib/smart-lock";
+import { gcalCreateEvent, gcalDeleteEvent } from "@/lib/gcal";
 import type { ReservationStatus, PaymentStatus } from "@/types/db";
 
 const PATH = "/admin/reservations";
@@ -128,25 +129,52 @@ export async function createReservation(formData: FormData) {
     amount = (roomType?.base_price ?? 0) * nights.length;
   }
 
-  const { error } = await supabase.from("reservations").insert({
-    code: generateReservationCode(checkIn),
-    facility_id: facilityId,
-    customer_id: customerId,
-    plan_id: planId,
-    room_type_id: roomTypeId,
-    room_id: roomId,
-    check_in: checkIn,
-    check_out: checkOut,
-    num_guests: numGuests,
-    amount,
-    status: "confirmed", // 管理者手動登録は確定扱い
-    payment_status: paymentStatus,
-    source,
-    note,
-  });
+  const code = generateReservationCode(checkIn);
+  const { data: created, error } = await supabase
+    .from("reservations")
+    .insert({
+      code,
+      facility_id: facilityId,
+      customer_id: customerId,
+      plan_id: planId,
+      room_type_id: roomTypeId,
+      room_id: roomId,
+      check_in: checkIn,
+      check_out: checkOut,
+      num_guests: numGuests,
+      amount,
+      status: "confirmed", // 管理者手動登録は確定扱い
+      payment_status: paymentStatus,
+      source,
+      note,
+    })
+    .select("id")
+    .single();
   if (error) redirectError(error.message);
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
+
+  // 管理画面からの直予約もGoogleカレンダーに反映する
+  let customerName: string | undefined;
+  if (customerId) {
+    const { data: cust } = await supabase
+      .from("customers")
+      .select("last_name, first_name")
+      .eq("id", customerId)
+      .maybeSingle();
+    customerName = [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || undefined;
+  }
+  const eventId = await gcalCreateEvent({
+    code,
+    customer: customerName,
+    check_in: checkIn,
+    check_out: checkOut,
+    guests: numGuests,
+    amount,
+  }).catch(() => null);
+  if (eventId && created) {
+    await supabase.from("reservations").update({ gcal_event_id: eventId }).eq("id", created.id);
+  }
 
   const redirectTo = String(formData.get("redirect_to") ?? "");
   if (redirectTo) redirect(redirectTo);
@@ -259,9 +287,13 @@ export async function deleteReservation(formData: FormData) {
   // 復元できない操作なので、何を消したか削除前に控える
   const { data: target } = await supabase
     .from("reservations")
-    .select("code, check_in, check_out, amount")
+    .select("code, check_in, check_out, amount, gcal_event_id")
     .eq("id", id)
     .maybeSingle();
+
+  if (target?.gcal_event_id) {
+    await gcalDeleteEvent(target.gcal_event_id as string).catch(() => {});
+  }
 
   await supabase.from("payments").delete().eq("reservation_id", id);
   await supabase.from("surveys").delete().eq("reservation_id", id);
