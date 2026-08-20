@@ -3,6 +3,7 @@ import { dict, type Locale } from "@/lib/i18n";
 import { SITE } from "@/lib/site";
 import type { Plan, Facility, Discount } from "@/types/db";
 import { ReserveCalendar } from "./ReserveCalendar";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type FacilitySettings = {
   hero_title?: string;
@@ -86,16 +87,7 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
             )}
           </div>
 
-          {heroImages.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {heroImages.slice(0, 4).map((img, i) => (
-                <div key={i} className="h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" className="h-full w-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+          <ImageLightbox images={heroImages} visibleCount={4} />
         </section>
       )}
 

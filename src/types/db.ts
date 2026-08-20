@@ -76,6 +76,7 @@ export type Plan = {
   tags: string[];
   discounts: Discount[];
   image_url: string | null;
+  gallery_images: string[];
   is_active: boolean;
   sort_order: number;
   created_at: string;

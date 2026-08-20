@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateTopPageSettings } from "./actions";
+import { PlanGalleryEditor } from "@/components/PlanGalleryEditor";
 
 type Props = {
   initialData: {
@@ -14,13 +15,20 @@ type Props = {
     heroDescription: string;
     heroImages: string[];
     features: string[];
-    plans: { id: string; name: string; price: number; tags: string[]; description: string }[];
+    plans: {
+      id: string;
+      name: string;
+      price: number;
+      tags: string[];
+      description: string;
+      galleryImages: string[];
+    }[];
   };
 };
 
 export function VisualSiteBuilder({ initialData }: Props) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [activeTab, setActiveTab] = useState<"text" | "images" | "features">("text");
+  const [activeTab, setActiveTab] = useState<"text" | "images" | "features" | "planPhotos">("text");
 
   // ライブステート
   const [name, setName] = useState(initialData.name);
@@ -192,6 +200,16 @@ export function VisualSiteBuilder({ initialData }: Props) {
             >
               特徴タグ
             </button>
+            <button
+              onClick={() => setActiveTab("planPhotos")}
+              className={`pb-2 px-3 font-semibold transition ${
+                activeTab === "planPhotos"
+                  ? "border-b-2 border-cyan-700 text-cyan-800"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              プラン別写真
+            </button>
           </div>
 
           {/* TAB 1: テキスト */}
@@ -335,6 +353,26 @@ export function VisualSiteBuilder({ initialData }: Props) {
               </div>
             </div>
           )}
+
+          {/* TAB 4: プラン別写真 */}
+          {activeTab === "planPhotos" && (
+            <div className="space-y-4 text-xs">
+              <p className="text-gray-500">
+                各プランの詳細ページ（見出しの下）に載る写真です。プランごとに個別に保存します。
+              </p>
+              {initialData.plans.length === 0 && (
+                <p className="text-gray-400">有効なプランがありません。</p>
+              )}
+              <div className="max-h-[32rem] space-y-4 overflow-y-auto pr-1">
+                {initialData.plans.map((p) => (
+                  <div key={p.id} className="space-y-2 rounded border border-gray-200 p-3">
+                    <p className="font-semibold text-gray-800">{p.name}</p>
+                    <PlanGalleryEditor planId={p.id} initialImages={p.galleryImages} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 右側: リアルタイム ライブプレビュー */}
@@ -345,90 +383,76 @@ export function VisualSiteBuilder({ initialData }: Props) {
               <span>{device === "mobile" ? "375px (Mobile)" : "Responsive (PC)"}</span>
             </div>
 
-            {/* リアルタイムに更新される予約TOPページ画面 */}
-            <div className="rounded border border-gray-200 bg-gray-50/50 p-4 text-gray-800 sm:p-6">
-              <div className={`grid gap-6 ${device === "mobile" ? "grid-cols-1" : "md:grid-cols-[220px_1fr]"} items-start`}>
-                {/* 左サイドバー */}
-                <aside className="space-y-4 text-xs text-gray-600">
-                  <div className="h-36 overflow-hidden rounded border border-gray-200 bg-gray-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={heroImages[0] ?? "/window.svg"} alt="" className="h-full w-full object-cover" />
+            {/* リアルタイムに更新される予約TOPページ画面（実際の /reserve と同じ構造） */}
+            <div className="space-y-6 rounded border border-gray-200 bg-gray-50/50 p-4 text-gray-800 sm:p-6">
+              {/* ヒーロー（フル幅） */}
+              <section className="space-y-4 rounded border border-gray-200 bg-white p-6">
+                <div className="space-y-2 border-b border-gray-100 pb-4">
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                    {heroSub}
+                  </span>
+                  <h1 className="font-serif text-xl font-bold tracking-widest text-gray-900">{heroTitle}</h1>
+                  <p className="whitespace-pre-wrap text-xs font-light leading-relaxed text-gray-600">
+                    {heroDescription}
+                  </p>
+                  {features.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {features.map((f, i) => (
+                        <span
+                          key={i}
+                          className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-700"
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {heroImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {heroImages.slice(0, 4).map((img, i) => (
+                      <div key={i} className="h-16 overflow-hidden rounded border border-gray-200 bg-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
                   </div>
-                  <div className="space-y-3 rounded border border-gray-200 bg-white p-4">
-                    <div>
-                      <h4 className="font-serif text-xs font-bold text-gray-900">所在地</h4>
-                      <p className="mt-0.5 text-gray-600">{address}</p>
-                    </div>
-                    <hr className="border-gray-100" />
-                    <div>
-                      <h4 className="font-serif text-xs font-bold text-gray-900">お問い合わせ</h4>
-                      <p className="mt-0.5 font-mono text-gray-700">{phone}</p>
-                    </div>
-                    <hr className="border-gray-100" />
-                    <div>
-                      <h4 className="font-serif text-xs font-bold text-gray-900">施設概要</h4>
-                      <p className="mt-0.5 font-medium text-gray-800">{name}</p>
-                    </div>
+                )}
+              </section>
+
+              {/* 下段: 左に住所/連絡先、右にプラン一覧（実ページのカレンダー相当） */}
+              <div className={`grid gap-6 ${device === "mobile" ? "grid-cols-1" : "md:grid-cols-[220px_1fr]"} items-start`}>
+                <aside className="space-y-3 text-xs text-gray-600">
+                  <div>
+                    <p className="font-semibold text-gray-900">所在地</p>
+                    <p className="text-gray-600">{address}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">お問い合わせ</p>
+                    <p className="text-gray-600">{phone}</p>
                   </div>
                 </aside>
 
-                {/* メインコンテンツ */}
-                <div className="space-y-6">
-                  <section className="space-y-4 rounded border border-gray-200 bg-white p-6">
-                    <div className="space-y-2 border-b border-gray-100 pb-4">
-                      <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                        {heroSub}
-                      </span>
-                      <h1 className="font-serif text-xl font-bold tracking-widest text-gray-900">{heroTitle}</h1>
-                      <p className="whitespace-pre-wrap text-xs font-light leading-relaxed text-gray-600">
-                        {heroDescription}
-                      </p>
-                      {features.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2">
-                          {features.map((f, i) => (
-                            <span
-                              key={i}
-                              className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-700"
-                            >
-                              {f}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ギャラリー写真 */}
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {(heroImages.length > 0 ? heroImages : ["/window.svg"]).slice(0, 4).map((img, i) => (
-                        <div key={i} className="h-16 overflow-hidden rounded border border-gray-200 bg-gray-100">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img} alt="" className="h-full w-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  {/* プラン一覧プレビュー */}
-                  <section className="space-y-4">
-                    <div className="border-b border-gray-900 pb-2">
-                      <h2 className="font-serif text-base font-bold tracking-widest text-gray-900">ご宿泊プラン</h2>
-                    </div>
-                    {initialData.plans.map((p) => (
-                      <div key={p.id} className="space-y-2 rounded border border-gray-200 bg-white p-4">
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-serif text-sm font-bold text-gray-900">{p.name}</h3>
-                          <span className="font-serif text-sm font-bold text-gray-900">¥{p.price.toLocaleString()}〜</span>
-                        </div>
-                        <p className="text-[11px] text-gray-500">{p.description}</p>
-                        <div className="pt-2 text-right">
-                          <span className="rounded bg-gray-900 px-4 py-1.5 text-[10px] font-semibold text-white">
-                            空室状況・日程を選択 →
-                          </span>
-                        </div>
+                <section className="space-y-4">
+                  <div className="border-b border-gray-900 pb-2">
+                    <h2 className="font-serif text-base font-bold tracking-widest text-gray-900">ご宿泊プラン</h2>
+                  </div>
+                  {initialData.plans.slice(0, 3).map((p) => (
+                    <div key={p.id} className="space-y-2 rounded border border-gray-200 bg-white p-4">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-serif text-sm font-bold text-gray-900">{p.name}</h3>
+                        <span className="font-serif text-sm font-bold text-gray-900">¥{p.price.toLocaleString()}〜</span>
                       </div>
-                    ))}
-                  </section>
-                </div>
+                      <p className="text-[11px] text-gray-500">{p.description}</p>
+                      <div className="pt-2 text-right">
+                        <span className="rounded bg-gray-900 px-4 py-1.5 text-[10px] font-semibold text-white">
+                          空室状況・日程を選択 →
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </section>
               </div>
             </div>
           </div>

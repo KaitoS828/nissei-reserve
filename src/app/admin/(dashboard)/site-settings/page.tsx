@@ -18,10 +18,9 @@ export default async function SiteSettingsPage() {
     supabase.from("facility").select("*").limit(1).maybeSingle(),
     supabase
       .from("plans")
-      .select("id, name, long_description, tags, plan_prices(price_per_night)")
+      .select("id, name, long_description, tags, gallery_images, plan_prices(price_per_night)")
       .eq("is_active", true)
-      .order("sort_order")
-      .limit(3),
+      .order("sort_order"),
   ]);
 
   const settings = (facility?.settings as FacilitySettings) ?? {};
@@ -42,6 +41,7 @@ export default async function SiteSettingsPage() {
     name: string;
     long_description: string | null;
     tags: string[] | null;
+    gallery_images: string[] | null;
     plan_prices: { price_per_night: number }[];
   };
 
@@ -51,6 +51,7 @@ export default async function SiteSettingsPage() {
     description: p.long_description ?? "",
     tags: p.tags ?? [],
     price: p.plan_prices?.[0]?.price_per_night ?? 0,
+    galleryImages: p.gallery_images ?? [],
   }));
 
   const initialData = {

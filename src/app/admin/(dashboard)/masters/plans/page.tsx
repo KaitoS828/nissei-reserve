@@ -1,4 +1,5 @@
 import { SubmitButton } from "@/components/SubmitButton";
+import { PlanGalleryEditor } from "@/components/PlanGalleryEditor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Plan } from "@/types/db";
 import { createPlan, updatePlan, togglePlanActive, deletePlan, setPlanPrice } from "./actions";
@@ -107,6 +108,11 @@ export default async function PlansPage() {
                 <SubmitButton className={btnPrimary}>保存</SubmitButton>
                 <input name="description" defaultValue={plan.description ?? ""} placeholder="説明" className={`${field} md:col-span-5`} />
               </form>
+
+              <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-100 p-4">
+                <p className="text-xs font-medium text-gray-600">プラン詳細ページに載せる写真</p>
+                <PlanGalleryEditor planId={plan.id} initialImages={plan.gallery_images ?? []} />
+              </div>
 
               <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-100 p-4">
                 <p className="text-xs font-medium text-gray-600">1泊あたりの料金（客室タイプ別）</p>

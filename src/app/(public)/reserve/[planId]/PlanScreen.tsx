@@ -6,6 +6,7 @@ import { eachNight } from "@/lib/availability";
 import { calcPrice, guestRange, nightlyRateForGuests, type GuestPrices } from "@/lib/pricing";
 import { dict, localePath, term, type Locale } from "@/lib/i18n";
 import type { Plan, RoomType } from "@/types/db";
+import { ImageLightbox } from "@/components/ImageLightbox";
 
 type PlanDetail = Plan & {
   plan_prices: {
@@ -91,6 +92,11 @@ export async function PlanScreen({
             </span>
           ))}
         </div>
+        {plan.gallery_images.length > 0 && (
+          <div className="mt-4">
+            <ImageLightbox images={plan.gallery_images} />
+          </div>
+        )}
       </div>
 
       {/* 予約バー */}
