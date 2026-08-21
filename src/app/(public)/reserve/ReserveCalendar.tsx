@@ -129,31 +129,31 @@ export function ReserveCalendar({
   query.set("guests", String(guests));
 
   const navBtn =
-    "rounded-lg px-2.5 py-1 text-xs text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30";
+    "rounded-lg px-2 py-1.5 text-xs text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 whitespace-nowrap sm:px-2.5";
 
   return (
     <div className="space-y-4">
       {/* カレンダー */}
       <div className="rounded-2xl border border-gray-200 p-4 shadow-sm sm:p-6">
         {/* ナビ: 前年/前月  月  翌月/翌年 */}
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="mb-1 flex items-center justify-between gap-1">
+          <div className="flex items-center">
             <button onClick={() => shift(-12)} disabled={atMin} className={navBtn} aria-label={t.prevYear}>
-              « {t.prevYear}
+              «<span className="hidden sm:inline"> {t.prevYear}</span>
             </button>
             <button onClick={() => shift(-1)} disabled={atMin} className={navBtn} aria-label={t.prevMonth}>
-              ‹ {t.prevMonth}
+              ‹<span className="hidden sm:inline"> {t.prevMonth}</span>
             </button>
           </div>
-          <span className="text-base font-semibold text-gray-900 sm:text-lg">
+          <span className="whitespace-nowrap text-base font-semibold text-gray-900 sm:text-lg">
             {t.monthLabel(baseYear, baseMonth)}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center">
             <button onClick={() => shift(1)} className={navBtn} aria-label={t.nextMonth}>
-              {t.nextMonth} ›
+              <span className="hidden sm:inline">{t.nextMonth} </span>›
             </button>
             <button onClick={() => shift(12)} className={navBtn} aria-label={t.nextYear}>
-              {t.nextYear} »
+              <span className="hidden sm:inline">{t.nextYear} </span>»
             </button>
           </div>
         </div>
@@ -311,6 +311,9 @@ export function ReserveCalendar({
                           <span className="mr-2 text-sm font-normal text-gray-400 line-through">¥{price.subtotal.toLocaleString()}</span>
                         )}
                         ¥{price.total.toLocaleString()}
+                      </p>
+                      <p className="text-[11px] text-gray-400">
+                        {t.perPersonTotal(Math.round(price.total / effGuests).toLocaleString())}
                       </p>
                     </>
                   ) : (

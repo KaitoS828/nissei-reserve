@@ -126,6 +126,9 @@ export async function PlanScreen({
                   {r.nightsTaxIncl(price.nights)}
                   {price.discountRate > 0 && r.longStayApplied(Math.round(price.discountRate * 100))}
                 </p>
+                <p className="text-[11px] text-gray-400">
+                  {r.perPersonTotal(Math.round(price.total / numGuests).toLocaleString())}
+                </p>
               </div>
             )}
             {available === false ? (

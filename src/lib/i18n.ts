@@ -100,6 +100,7 @@ type Dict = {
     perPersonFrom: (yen: string) => string;
     minGuestsNotice: (n: number) => string; minGuestsBadge: (n: number) => string;
     nightsTaxIncl: (n: number) => string;
+    perPersonTotal: (amount: string) => string;
     longStayApplied: (pct: number) => string;
     oneNightTotal: (guests: number, yen: string) => string;
     bookTheseDates: string; selectDates: string;
@@ -224,6 +225,7 @@ const ja: Dict = {
     minGuestsNotice: (n) => `このプランは最低${n}名からです`,
     minGuestsBadge: (n) => `最低${n}名から`,
     nightsTaxIncl: (n) => `${n}泊・税サービス料込`,
+    perPersonTotal: (amount) => `お一人様 ¥${amount}`,
     longStayApplied: (pct) => `（長期割${pct}%適用）`,
     oneNightTotal: (guests, yen) => `${guests}名・1泊 合計 ¥${yen}`,
     bookTheseDates: "この日程で予約する", selectDates: "日程を選択",
@@ -432,6 +434,7 @@ const en: Dict = {
     minGuestsNotice: (n) => `This plan starts at ${n} guests`,
     minGuestsBadge: (n) => `From ${n} guests`,
     nightsTaxIncl: (n) => `${n === 1 ? "1 night" : `${n} nights`}, tax and service included`,
+    perPersonTotal: (amount) => `¥${amount} per person`,
     longStayApplied: (pct) => ` (${pct}% long-stay discount applied)`,
     oneNightTotal: (guests, yen) => `${guests === 1 ? "1 guest" : `${guests} guests`}, 1 night: ¥${yen}`,
     bookTheseDates: "Book these dates", selectDates: "Select your dates",
