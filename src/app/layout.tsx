@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SITE, siteUrl } from "@/lib/site";
@@ -13,6 +13,13 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// 管理画面・公開画面共通の日本語UI用（Geistはラテン文字のみのため日本語はOSフォント任せになっていた）
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
 });
 
@@ -57,8 +64,18 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoSansJp.variable} h-full antialiased`}
     >
+      <head>
+        {/* Zen Old Mincho: next/fontのローカル最適化だとサブセット定義に日本語が無く
+            日本語グリフが削られてしまうため、この書体だけはGoogle Fontsから直接読み込む */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-gray-950 text-gray-200">
         {children}
         <Script
