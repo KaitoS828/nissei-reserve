@@ -57,7 +57,10 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
   return (
     <div className="space-y-6">
       {locale === "ja" && (settings.hero_title || settings.hero_sub || settings.hero_description) && (
-        <section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6">
+        <section className="relative space-y-4 rounded-2xl border border-gray-200 bg-white p-6">
+          <span className="absolute right-4 top-4 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 sm:right-6 sm:top-6">
+            7泊以上で最大15%OFF
+          </span>
           <div className="space-y-2 border-b border-gray-100 pb-4">
             {settings.hero_sub && (
               <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-gray-400">
