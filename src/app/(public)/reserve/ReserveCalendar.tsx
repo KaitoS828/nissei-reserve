@@ -13,6 +13,7 @@ type Plan = {
   pricePerNight: number;
   guestPrices: GuestPrices;
   discounts: Discount[];
+  galleryImages: string[];
 };
 
 function pad(n: number) {
@@ -265,7 +266,16 @@ export function ReserveCalendar({
           const perPerson = Math.round(nightly / effGuests);
           const price = from && to && !belowMin ? calcPrice(from, to, nightly, p.discounts) : null;
           return (
-            <div key={p.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div key={p.id} className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+              {p.galleryImages.length > 0 && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.galleryImages[0]}
+                  alt={`${p.name}の写真`}
+                  className="h-40 w-full object-cover"
+                />
+              )}
+              <div className="p-5">
               <div className="space-y-2 border-b border-gray-100 pb-4">
                 <h2 className="text-lg font-semibold text-gray-900">{p.name}</h2>
                 <div className="flex flex-wrap gap-1.5">
@@ -323,6 +333,7 @@ export function ReserveCalendar({
                     {t.selectDates}
                   </span>
                 )}
+              </div>
               </div>
             </div>
           );

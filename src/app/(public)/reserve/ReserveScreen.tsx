@@ -51,6 +51,7 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
     pricePerNight: p.plan_prices[0]?.price_per_night ?? 0,
     guestPrices: p.plan_prices[0]?.guest_prices ?? null,
     discounts: (p.discounts ?? []) as Discount[],
+    galleryImages: p.gallery_images ?? [],
   }));
 
   return (
