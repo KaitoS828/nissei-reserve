@@ -9,7 +9,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white text-gray-800">
+    <div className="min-h-screen bg-white text-gray-800 font-serif">
       {/* 宿泊施設としての構造化データ。検索結果に住所や設備が出るようにする */}
       <script
         type="application/ld+json"
