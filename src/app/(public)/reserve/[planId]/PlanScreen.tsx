@@ -102,14 +102,16 @@ export async function PlanScreen({
       {/* 予約バー */}
       <form method="get" className="rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[8.5rem] flex-1 space-y-1 sm:flex-none">
-            <span className="text-xs text-gray-500">{t.checkIn}</span>
-            <input type="date" name="from" defaultValue={from} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-          </label>
-          <label className="min-w-[8.5rem] flex-1 space-y-1 sm:flex-none">
-            <span className="text-xs text-gray-500">{t.checkOut}</span>
-            <input type="date" name="to" defaultValue={to} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-          </label>
+          <div className="grid w-full grid-cols-2 gap-3 sm:contents">
+            <label className="min-w-0 space-y-1 sm:min-w-[8.5rem] sm:flex-none">
+              <span className="text-xs text-gray-500">{t.checkIn}</span>
+              <input type="date" name="from" defaultValue={from} className="block w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            </label>
+            <label className="min-w-0 space-y-1 sm:min-w-[8.5rem] sm:flex-none">
+              <span className="text-xs text-gray-500">{t.checkOut}</span>
+              <input type="date" name="to" defaultValue={to} className="block w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            </label>
+          </div>
           <label className="space-y-1">
             <span className="text-xs text-gray-500">{t.guestsRange(minGuests, maxGuests)}</span>
             <input type="number" name="guests" min={minGuests} max={maxGuests} defaultValue={String(numGuests)} className="block w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
