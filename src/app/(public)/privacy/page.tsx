@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | 一棟貸し宿「日靜」",
+  title: "プライバシーポリシー",
 };
 
 export default function PrivacyPage() {

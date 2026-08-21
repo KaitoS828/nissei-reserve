@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "利用規約 | 一棟貸し宿「日靜」",
+  title: "利用規約",
 };
 
 export default function TermsPage() {

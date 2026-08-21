@@ -94,7 +94,7 @@ export async function PlanScreen({
         </div>
         {plan.gallery_images.length > 0 && (
           <div className="mt-4">
-            <ImageLightbox images={plan.gallery_images} />
+            <ImageLightbox images={plan.gallery_images} altPrefix={plan.name} />
           </div>
         )}
       </div>

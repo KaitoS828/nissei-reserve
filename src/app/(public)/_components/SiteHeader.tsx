@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { dict, localeOf, localePath } from "@/lib/i18n";
@@ -38,9 +39,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur print:hidden">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link href={localePath(locale, "/reserve")} className="flex min-w-0 items-center gap-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-300 text-[10px] leading-tight text-gray-600">
-            {t.site.badge}
-          </span>
+          <Image src="/logo.png" alt={t.site.name} width={36} height={36} className="h-9 w-9 shrink-0" priority />
           <span className="truncate text-base font-semibold tracking-tight text-gray-900 sm:text-lg">
             {t.site.name}
           </span>

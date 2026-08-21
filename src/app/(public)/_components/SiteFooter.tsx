@@ -17,6 +17,8 @@ export function SiteFooter() {
         <span className="text-gray-300">|</span>
         <Link href={localePath(locale, "/reserve/lookup")} className="hover:text-gray-800">{t.nav.lookup}</Link>
         <span className="text-gray-300">|</span>
+        <Link href="/faq" className="hover:text-gray-800">{t.site.faq}</Link>
+        <span className="text-gray-300">|</span>
         <Link href="/terms" className="hover:text-gray-800">{t.site.terms}</Link>
         <span className="text-gray-300">|</span>
         <Link href="/privacy" className="hover:text-gray-800">{t.site.privacy}</Link>

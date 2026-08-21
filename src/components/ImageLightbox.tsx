@@ -5,14 +5,18 @@ import { useEffect, useState } from "react";
 // サムネイルをクリックすると拡大表示（前後の写真・サムネイル帯付き）
 export function ImageLightbox({
   images,
+  altPrefix,
   visibleCount,
   thumbClassName = "h-24 sm:h-28",
 }: {
   images: string[];
+  /** alt文言の接頭辞（例:「一棟貸し宿「日靜」」「素泊まりプラン」）。何の写真かを画像検索・AIに伝える。 */
+  altPrefix: string;
   /** グリッドに並べるサムネイル数の上限（省略時は全件）。拡大表示は常に全件を巡回する。 */
   visibleCount?: number;
   thumbClassName?: string;
 }) {
+  const altOf = (i: number) => `${altPrefix}の写真 ${i + 1}枚目`;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export function ImageLightbox({
             className={`${thumbClassName} overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition hover:opacity-90`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img} alt="" className="h-full w-full object-cover" />
+            <img src={img} alt={altOf(i)} className="h-full w-full object-cover" />
           </button>
         ))}
       </div>
@@ -66,7 +70,7 @@ export function ImageLightbox({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[openIndex]}
-              alt=""
+              alt={altOf(openIndex)}
               className="max-h-[70vh] max-w-full rounded-lg object-contain"
             />
             {images.length > 1 && (
@@ -110,7 +114,7 @@ export function ImageLightbox({
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <img src={img} alt={altOf(i)} className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

@@ -87,7 +87,7 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
             )}
           </div>
 
-          <ImageLightbox images={heroImages} visibleCount={4} />
+          <ImageLightbox images={heroImages} altPrefix={SITE.name} visibleCount={4} />
         </section>
       )}
 
