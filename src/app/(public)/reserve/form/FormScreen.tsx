@@ -72,7 +72,7 @@ export async function FormScreen({
 
       {/* 予約サマリ */}
       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-        <h1 className="text-lg font-semibold text-gray-900">{plan.name}</h1>
+        <h1 className="text-lg font-bold text-gray-900">{plan.name}</h1>
         <p className="mt-1 text-sm text-gray-600">{r.roomLabel}</p>
         {price && (
           <div className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-gray-200 pt-3">

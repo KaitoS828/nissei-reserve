@@ -277,7 +277,7 @@ export function ReserveCalendar({
               )}
               <div className="p-5">
               <div className="space-y-2 border-b border-gray-100 pb-4">
-                <h2 className="text-lg font-semibold text-gray-900">{p.name}</h2>
+                <h2 className="text-lg font-bold text-gray-900">{p.name}</h2>
                 <div className="flex flex-wrap gap-1.5">
                   {p.tags.map((tag) => (
                     <span key={tag} className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-500">
