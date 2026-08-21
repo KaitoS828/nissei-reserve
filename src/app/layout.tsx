@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_JP, Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SITE, siteUrl } from "@/lib/site";
@@ -19,6 +19,14 @@ const geistMono = Geist_Mono({
 // 管理画面・公開画面共通の日本語UI用（Geistはラテン文字のみのため日本語はOSフォント任せになっていた）
 const notoSansJp = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+});
+
+// 管理画面のラテン文字（英数字）用。Noto Sans JPのラテン字形より
+// Interの方が近いイメージだったため、ラテン文字だけこちらを優先させる
+const inter = Inter({
+  variable: "--font-inter",
   weight: ["300", "400", "500", "700"],
   subsets: ["latin"],
 });
@@ -64,7 +72,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSansJp.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoSansJp.variable} ${inter.variable} h-full antialiased`}
     >
       <head>
         {/* Zen Old Mincho: next/fontのローカル最適化だとサブセット定義に日本語が無く

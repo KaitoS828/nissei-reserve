@@ -234,11 +234,14 @@ export function ReserveCalendar({
             <span className="rounded-full bg-teal-50 px-2 py-0.5 text-sm text-teal-700">{t.nightCount(nights)}</span>
           )}
           <label className="ml-auto flex items-center gap-2 text-sm">
-            <span className="text-gray-500">{t.guestsLabel}</span>
+            <span className="text-gray-500">
+              {t.guestsLabel}
+              <span className="ml-1 text-xs text-gray-400">({t.guestsUpTo(maxGuests)})</span>
+            </span>
             <select
               value={guests}
               onChange={(e) => setGuests(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 px-2 py-1"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
             >
               {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{t.guestOption(n)}</option>

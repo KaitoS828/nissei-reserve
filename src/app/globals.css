@@ -11,7 +11,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
-  --font-sans: var(--font-noto-sans-jp), var(--font-geist-sans), sans-serif;
+  --font-sans: var(--font-inter), var(--font-noto-sans-jp), var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-serif: "Zen Old Mincho", "Hiragino Mincho ProN", serif;
 }

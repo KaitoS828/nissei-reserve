@@ -94,7 +94,7 @@ type Dict = {
     tapToSelect: string; checkingAvailability: string;
     legendSelected: string; legendAvailable: string; legendFull: string;
     in: string; out: string; nightCount: (n: number) => string;
-    guestsLabel: string; guestOption: (n: number) => string; clear: string;
+    guestsLabel: string; guestOption: (n: number) => string; guestsUpTo: (n: number) => string; clear: string;
     roomLabel: string;
     guestRangeNote: (min: number, max: number) => string;
     perPersonFrom: (yen: string) => string;
@@ -217,7 +217,7 @@ const ja: Dict = {
     checkingAvailability: "空き状況を確認しています…",
     legendSelected: "選択中", legendAvailable: "空室あり", legendFull: "満室・予約不可",
     in: "IN", out: "OUT", nightCount: (n) => `${n}泊`,
-    guestsLabel: "人数", guestOption: (n) => `${n}名`, clear: "クリア",
+    guestsLabel: "人数", guestOption: (n) => `${n}名`, guestsUpTo: (n) => `${n}名まで`, clear: "クリア",
     roomLabel: "日靜（1日1組限定）",
     guestRangeNote: (min, max) => `${min}名〜${max}名でご利用可`,
     perPersonFrom: (yen) => `¥${yen}/人〜`,
@@ -425,7 +425,7 @@ const en: Dict = {
     checkingAvailability: "Checking availability…",
     legendSelected: "Selected", legendAvailable: "Available", legendFull: "Fully booked",
     in: "IN", out: "OUT", nightCount: (n) => (n === 1 ? "1 night" : `${n} nights`),
-    guestsLabel: "Guests", guestOption: (n) => (n === 1 ? "1 guest" : `${n} guests`), clear: "Clear",
+    guestsLabel: "Guests", guestOption: (n) => (n === 1 ? "1 guest" : `${n} guests`), guestsUpTo: (n) => `up to ${n}`, clear: "Clear",
     roomLabel: "The whole house, one group per day",
     guestRangeNote: (min, max) => `For ${min}–${max} guests`,
     perPersonFrom: (yen) => `From ¥${yen} per person`,
