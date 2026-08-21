@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { SubmitButton } from "@/components/SubmitButton";
 import { login } from "./actions";
 
@@ -9,12 +10,13 @@ export default async function LoginPage({
   const { error, redirect } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-gray-800">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 text-gray-800 font-light">
       <form
         action={login}
         className="w-full max-w-sm space-y-5 rounded-2xl border border-gray-200 bg-white p-8"
       >
         <div className="space-y-1">
+          <Image src="/logo.png" alt="日靜" width={40} height={40} className="mb-2 h-10 w-10" priority />
           <h1 className="text-xl font-semibold text-gray-900">nissei 管理</h1>
           <p className="text-sm text-gray-600">管理画面にログイン</p>
         </div>

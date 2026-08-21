@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 // 管理画面・公開画面共通の日本語UI用（Geistはラテン文字のみのため日本語はOSフォント任せになっていた）
 const notoSansJp = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "700"],
   subsets: ["latin"],
 });
 

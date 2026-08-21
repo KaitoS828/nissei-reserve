@@ -67,7 +67,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-800 md:flex-row">
+    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-800 font-light md:flex-row">
       <AdminNav groups={groups} />
 
       <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">{children}</main>

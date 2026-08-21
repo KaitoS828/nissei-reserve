@@ -9,7 +9,7 @@ export default async function MfaPage({
   const { error, redirect } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 font-light">
       <div className="w-full max-w-sm space-y-4">
         <form
           action={verifyMfa}
