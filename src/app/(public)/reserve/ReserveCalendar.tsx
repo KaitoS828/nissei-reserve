@@ -312,7 +312,7 @@ export function ReserveCalendar({
                         )}
                         ¥{price.total.toLocaleString()}
                       </p>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-sm text-gray-500">
                         {t.perPersonTotal(Math.round(price.total / effGuests).toLocaleString())}
                       </p>
                     </>

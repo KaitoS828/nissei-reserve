@@ -83,7 +83,7 @@ export async function FormScreen({
               )}
               <p className="text-xl font-bold text-gray-900">¥{price.total.toLocaleString()}</p>
               <p className="text-xs text-gray-500">{t.taxIncl}</p>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-sm text-gray-500">
                 {r.perPersonTotal(Math.round(price.total / numGuests).toLocaleString())}
               </p>
             </div>
