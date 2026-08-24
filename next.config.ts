@@ -31,7 +31,10 @@ const nextConfig: NextConfig = {
   // ページ側の redirect() だと静的化されてクローラに 200 を返してしまうため、
   // サーバレベルで返す。
   async redirects() {
-    return [{ source: "/en", destination: "/en/reserve", permanent: true }];
+    return [
+      { source: "/en", destination: "/en/reserve", permanent: true },
+      { source: "/", destination: "/reserve", permanent: true },
+    ];
   },
   webpack: (config) => {
     // OMC の HUD が書き込む .omc/ を監視対象外にして

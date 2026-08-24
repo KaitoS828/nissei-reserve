@@ -16,12 +16,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   const staticEntries: MetadataRoute.Sitemap = [
-    { url: `${base}/`, lastModified: now, changeFrequency: "monthly", priority: 1 },
     {
       url: `${base}/reserve`,
       lastModified: now,
       changeFrequency: "daily",
-      priority: 0.9,
+      priority: 1,
       alternates: bilingual("/reserve"),
     },
     {
