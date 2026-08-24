@@ -134,6 +134,7 @@ type Dict = {
     checkInTime: string;
     survey: string; surveyPlaceholder: string;
     contact: string; contactPlaceholder: string;
+    agreePolicy: { before: string; linkText: string; after: string };
     submit: string; submitting: string;
     errors: Record<string, string>;
     errMinGuests: (n: number) => string;
@@ -265,6 +266,7 @@ const ja: Dict = {
     checkInTime: "チェックイン予定時刻",
     survey: "ご要望・アンケート", surveyPlaceholder: "・宿泊の目的\n・ご要望など",
     contact: "連絡事項", contactPlaceholder: "連絡事項がございましたらご入力ください",
+    agreePolicy: { before: "", linkText: "キャンセルポリシー", after: "を含む利用規約に同意する" },
     submit: "お支払いへ進む", submitting: "決済ページへ移動しています…",
     errors: {
       rate_limited: "お申し込みの回数が上限に達しました。しばらくしてからお試しください",
@@ -282,6 +284,7 @@ const ja: Dict = {
       sold_out: "満室のため予約できません",
       customer_save_failed: "顧客情報の保存に失敗しました",
       reservation_failed: "予約の作成に失敗しました",
+      agree_required: "キャンセルポリシーを含む利用規約への同意が必要です",
       checkout_failed: "決済セッションの作成に失敗しました",
       generic: "処理できませんでした。お手数ですが最初からお試しください",
     },
@@ -478,6 +481,7 @@ const en: Dict = {
     checkInTime: "Estimated arrival time",
     survey: "Requests and comments", surveyPlaceholder: "・Purpose of your stay\n・Any requests",
     contact: "Anything else we should know", contactPlaceholder: "Let us know if there is anything else",
+    agreePolicy: { before: "I agree to the terms of use, including the ", linkText: "cancellation policy", after: "." },
     submit: "Continue to payment", submitting: "Taking you to the payment page…",
     errors: {
       rate_limited: "You have reached the limit for booking attempts. Please try again later.",
@@ -495,6 +499,7 @@ const en: Dict = {
       sold_out: "Those dates are no longer available.",
       customer_save_failed: "We could not save your details.",
       reservation_failed: "We could not create the booking.",
+      agree_required: "Please agree to the terms of use, including the cancellation policy.",
       checkout_failed: "We could not start the payment session.",
       generic: "We could not complete that. Please start again.",
     },

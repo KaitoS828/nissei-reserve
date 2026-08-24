@@ -48,8 +48,11 @@ export async function startCheckout(formData: FormData) {
   const ciMin = String(formData.get("ci_min") ?? "");
   const survey = String(formData.get("survey") ?? "").trim() || null;
   const contact = String(formData.get("contact") ?? "").trim() || null;
+  const agreePolicy = formData.get("agree_policy") === "on";
 
   if (!planId || !from || !to) fail(locale, planId, "invalid_plan_dates");
+  // HTMLのrequiredは直POSTでバイパス可能なため、サーバ側でも同意チェックを必須にする
+  if (!agreePolicy) fail(locale, planId, "agree_required");
   if (!lastName || !firstName || !email) fail(locale, planId, "name_email_required");
   // カナは日本語フォームのみ必須。海外のお客様は書けないため英語版では聞かない。
   if (locale === "ja" && (!lastKana || !firstKana)) fail(locale, planId, "kana_required");

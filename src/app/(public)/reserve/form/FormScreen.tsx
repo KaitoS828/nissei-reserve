@@ -178,6 +178,17 @@ export async function FormScreen({
           </div>
         </div>
 
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input type="checkbox" name="agree_policy" required className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {t.agreePolicy.before}
+            <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-teal-600 underline hover:text-teal-500">
+              {t.agreePolicy.linkText}
+            </Link>
+            {t.agreePolicy.after} {req}
+          </span>
+        </label>
+
         <div className="flex justify-center">
           <SubmitButton pendingLabel={t.submitting} className="rounded-full bg-teal-600 px-12 py-3 font-medium text-white transition hover:bg-teal-500">
             {t.submit}
