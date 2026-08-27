@@ -116,7 +116,7 @@ type Dict = {
     contentInJapanese: string;
   };
   common: {
-    reservationCode: string; email: string; guests: string; nights: string;
+    reservationCode: string; email: string; guests: string; nights: string; guestUnit: string;
     plan: string; dates: string; submit: string; back: string; loading: string;
     required: string; optional: string; switchLang: string;
   };
@@ -186,7 +186,7 @@ type Dict = {
     no: string; itemCol: string; qtyCol: string; unitCol: string;
     unitPriceCol: string; amountCol: string;
     subtotal: string; taxRow: string; total: string; notes: string;
-    issuedLabel: string; itemName: (plan: string) => string;
+    issuedLabel: string; itemName: (plan: string) => string; itemNameGuest: (plan: string, n: number) => string;
   };
   checkin: {
     title: string; lead: string; showCode: string; verifying: string;
@@ -251,7 +251,7 @@ const ja: Dict = {
     contentInJapanese: "",
   },
   common: {
-    reservationCode: "予約番号", email: "メールアドレス", guests: "人数", nights: "泊",
+    reservationCode: "予約番号", email: "メールアドレス", guests: "人数", nights: "泊", guestUnit: "人",
     plan: "プラン", dates: "日程", submit: "送信する", back: "戻る", loading: "読み込んでいます…",
     required: "必須", optional: "任意", switchLang: "English",
   },
@@ -380,6 +380,7 @@ const ja: Dict = {
     unitPriceCol: "単価", amountCol: "金額",
     subtotal: "小計", taxRow: "消費税（10%）", total: "合計", notes: "特記事項",
     issuedLabel: "発行日", itemName: (plan) => `ご宿泊代として（${plan}）`,
+    itemNameGuest: (plan, n) => `ご宿泊代として（${plan}）${n}名様分`,
   },
   checkin: {
     title: "チェックイン",
@@ -475,7 +476,7 @@ const en: Dict = {
       "The plan and room descriptions below are written by the owner in Japanese. Please contact us in English if anything is unclear.",
   },
   common: {
-    reservationCode: "Booking number", email: "Email address", guests: "Guests", nights: "night(s)",
+    reservationCode: "Booking number", email: "Email address", guests: "Guests", nights: "night(s)", guestUnit: "guest(s)",
     plan: "Plan", dates: "Dates", submit: "Submit", back: "Back", loading: "Loading…",
     required: "required", optional: "optional", switchLang: "日本語",
   },
@@ -609,6 +610,7 @@ const en: Dict = {
     unitPriceCol: "Unit price", amountCol: "Amount",
     subtotal: "Subtotal", taxRow: "Consumption tax (10%)", total: "Total", notes: "Notes",
     issuedLabel: "Issued", itemName: (plan) => `Accommodation (${plan})`,
+    itemNameGuest: (plan, n) => `Accommodation (${plan}) — Guest ${n}`,
   },
   checkin: {
     title: "Check-in",
