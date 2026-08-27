@@ -186,7 +186,7 @@ type Dict = {
     no: string; itemCol: string; qtyCol: string; unitCol: string;
     unitPriceCol: string; amountCol: string;
     subtotal: string; taxRow: string; total: string; notes: string;
-    issuedLabel: string; itemName: (plan: string) => string; itemNameGuest: (plan: string, n: number) => string;
+    issuedLabel: string; itemName: (plan: string) => string;
   };
   checkin: {
     title: string; lead: string; showCode: string; verifying: string;
@@ -380,7 +380,6 @@ const ja: Dict = {
     unitPriceCol: "単価", amountCol: "金額",
     subtotal: "小計", taxRow: "消費税（10%）", total: "合計", notes: "特記事項",
     issuedLabel: "発行日", itemName: (plan) => `ご宿泊代として（${plan}）`,
-    itemNameGuest: (plan, n) => `ご宿泊代として（${plan}）${n}名様分`,
   },
   checkin: {
     title: "チェックイン",
@@ -610,7 +609,6 @@ const en: Dict = {
     unitPriceCol: "Unit price", amountCol: "Amount",
     subtotal: "Subtotal", taxRow: "Consumption tax (10%)", total: "Total", notes: "Notes",
     issuedLabel: "Issued", itemName: (plan) => `Accommodation (${plan})`,
-    itemNameGuest: (plan, n) => `Accommodation (${plan}) — Guest ${n}`,
   },
   checkin: {
     title: "Check-in",

@@ -2,12 +2,10 @@ import Image from "next/image";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dict, type Locale } from "@/lib/i18n";
 import { SITE } from "@/lib/site";
-import type { PricingRule } from "@/lib/pricing";
 import { PrintButton } from "./PrintButton";
 
 type ReceiptResv = {
-  code: string; check_in: string; check_out: string; nights: number; num_guests: number;
-  plan_id: string | null; room_type_id: string | null;
+  code: string; check_in: string; check_out: string; nights: number;
   amount: number; payment_status: string; created_at: string; receipt_name: string | null;
   customers: { last_name: string | null; first_name: string | null } | null;
   plans: { name: string } | null;
@@ -49,7 +47,7 @@ export async function ReceiptScreen({
     const { data } = await supabase
       .from("reservations")
       .select(
-        "code, check_in, check_out, nights, num_guests, plan_id, room_type_id, amount, payment_status, created_at, receipt_name, customers(last_name, first_name), plans(name), payments(stripe_payment_intent_id, created_at)",
+        "code, check_in, check_out, nights, amount, payment_status, created_at, receipt_name, customers(last_name, first_name), plans(name), payments(stripe_payment_intent_id, created_at)",
       )
       .eq("code", code)
       .eq("lookup_token", token)
@@ -77,56 +75,13 @@ export async function ReceiptScreen({
     ? t.paymentMethodCard
     : t.paymentMethodOther;
 
+  const itemLabel = t.itemName(resv.plans?.name ?? "—");
   const cellBorder = "border border-gray-900 px-2 py-1";
   const { postal, rest: addressRest } = splitPostal(
     locale === "en" ? SITE.address.fullEn : facility?.address,
   );
-
-  // このプラン×客室が人数制の料金（pricing_rule.type === "per_person"）かどうかで、
-  // 明細を「1行・泊数ベース」ではなく「人数分の行・各行は泊数×1人分の単価」で出す。
-  // 人数制プランは1泊あたりの単価が人数で決まるため、1行に泊数だけで単価を出すと
-  // 実際の1人あたり料金と合わなくなるため。
-  let pricingRule: PricingRule | null = null;
-  if (resv.plan_id && resv.room_type_id) {
-    const { data: planPrice } = await supabase
-      .from("plan_prices")
-      .select("pricing_rule")
-      .eq("plan_id", resv.plan_id)
-      .eq("room_type_id", resv.room_type_id)
-      .maybeSingle();
-    pricingRule = (planPrice?.pricing_rule as PricingRule | null) ?? null;
-  }
-  const isPerPerson = pricingRule?.type === "per_person" && resv.num_guests > 0;
-  const planName = resv.plans?.name ?? "—";
-
-  type LineItem = { label: string; qty: number; unit: string; unitPrice: number; amount: number };
-  let lineItems: LineItem[];
-  if (isPerPerson) {
-    // 1人1泊あたりの単価で行を人数分作る（数量＝泊数、単価は全行共通）。
-    // 端数（長期割引などで人数×泊数で割り切れない場合）は最終行の金額だけに寄せて、
-    // 合計欄が必ず実際の請求額と一致するようにする。
-    const guests = resv.num_guests;
-    const rate = resv.nights > 0 ? Math.round(resv.amount / (guests * resv.nights)) : resv.amount;
-    const rowAmount = rate * resv.nights;
-    const remainder = resv.amount - rowAmount * guests;
-    lineItems = Array.from({ length: guests }, (_, i) => ({
-      label: t.itemNameGuest(planName, i + 1),
-      qty: resv.nights,
-      unit: c.nights,
-      unitPrice: rate,
-      amount: i === guests - 1 ? rowAmount + remainder : rowAmount,
-    }));
-  } else {
-    lineItems = [
-      {
-        label: t.itemName(planName),
-        qty: resv.nights,
-        unit: c.nights,
-        unitPrice: resv.nights > 0 ? Math.round(resv.amount / resv.nights) : resv.amount,
-        amount: resv.amount,
-      },
-    ];
-  }
+  // 単価は実際の請求額から逆算する（長期割引等があっても表の合計欄は必ず実際の請求額と一致させる）
+  const unitPrice = resv.nights > 0 ? Math.round(resv.amount / resv.nights) : resv.amount;
 
   return (
     <div className="mx-auto max-w-2xl print:mx-0 print:max-w-none">
@@ -197,15 +152,13 @@ export async function ReceiptScreen({
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((item, i) => (
-              <tr key={i}>
-                <td className={cellBorder}>{item.label}</td>
-                <td className={`${cellBorder} text-center`}>{item.qty}</td>
-                <td className={`${cellBorder} text-center`}>{item.unit}</td>
-                <td className={`${cellBorder} text-right`}>¥{item.unitPrice.toLocaleString()}</td>
-                <td className={`${cellBorder} text-right`}>¥{item.amount.toLocaleString()}</td>
-              </tr>
-            ))}
+            <tr>
+              <td className={cellBorder}>{itemLabel}</td>
+              <td className={`${cellBorder} text-center`}>{resv.nights}</td>
+              <td className={`${cellBorder} text-center`}>{c.nights}</td>
+              <td className={`${cellBorder} text-right`}>¥{unitPrice.toLocaleString()}</td>
+              <td className={`${cellBorder} text-right`}>¥{resv.amount.toLocaleString()}</td>
+            </tr>
           </tbody>
         </table>
 
