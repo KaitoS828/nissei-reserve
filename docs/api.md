@@ -92,7 +92,7 @@ Claude Code / Claude Desktop などのMCP対応クライアントから直接、
 
 利用できるツール: `check_availability` `list_reservations` `get_reservation`
 `quote_cancellation` `cancel_reservation` `block_dates` `unblock_dates`
-`create_reservation` `update_reservation`
+`create_reservation` `update_reservation` `list_ical_sources` `sync_ical`
 （各ツールの説明・引数は `tools/list` で取得できる）
 
 ### Claude Codeから接続する

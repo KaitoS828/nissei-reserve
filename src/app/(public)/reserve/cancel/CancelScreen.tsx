@@ -6,7 +6,7 @@ import { dict, localePath, term, type Locale } from "@/lib/i18n";
 import { confirmCancel } from "./actions";
 
 const field =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
 
 type ResvRow = {
   id: string; code: string; check_in: string; check_out: string; nights: number;
@@ -49,7 +49,7 @@ export async function CancelScreen({
       <div className="mx-auto max-w-xl space-y-4">
         <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
         <p className="text-sm text-gray-600">{t.notFound}</p>
-        <Link href={localePath(locale, "/reserve/lookup")} className="text-sm text-teal-700 hover:underline">
+        <Link href={localePath(locale, "/reserve/lookup")} className="text-sm text-brand-700 hover:underline">
           {t.backToLookup}
         </Link>
       </div>
@@ -61,7 +61,7 @@ export async function CancelScreen({
       <div className="mx-auto max-w-xl space-y-4">
         <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
         <p className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">{t.alreadyCancelled}</p>
-        <Link href={localePath(locale, "/reserve")} className="text-sm text-teal-700 hover:underline">{t.home}</Link>
+        <Link href={localePath(locale, "/reserve")} className="text-sm text-brand-700 hover:underline">{t.home}</Link>
       </div>
     );
   }
@@ -96,9 +96,9 @@ export async function CancelScreen({
       </div>
 
       {/* 返金予定額 */}
-      <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5">
+      <div className="rounded-2xl border border-brand-200 bg-brand-50 p-5">
         <p className="text-sm font-medium text-gray-900">{t.refundAmount}</p>
-        <p className="mt-1 text-3xl font-bold text-teal-700">¥{refund.refundAmount.toLocaleString()}</p>
+        <p className="mt-1 text-3xl font-bold text-brand-700">¥{refund.refundAmount.toLocaleString()}</p>
         <p className="mt-2 text-xs text-gray-600">
           {t.refundNote(refund.daysBefore, Math.round(refund.chargeRate * 100), refund.feeAmount.toLocaleString())}
         </p>
@@ -116,7 +116,7 @@ export async function CancelScreen({
           <div className="space-y-1.5">
             {CANCEL_CATEGORIES.map((cat, i) => (
               <label key={cat} className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="radio" name="category" value={cat} required defaultChecked={i === 0} className="accent-teal-600" />
+                <input type="radio" name="category" value={cat} required defaultChecked={i === 0} className="accent-brand-600" />
                 {term(locale, cat)}
               </label>
             ))}

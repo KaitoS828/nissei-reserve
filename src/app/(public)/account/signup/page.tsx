@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { signup } from "../actions";
 
-const field = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500";
+const field = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
 
 export default async function AccountSignupPage({
   searchParams,
@@ -27,10 +27,10 @@ export default async function AccountSignupPage({
           <span className="text-sm text-gray-700">パスワード（6文字以上）</span>
           <input type="password" name="password" required minLength={6} autoComplete="new-password" className={field} />
         </label>
-        <SubmitButton pendingLabel="登録しています…" className="w-full rounded-full bg-teal-600 py-2.5 text-sm font-medium text-white hover:bg-teal-500">登録する</SubmitButton>
+        <SubmitButton pendingLabel="登録しています…" className="w-full rounded-full bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-500">登録する</SubmitButton>
       </form>
       <p className="text-center text-sm text-gray-500">
-        登録済みの方は <Link href="/account/login" className="text-teal-700 hover:underline">ログイン</Link>
+        登録済みの方は <Link href="/account/login" className="text-brand-700 hover:underline">ログイン</Link>
       </p>
     </div>
   );

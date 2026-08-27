@@ -34,9 +34,11 @@ const NAV = [
     group: "設定",
     items: [
       { href: "/admin/site-settings", label: "TOPページ設定" },
+      { href: "/admin/customize", label: "カスタマイズ" },
       { href: "/admin/masters/plans", label: "宿泊プラン" },
       { href: "/admin/masters/room-types", label: "客室タイプ" },
       { href: "/admin/masters/rooms", label: "客室" },
+      { href: "/admin/api-docs", label: "API / MCP" },
       { href: "/admin/security", label: "セキュリティ" },
       { href: "/admin/audit", label: "操作履歴" },
       { href: "/admin/hq", label: "本部管理", hq: true },

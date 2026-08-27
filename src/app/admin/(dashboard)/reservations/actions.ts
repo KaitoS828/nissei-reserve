@@ -195,6 +195,7 @@ export async function updateReservation(formData: FormData) {
   const amount = Number(formData.get("amount") ?? 0);
   const source = String(formData.get("source") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+  const receiptName = String(formData.get("receipt_name") ?? "").trim() || null;
 
   if (!id || !roomTypeId || !checkIn || !checkOut) {
     redirectError("客室タイプ・チェックイン・チェックアウトは必須です");
@@ -252,6 +253,7 @@ export async function updateReservation(formData: FormData) {
       payment_status: paymentStatus,
       ...(source ? { source } : {}),
       note,
+      receipt_name: receiptName,
     })
     .eq("id", id);
   if (error) redirectError(error.message);

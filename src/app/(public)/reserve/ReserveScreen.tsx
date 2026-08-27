@@ -24,7 +24,18 @@ type PlanRow = Plan & {
 
 // 日英で同じ中身を出すための画面本体。
 // page.tsx は任意のプロパティを受け取れないので、部品側に切り出している。
-export async function ReserveScreen({ locale }: { locale: Locale }) {
+export async function ReserveScreen({
+  locale,
+  from,
+  to,
+  guests,
+}: {
+  locale: Locale;
+  /** URLパラメータでの日付事前入力(?from=YYYY-MM-DD&to=YYYY-MM-DD&guests=N)。妥当性はReserveCalendar側で検証する。 */
+  from?: string;
+  to?: string;
+  guests?: string;
+}) {
   const t = dict(locale).reserve;
   const supabase = createAdminClient();
   const [{ data: planData }, { data: facilityData }] = await Promise.all([
@@ -111,7 +122,15 @@ export async function ReserveScreen({ locale }: { locale: Locale }) {
 
         <div>
           {roomTypeId ? (
-            <ReserveCalendar plans={plans} roomTypeId={roomTypeId} maxGuests={maxGuests} locale={locale} />
+            <ReserveCalendar
+              plans={plans}
+              roomTypeId={roomTypeId}
+              maxGuests={maxGuests}
+              locale={locale}
+              initialFrom={from}
+              initialTo={to}
+              initialGuests={guests}
+            />
           ) : (
             <p className="text-sm text-gray-500">{t.noPlans}</p>
           )}

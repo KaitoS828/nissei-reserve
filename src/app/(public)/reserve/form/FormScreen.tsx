@@ -8,7 +8,7 @@ import { dict, localePath, type Locale } from "@/lib/i18n";
 import { startCheckout } from "./actions";
 
 const field =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
 const label = "text-sm font-medium text-gray-900";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
@@ -169,6 +169,13 @@ export async function FormScreen({
 
         <div className="space-y-4 rounded-2xl border border-gray-200 p-6">
           <div className="grid gap-2 md:grid-cols-[160px_1fr]">
+            <span className={label}>{t.receiptName}</span>
+            <div>
+              <input name="receipt_name" placeholder={t.receiptNamePlaceholder} maxLength={100} className={field} />
+              <p className="mt-1 text-xs text-gray-500">{t.receiptNameHint}</p>
+            </div>
+          </div>
+          <div className="grid gap-2 md:grid-cols-[160px_1fr]">
             <span className={label}>{t.survey}</span>
             <textarea name="survey" rows={3} placeholder={t.surveyPlaceholder} className={field} />
           </div>
@@ -182,7 +189,7 @@ export async function FormScreen({
           <input type="checkbox" name="agree_policy" required className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {t.agreePolicy.before}
-            <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-teal-600 underline hover:text-teal-500">
+            <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-brand-600 underline hover:text-brand-500">
               {t.agreePolicy.linkText}
             </Link>
             {t.agreePolicy.after} {req}
@@ -190,7 +197,7 @@ export async function FormScreen({
         </label>
 
         <div className="flex justify-center">
-          <SubmitButton pendingLabel={t.submitting} className="rounded-full bg-teal-600 px-12 py-3 font-medium text-white transition hover:bg-teal-500">
+          <SubmitButton pendingLabel={t.submitting} className="rounded-full bg-brand-600 px-12 py-3 font-medium text-white transition hover:bg-brand-500">
             {t.submit}
           </SubmitButton>
         </div>

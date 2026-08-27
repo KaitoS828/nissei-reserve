@@ -52,7 +52,7 @@ export function SiteHeader() {
               href={hrefOf(item)}
               className={
                 isActive(item)
-                  ? "font-medium text-teal-700"
+                  ? "font-medium text-brand-700"
                   : "text-gray-500 transition hover:text-gray-800"
               }
             >
@@ -110,7 +110,7 @@ export function SiteHeader() {
               href={hrefOf(item)}
               className={`block rounded-lg px-3 py-3 text-sm ${
                 isActive(item)
-                  ? "bg-teal-50 font-medium text-teal-700"
+                  ? "bg-brand-50 font-medium text-brand-700"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >

@@ -171,6 +171,7 @@ export type Reservation = {
   gcal_event_id: string | null;
   note: string | null;
   survey: Record<string, unknown> | null;
+  receipt_name: string | null;
   lookup_token: string | null;
   cancel_category: string | null;
   cancel_reason: string | null;

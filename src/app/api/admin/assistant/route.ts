@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { runAssistant, type GeminiContent } from "@/lib/gemini-agent";
+import { runAssistant, type GroqHistory } from "@/lib/groq-agent";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!message) {
     return NextResponse.json({ error: "メッセージが空です" }, { status: 400 });
   }
-  const history = Array.isArray(body.history) ? (body.history as GeminiContent[]) : [];
+  const history = Array.isArray(body.history) ? (body.history as GroqHistory) : [];
 
   try {
     const { reply, history: nextHistory } = await runAssistant(message, history);

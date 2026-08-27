@@ -41,18 +41,30 @@ function nightsBetween(from: string, to: string) {
   return out;
 }
 
+// YYYY-MM-DD形式かつ今日以降の日付かを検証する(URLパラメータからの日付事前入力用)。
+function isValidFutureDateStr(s: string | undefined, today: string): s is string {
+  return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && s >= today;
+}
+
 export function ReserveCalendar({
   plans,
   roomTypeId,
   maxGuests = 6,
   locale = "ja",
   roomLabel,
+  initialFrom,
+  initialTo,
+  initialGuests,
 }: {
   plans: Plan[];
   roomTypeId: string;
   maxGuests?: number;
   locale?: Locale;
   roomLabel?: string;
+  /** ?from=YYYY-MM-DD&to=YYYY-MM-DD&guests=N によるURL事前入力。不正な値は無視する。 */
+  initialFrom?: string;
+  initialTo?: string;
+  initialGuests?: string;
 }) {
   const t = dict(locale).reserve;
   const room = roomLabel ?? t.roomLabel;
@@ -62,11 +74,23 @@ export function ReserveCalendar({
 
   const [avail, setAvail] = useState<Record<string, number>>({});
   const [loaded, setLoaded] = useState(false);
-  const [from, setFrom] = useState<string | null>(null);
-  const [to, setTo] = useState<string | null>(null);
-  const [guests, setGuests] = useState(1);
-  const [baseYear, setBaseYear] = useState(now.getFullYear());
-  const [baseMonth, setBaseMonth] = useState(now.getMonth());
+
+  const validFrom = isValidFutureDateStr(initialFrom, today) ? initialFrom : null;
+  const validTo =
+    validFrom && isValidFutureDateStr(initialTo, today) && initialTo! > validFrom ? initialTo! : null;
+  const parsedGuests = initialGuests ? Number(initialGuests) : NaN;
+  const validGuests =
+    Number.isInteger(parsedGuests) && parsedGuests >= 1 && parsedGuests <= maxGuests ? parsedGuests : 1;
+  const initialView = validFrom
+    ? (([y, m]) => new Date(y, m - 1, 1))(validFrom.split("-").map(Number))
+    : now;
+
+  const [from, setFrom] = useState<string | null>(validFrom);
+  const [to, setTo] = useState<string | null>(validTo);
+  const [guests, setGuests] = useState(validGuests);
+  const [baseYear, setBaseYear] = useState(initialView.getFullYear());
+  const [baseMonth, setBaseMonth] = useState(initialView.getMonth());
+  const [prefillUnavailable, setPrefillUnavailable] = useState(false);
 
   useEffect(() => {
     const end = new Date(now.getFullYear(), now.getMonth() + 13, 1);
@@ -85,6 +109,19 @@ export function ReserveCalendar({
 
   const isBooked = (date: string) => loaded && (avail[date] ?? 1) <= 0;
   const disabled = (date: string) => date < today || isBooked(date);
+
+  // URLパラメータで事前入力された日程が、実際の空き状況(avail読み込み後)では
+  // 予約不可だった場合、選択を解除して「空室がございません」の案内を出す。
+  useEffect(() => {
+    if (!loaded || !validFrom) return;
+    const rangeOk = validTo ? nightsBetween(validFrom, validTo).every((n) => (avail[n] ?? 1) > 0) : true;
+    if (disabled(validFrom) || !rangeOk) {
+      setFrom(null);
+      setTo(null);
+      setPrefillUnavailable(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   function onClickDay(date: string) {
     if (disabled(date)) return;
@@ -133,6 +170,9 @@ export function ReserveCalendar({
 
   return (
     <div className="space-y-4">
+      {prefillUnavailable && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{t.prefillUnavailable}</p>
+      )}
       {/* カレンダー */}
       <div className="rounded-2xl border border-gray-200 p-4 shadow-sm sm:p-6">
         {/* ナビ: 前年/前月  月  翌月/翌年 */}
@@ -193,9 +233,9 @@ export function ReserveCalendar({
                     "flex h-10 w-10 items-center justify-center rounded-full text-sm transition sm:h-11 sm:w-11",
                     off
                       ? "cursor-not-allowed text-gray-300 line-through decoration-gray-300"
-                      : "text-gray-800 hover:bg-teal-50 active:bg-teal-100",
-                    sel ? "bg-teal-600 font-bold text-white hover:bg-teal-600" : "",
-                    range ? "bg-teal-100" : "",
+                      : "text-gray-800 hover:bg-brand-50 active:bg-brand-100",
+                    sel ? "bg-brand-600 font-bold text-white hover:bg-brand-600" : "",
+                    range ? "bg-brand-100" : "",
                   ].join(" ")}
                 >
                   {d}
@@ -208,7 +248,7 @@ export function ReserveCalendar({
         {/* 凡例 */}
         <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 border-t border-gray-100 pt-3 text-xs">
           <span className="flex items-center gap-1 text-gray-500">
-            <span className="inline-block h-3 w-3 rounded-full bg-teal-600" /> {t.legendSelected}
+            <span className="inline-block h-3 w-3 rounded-full bg-brand-600" /> {t.legendSelected}
           </span>
           <span className="flex items-center gap-1 text-gray-500">
             <span className="inline-block h-3 w-3 rounded-full border border-gray-300" /> {t.legendAvailable}
@@ -231,7 +271,7 @@ export function ReserveCalendar({
             <span className="font-semibold text-gray-900">{to ?? "—"}</span>
           </div>
           {nights > 0 && (
-            <span className="rounded-full bg-teal-50 px-2 py-0.5 text-sm text-teal-700">{t.nightCount(nights)}</span>
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-sm text-brand-700">{t.nightCount(nights)}</span>
           )}
           <label className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-gray-500">
@@ -241,7 +281,7 @@ export function ReserveCalendar({
             <select
               value={guests}
               onChange={(e) => setGuests(Number(e.target.value))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-900 outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
             >
               {Array.from({ length: maxGuests }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>{t.guestOption(n)}</option>
@@ -303,7 +343,7 @@ export function ReserveCalendar({
                       <p className="mt-1 text-xs text-gray-500">
                         {t.nightsTaxIncl(price.nights)}
                         {price.discountRate > 0 && (
-                          <span className="ml-1 text-teal-700">{t.longStayApplied(Math.round(price.discountRate * 100))}</span>
+                          <span className="ml-1 text-brand-700">{t.longStayApplied(Math.round(price.discountRate * 100))}</span>
                         )}
                       </p>
                       <p className="text-xl font-bold text-gray-900">
@@ -330,7 +370,7 @@ export function ReserveCalendar({
                 ) : from && to ? (
                   <Link
                     href={`${localePath(locale, `/reserve/${p.id}`)}?${query.toString()}`}
-                    className="rounded-full bg-teal-600 px-6 py-2.5 text-center text-sm font-medium text-white transition hover:bg-teal-500"
+                    className="rounded-full bg-brand-600 px-6 py-2.5 text-center text-sm font-medium text-white transition hover:bg-brand-500"
                   >
                     {t.bookTheseDates}
                   </Link>

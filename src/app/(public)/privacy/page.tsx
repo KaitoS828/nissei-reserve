@@ -86,7 +86,7 @@ export default function PrivacyPage() {
         <dl className="space-y-1">
           <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">名称</dt><dd>一棟貸ゲストハウス日靜</dd></div>
           <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">所在地</dt><dd>〒089-2771 北海道広尾郡広尾町音調津733番地</dd></div>
-          <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">連絡先</dt><dd><a href="tel:07012516275" className="text-teal-700 underline">070-1251-6275</a></dd></div>
+          <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">連絡先</dt><dd><a href="tel:07012516275" className="text-brand-700 underline">070-1251-6275</a></dd></div>
         </dl>
       </section>
     </article>

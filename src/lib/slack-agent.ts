@@ -9,6 +9,7 @@ import { computeRefund } from "./cancel";
 import { getStripe } from "./stripe";
 import { gcalCreateEvent, gcalDeleteEvent } from "./gcal";
 import { revokeDoorPin } from "./smart-lock";
+import { importAllIcalSources, importIcalSource } from "./ical-import";
 
 // コスト重視で Sonnet（現行は 4.6。「4.7」は存在しないため 4.6 を使用）
 const MODEL = "claude-sonnet-4-6";
@@ -285,6 +286,31 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     await supabase.from("reservations").update(patch).eq("id", resv.id);
     return `予約 ${code} を更新しました（${Object.keys(patch).join(", ")}）。`;
   },
+
+  async list_ical_sources() {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("ical_sources")
+      .select("id, name, is_active, last_synced_at")
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as Array<{ id: string; name: string; is_active: boolean; last_synced_at: string | null }>;
+    if (rows.length === 0) return "iCal連携先が登録されていません。";
+    return rows
+      .map((r) => `・${r.name} | ${r.is_active ? "有効" : "無効"} | 最終取り込み: ${r.last_synced_at ?? "未取り込み"} | id: ${r.id}`)
+      .join("\n");
+  },
+
+  async sync_ical(input) {
+    const id = input.id ? String(input.id) : null;
+    if (id) {
+      const result = await importIcalSource(id);
+      if (result.error) return `iCal取り込みに失敗しました: ${result.error}`;
+      return `取り込み完了: ${result.imported}件の予定を反映しました。`;
+    }
+    const result = await importAllIcalSources();
+    if (result.errors.length > 0) return `一部失敗: ${result.imported}件取り込み / エラー: ${result.errors.join(", ")}`;
+    return `全連携先の同期完了: ${result.imported}件の予定を反映しました。`;
+  },
 };
 
 function formatResv(r: Record<string, unknown>): string {
@@ -304,6 +330,8 @@ export const TOOLS: Anthropic.Tool[] = [
   { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
   { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
+  { name: "list_ical_sources", description: "登録済みのiCal連携先（Airbnb等）の一覧と最終取り込み日時を取得する。", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "sync_ical", description: "外部カレンダー（Airbnb等）のiCalを取り込み、blocked_datesに反映する。idを指定するとその連携先のみ、省略時は有効な連携先すべてを同期する。", input_schema: { type: "object", properties: { id: { type: "string", description: "iCal連携先のid（省略時は全件同期）" } }, required: [] } },
 ];
 
 const SYSTEM = `あなたは一棟貸ゲストハウス日靜の予約システムの運用アシスタントです。Slackでオーナーからの依頼を受け、ツールを使って予約状況の確認・予約の変更/キャンセル・休業日設定などを行います。

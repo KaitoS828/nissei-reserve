@@ -5,7 +5,7 @@ import { checkinAction, type CheckinState } from "./actions";
 import { dict, type Locale } from "@/lib/i18n";
 
 const field =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
 
 export function CheckinForm({ locale = "ja" }: { locale?: Locale }) {
   const t = dict(locale).checkin;
@@ -86,13 +86,13 @@ export function CheckinForm({ locale = "ja" }: { locale?: Locale }) {
       </div>
 
       {state.doorPin ? (
-        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-6 text-center">
-          <p className="text-sm font-medium text-teal-800">{t.doorCode}</p>
+        <div className="rounded-2xl border border-brand-200 bg-brand-50 p-6 text-center">
+          <p className="text-sm font-medium text-brand-800">{t.doorCode}</p>
           <p className="my-3 font-mono text-4xl font-bold tracking-[0.2em] text-gray-900">
             {state.doorPin}
           </p>
           {state.validFrom && state.validUntil && (
-            <p className="text-xs text-teal-800">
+            <p className="text-xs text-brand-800">
               {state.validFrom} 〜 {state.validUntil} {t.validBetween}
             </p>
           )}
@@ -120,7 +120,7 @@ export function CheckinForm({ locale = "ja" }: { locale?: Locale }) {
           <input type="hidden" name="email" value={state.email} />
           <button
             disabled={pending}
-            className="w-full rounded-full bg-teal-700 py-2.5 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+            className="w-full rounded-full bg-brand-700 py-2.5 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50"
           >
             {pending ? dict(locale).common.loading : t.doCheckin}
           </button>

@@ -66,14 +66,14 @@ export async function RegisterScreen({
         </div>
         <div className="mt-1 flex justify-between">
           <span className="text-gray-500">{t.status}</span>
-          <span className={guests.length >= resv.num_guests ? "text-teal-700" : "text-gray-900"}>
+          <span className={guests.length >= resv.num_guests ? "text-brand-700" : "text-gray-900"}>
             {guests.length} / {resv.num_guests}
           </span>
         </div>
       </div>
 
       {done && (
-        <p className="rounded-lg bg-teal-50 px-4 py-3 text-sm text-teal-700">
+        <p className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700">
           {done} {t.done}
         </p>
       )}

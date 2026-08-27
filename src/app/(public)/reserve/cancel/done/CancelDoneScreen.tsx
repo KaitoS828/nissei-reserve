@@ -38,14 +38,14 @@ export async function CancelDoneScreen({ code, locale }: { code?: string; locale
           </div>
           <div className="mt-2 flex justify-between">
             <span className="text-gray-500">{t.refunded}</span>
-            <span className="font-semibold text-teal-700">¥{info.refunded.toLocaleString()}</span>
+            <span className="font-semibold text-brand-700">¥{info.refunded.toLocaleString()}</span>
           </div>
         </div>
       )}
 
       <Link
         href={localePath(locale, "/reserve")}
-        className="inline-block rounded-full bg-teal-600 px-8 py-2.5 text-sm font-medium text-white hover:bg-teal-500"
+        className="inline-block rounded-full bg-brand-600 px-8 py-2.5 text-sm font-medium text-white hover:bg-brand-500"
       >
         {t.home}
       </Link>

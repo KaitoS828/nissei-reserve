@@ -46,6 +46,7 @@ export async function startCheckout(formData: FormData) {
   const building = String(formData.get("building") ?? "").trim() || null;
   const ciHour = String(formData.get("ci_hour") ?? "");
   const ciMin = String(formData.get("ci_min") ?? "");
+  const receiptName = String(formData.get("receipt_name") ?? "").trim() || null;
   const survey = String(formData.get("survey") ?? "").trim() || null;
   const contact = String(formData.get("contact") ?? "").trim() || null;
   const agreePolicy = formData.get("agree_policy") === "on";
@@ -73,7 +74,7 @@ export async function startCheckout(formData: FormData) {
     phone.length > 30 || (prefecture?.length ?? 0) > 20 ||
     (city?.length ?? 0) > 100 || (address?.length ?? 0) > 200 ||
     (building?.length ?? 0) > 100 || (survey?.length ?? 0) > 2000 ||
-    (contact?.length ?? 0) > 2000;
+    (contact?.length ?? 0) > 2000 || (receiptName?.length ?? 0) > 100;
   if (over) fail(locale, planId, "too_long");
   // 人数の範囲チェック（負数・極端な値を弾く）
   if (!Number.isInteger(adults) || adults < 1 || adults > 20) {
@@ -144,7 +145,7 @@ export async function startCheckout(formData: FormData) {
       check_in: from, check_out: to, num_guests: adults, num_children: 0,
       amount: price.total, status: "pending", payment_status: "unpaid",
       source: "web", check_in_time: checkInTime, survey, note: contact,
-      lookup_token: lookupToken,
+      receipt_name: receiptName, lookup_token: lookupToken,
     })
     .select("id, code")
     .single();

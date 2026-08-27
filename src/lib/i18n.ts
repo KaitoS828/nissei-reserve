@@ -87,7 +87,7 @@ type Dict = {
   site: { name: string; about: string; terms: string; privacy: string; faq: string; officialSite: string };
   nav: { reserve: string; lookup: string; checkin: string; account: string; login: string };
   reserve: {
-    location: string; contact: string; noPlans: string;
+    location: string; contact: string; noPlans: string; prefillUnavailable: string;
     prevYear: string; prevMonth: string; nextMonth: string; nextYear: string;
     monthLabel: (year: number, month0: number) => string;
     weekdays: string[];
@@ -132,6 +132,7 @@ type Dict = {
     addressPlaceholder: string; buildingPlaceholder: string;
     addressHint: string;
     checkInTime: string;
+    receiptName: string; receiptNamePlaceholder: string; receiptNameHint: string;
     survey: string; surveyPlaceholder: string;
     contact: string; contactPlaceholder: string;
     agreePolicy: { before: string; linkText: string; after: string };
@@ -180,6 +181,12 @@ type Dict = {
     honorific: (name: string) => string; amount: string;
     forStay: (plan: string) => string; stayDates: string;
     received: string; cannotShow: string; notPaidYet: string; fallbackName: string;
+    taxableAmount: string; taxAmount: string; taxRateNote: string;
+    paymentMethod: string; paymentMethodCard: string; paymentMethodOther: string;
+    no: string; itemCol: string; qtyCol: string; unitCol: string;
+    unitPriceCol: string; amountCol: string;
+    subtotal: string; taxRow: string; total: string; notes: string;
+    issuedLabel: string; itemName: (plan: string) => string;
   };
   checkin: {
     title: string; lead: string; showCode: string; verifying: string;
@@ -212,6 +219,7 @@ const ja: Dict = {
   reserve: {
     location: "所在地", contact: "お問い合わせ",
     noPlans: "現在ご予約いただけるプランがありません。",
+    prefillUnavailable: "指定の日程は空室がございません。カレンダーから空いている日程をお選びください。",
     prevYear: "前の年", prevMonth: "前の月", nextMonth: "次の月", nextYear: "次の年",
     monthLabel: (y, m) => `${y}年${m + 1}月`,
     weekdays: ["日", "月", "火", "水", "木", "金", "土"],
@@ -264,6 +272,9 @@ const ja: Dict = {
     addressPlaceholder: "山海谷町1-3-11", buildingPlaceholder: "谷海山ビル3階",
     addressHint: "",
     checkInTime: "チェックイン予定時刻",
+    receiptName: "領収書の宛名（任意）",
+    receiptNamePlaceholder: "例: 株式会社◯◯",
+    receiptNameHint: "空欄の場合はご予約者名で発行します。「様」は自動で付きます。",
     survey: "ご要望・アンケート", surveyPlaceholder: "・宿泊の目的\n・ご要望など",
     contact: "連絡事項", contactPlaceholder: "連絡事項がございましたらご入力ください",
     agreePolicy: { before: "", linkText: "キャンセルポリシー", after: "を含む利用規約に同意する" },
@@ -362,6 +373,13 @@ const ja: Dict = {
     cannotShow: "領収書を表示できませんでした。",
     notPaidYet: "お支払い完了後に領収書を発行できます。",
     fallbackName: "ご宿泊者",
+    taxableAmount: "税抜金額", taxAmount: "消費税額（10%）",
+    taxRateNote: "10%対象",
+    paymentMethod: "お支払方法", paymentMethodCard: "クレジットカード", paymentMethodOther: "現金・その他",
+    no: "No.", itemCol: "項目", qtyCol: "数量", unitCol: "単位",
+    unitPriceCol: "単価", amountCol: "金額",
+    subtotal: "小計", taxRow: "消費税（10%）", total: "合計", notes: "特記事項",
+    issuedLabel: "発行日", itemName: (plan) => `ご宿泊代として（${plan}）`,
   },
   checkin: {
     title: "チェックイン",
@@ -422,6 +440,7 @@ const en: Dict = {
   reserve: {
     location: "Address", contact: "Contact",
     noPlans: "There are no plans available for booking at the moment.",
+    prefillUnavailable: "Sorry, those dates are not available. Please choose an open date from the calendar.",
     prevYear: "Previous year", prevMonth: "Previous month", nextMonth: "Next month", nextYear: "Next year",
     monthLabel: (y, m) =>
       `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][m]} ${y}`,
@@ -479,6 +498,9 @@ const en: Dict = {
     addressPlaceholder: "1234 Market St, USA", buildingPlaceholder: "Apt 5B",
     addressHint: "Please include your country in the street address.",
     checkInTime: "Estimated arrival time",
+    receiptName: "Receipt name (optional)",
+    receiptNamePlaceholder: "e.g. Acme Inc.",
+    receiptNameHint: "Leave blank to issue the receipt under the guest's name.",
     survey: "Requests and comments", surveyPlaceholder: "・Purpose of your stay\n・Any requests",
     contact: "Anything else we should know", contactPlaceholder: "Let us know if there is anything else",
     agreePolicy: { before: "I agree to the terms of use, including the ", linkText: "cancellation policy", after: "." },
@@ -580,6 +602,13 @@ const en: Dict = {
     cannotShow: "We could not display the receipt.",
     notPaidYet: "The receipt is available once payment is complete.",
     fallbackName: "Guest",
+    taxableAmount: "Subtotal (excl. tax)", taxAmount: "Consumption tax (10%)",
+    taxRateNote: "10% taxable",
+    paymentMethod: "Payment method", paymentMethodCard: "Credit card", paymentMethodOther: "Cash / other",
+    no: "No.", itemCol: "Item", qtyCol: "Qty", unitCol: "Unit",
+    unitPriceCol: "Unit price", amountCol: "Amount",
+    subtotal: "Subtotal", taxRow: "Consumption tax (10%)", total: "Total", notes: "Notes",
+    issuedLabel: "Issued", itemName: (plan) => `Accommodation (${plan})`,
   },
   checkin: {
     title: "Check-in",

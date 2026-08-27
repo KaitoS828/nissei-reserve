@@ -54,7 +54,7 @@ export default async function AccountPage() {
 
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-gray-900">予約履歴</h2>
-        <Link href="/reserve" className="rounded-full bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-500">新しく予約する</Link>
+        <Link href="/reserve" className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500">新しく予約する</Link>
       </div>
 
       <div className="space-y-3">
@@ -70,7 +70,7 @@ export default async function AccountPage() {
               <span className="font-semibold">¥{r.amount.toLocaleString()}</span>
             </div>
             <div className="mt-2 flex gap-3 text-xs">
-              <Link href={`/reserve/lookup?code=${r.code}&email=${encodeURIComponent(user.email ?? "")}`} className="text-teal-700 hover:underline">詳細・キャンセル</Link>
+              <Link href={`/reserve/lookup?code=${r.code}&email=${encodeURIComponent(user.email ?? "")}`} className="text-brand-700 hover:underline">詳細・キャンセル</Link>
             </div>
           </div>
         ))}

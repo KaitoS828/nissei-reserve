@@ -5,7 +5,7 @@ import { jstStamp } from "@/lib/datetime";
 import type { ReservationStatus } from "@/types/db";
 
 const field =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500";
 
 type ResvDetail = {
   code: string; check_in: string; check_out: string; nights: number;
@@ -57,7 +57,7 @@ export async function LookupScreen({
       <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
 
       {cancelled && (
-        <p className="rounded-lg bg-teal-50 px-4 py-3 text-sm text-teal-700">{t.cancelled}</p>
+        <p className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700">{t.cancelled}</p>
       )}
 
       <form method="get" className="space-y-3 rounded-2xl border border-gray-200 p-6">
@@ -94,7 +94,7 @@ export async function LookupScreen({
               <p className="mb-2 font-semibold text-gray-800">{t.doorCode}</p>
               {resv.access_keys?.status === "issued" ? (
                 <div className="space-y-1">
-                  <p className="text-2xl font-mono font-bold tracking-widest text-teal-700">
+                  <p className="text-2xl font-mono font-bold tracking-widest text-brand-700">
                     {resv.access_keys.door_pin}
                   </p>
                   {resv.access_keys.valid_from && resv.access_keys.valid_until && (

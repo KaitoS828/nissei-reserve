@@ -37,7 +37,7 @@ export async function CompleteScreen({
   }
 
   const checkinLink = (
-    <Link href={localePath(locale, "/checkin")} className="text-teal-700 underline">
+    <Link href={localePath(locale, "/checkin")} className="text-brand-700 underline">
       {dict(locale).checkin.title}
     </Link>
   );
@@ -45,7 +45,7 @@ export async function CompleteScreen({
   return (
     <div className="mx-auto max-w-xl space-y-6 text-center">
       <div className="flex flex-col items-center gap-3 pt-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-3xl text-teal-600">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-3xl text-brand-600">
           ✓
         </div>
         <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
@@ -66,7 +66,7 @@ export async function CompleteScreen({
               <dt className="text-gray-500">{t.statusLabel}</dt>
               <dd>
                 {resv.payment_status === "paid" ? (
-                  <span className="rounded bg-teal-50 px-2 py-0.5 text-teal-700">{t.paid}</span>
+                  <span className="rounded bg-brand-50 px-2 py-0.5 text-brand-700">{t.paid}</span>
                 ) : (
                   <span className="rounded bg-amber-50 px-2 py-0.5 text-amber-700">{t.pending}</span>
                 )}
@@ -86,7 +86,7 @@ export async function CompleteScreen({
         <p>🚪 {t.guideDoor.before}{checkinLink}{t.guideDoor.after}</p>
         <p>
           📞 {t.guidePhone}{" "}
-          <a href={`tel:${SITE.phone.replace(/-/g, "")}`} className="font-semibold text-teal-700">{SITE.phone}</a>
+          <a href={`tel:${SITE.phone.replace(/-/g, "")}`} className="font-semibold text-brand-700">{SITE.phone}</a>
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export async function CompleteScreen({
           {t.home}
         </Link>
         {resv && (
-          <Link href={`${localePath(locale, "/reserve/lookup")}?code=${resv.code}`} className="rounded-full bg-teal-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-500">
+          <Link href={`${localePath(locale, "/reserve/lookup")}?code=${resv.code}`} className="rounded-full bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-500">
             {t.viewBooking}
           </Link>
         )}

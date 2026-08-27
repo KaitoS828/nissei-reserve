@@ -80,15 +80,15 @@ export default function FaqPage() {
 
       <p className="text-sm text-gray-600">
         ここに無いご質問は、お電話（
-        <a href={`tel:${SITE.phone}`} className="text-teal-700 underline">
+        <a href={`tel:${SITE.phone}`} className="text-brand-700 underline">
           {SITE.phone}
         </a>
         ）またはメール（
-        <a href={`mailto:${SITE.email}`} className="text-teal-700 underline">
+        <a href={`mailto:${SITE.email}`} className="text-brand-700 underline">
           {SITE.email}
         </a>
         ）よりお気軽にご連絡ください。
-        <Link href="/reserve" className="ml-1 text-teal-700 underline">
+        <Link href="/reserve" className="ml-1 text-brand-700 underline">
           ご予約はこちら
         </Link>
       </p>
