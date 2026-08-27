@@ -84,7 +84,7 @@ export function term(locale: Locale, value: string): string {
 }
 
 type Dict = {
-  site: { name: string; about: string; terms: string; privacy: string; faq: string };
+  site: { name: string; about: string; terms: string; privacy: string; faq: string; officialSite: string };
   nav: { reserve: string; lookup: string; checkin: string; account: string; login: string };
   reserve: {
     location: string; contact: string; noPlans: string;
@@ -207,7 +207,7 @@ type Dict = {
 };
 
 const ja: Dict = {
-  site: { name: "一棟貸し宿「日靜」", about: "About Us", terms: "利用規約", privacy: "プライバシーポリシー", faq: "よくある質問" },
+  site: { name: "一棟貸ゲストハウス日靜", about: "About Us", terms: "利用規約", privacy: "プライバシーポリシー", faq: "よくある質問", officialSite: "公式サイト" },
   nav: { reserve: "予約", lookup: "予約照会", checkin: "チェックイン", account: "マイページ", login: "ログイン" },
   reserve: {
     location: "所在地", contact: "お問い合わせ",
@@ -345,8 +345,8 @@ const ja: Dict = {
     },
   },
   email: {
-    brand: "一棟貸し宿「日靜」",
-    footer: "北海道広尾郡広尾町音調津733番地 日靜 / ☎ 070-1251-6275",
+    brand: "一棟貸ゲストハウス日靜",
+    footer: "北海道広尾郡広尾町音調津733番地 一棟貸ゲストハウス日靜 / ☎ 070-1251-6275",
     honorific: (name) => `${name} 様`,
     cancelSubject: (code) => `【日靜】キャンセル受付（${code}）`,
     cancelLead: (code) => `ご予約（予約番号 ${code}）のキャンセルを承りました。`,
@@ -417,7 +417,7 @@ const ja: Dict = {
 };
 
 const en: Dict = {
-  site: { name: "Nissei — private house & sauna", about: "About Us", terms: "Terms", privacy: "Privacy", faq: "FAQ" },
+  site: { name: "Nissei — private house & sauna", about: "About Us", terms: "Terms", privacy: "Privacy", faq: "FAQ", officialSite: "Official Website" },
   nav: { reserve: "Book", lookup: "Find booking", checkin: "Check-in", account: "My page", login: "Log in" },
   reserve: {
     location: "Address", contact: "Contact",

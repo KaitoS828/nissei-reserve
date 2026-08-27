@@ -56,7 +56,7 @@ export function bookingGuideText(input: BookingGuideInput): string {
   blocks.push(
     `${name ? `${name} 様` : "お客様"}
 
-このたびは一棟貸し宿「日靜」をご予約いただきありがとうございます。
+このたびは一棟貸ゲストハウス日靜をご予約いただきありがとうございます。
 ご宿泊にあたってのご案内をお送りします。`,
   );
 
@@ -124,7 +124,7 @@ ${input.phone ? `電話: ${input.phone}` : ""}
 当日お会いできますことを楽しみにしております。
 
 ――――――――――――――――
-一棟貸し宿「日靜」
+一棟貸ゲストハウス日靜
 住所: 北海道広尾郡広尾町音調津733番地${input.phone ? `\n電話: ${input.phone}` : ""}`.replace(
       /\n\n+/g,
       "\n\n",

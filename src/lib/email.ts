@@ -29,7 +29,7 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolea
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: `一棟貸し宿「日靜」 <${from}>`,
+            from: `一棟貸ゲストハウス日靜 <${from}>`,
             to: addr,
             subject,
             html,

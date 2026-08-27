@@ -21,7 +21,7 @@ function jpDate(date: string): string {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function reviewRequestSubject(_guestName?: string | null): string {
-  return "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い";
+  return "【一棟貸ゲストハウス日靜】ご宿泊の御礼とご感想（口コミ）のお願い";
 }
 
 const escapeHtml = (s: string) =>
@@ -36,14 +36,14 @@ export function reviewRequestHtml(input: ReviewRequestInput): string {
   return `
   <div style="font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px;line-height:1.9;color:#1f2937;max-width:560px;margin:0 auto">
     <div style="border-bottom:2px solid #0d9488;padding:16px 0">
-      <strong style="font-size:18px;color:#0f766e">一棟貸し宿「日靜」</strong>
+      <strong style="font-size:18px;color:#0f766e">一棟貸ゲストハウス日靜</strong>
     </div>
 
     <div style="padding:24px 0">
       <p style="margin:0 0 16px;font-weight:600">${escapeHtml(name ? `${name} 様` : "お客様")}</p>
 
       <p style="margin:0 0 16px">
-        このたびは一棟貸し宿「日靜」にご宿泊いただき、誠にありがとうございました。<br>
+        このたびは一棟貸ゲストハウス日靜にご宿泊いただき、誠にありがとうございました。<br>
         また、お部屋を大変綺麗にご利用いただき心より感謝申し上げます。
       </p>
 
@@ -89,7 +89,7 @@ export function reviewRequestHtml(input: ReviewRequestInput): string {
     </div>
 
     <div style="border-top:1px solid #e5e7eb;padding:16px 0;color:#6b7280;font-size:12px;line-height:1.6">
-      <strong style="color:#374151">一棟貸し宿「日靜」</strong><br>
+      <strong style="color:#374151">一棟貸ゲストハウス日靜</strong><br>
       住所: 北海道広尾郡広尾町音調津733番地<br>
       ${phone ? `電話: ${escapeHtml(phone)}<br>` : ""}
       メール: info@gh-nissei.jp
@@ -108,7 +108,7 @@ export function reviewRequestText(input: ReviewRequestInput): string {
   blocks.push(
     `${name ? `${name} 様` : "お客様"}
 
-このたびは一棟貸し宿「日靜」にご宿泊いただき、誠にありがとうございました。
+このたびは一棟貸ゲストハウス日靜にご宿泊いただき、誠にありがとうございました。
 また、お部屋を大変綺麗にご利用いただき心より感謝申し上げます。
 
 当宿でのご滞在は心地よくお過ごしいただけましたでしょうか。
@@ -136,7 +136,7 @@ ${reviewUrl}`,
 皆様のまたのお越しを心よりお待ちしております。
 
 ――――――――――――――――
-一棟貸し宿「日靜」
+一棟貸ゲストハウス日靜
 住所: 北海道広尾郡広尾町音調津733番地
 ${phone ? `電話: ${phone}\n` : ""}メール: info@gh-nissei.jp`.replace(/\n\n+/g, "\n\n"),
   );
@@ -153,7 +153,7 @@ export function reviewRequestCustomHtml(customBody: string): string {
   return `
   <div style="font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px;line-height:1.9;color:#1f2937;max-width:560px;margin:0 auto">
     <div style="border-bottom:2px solid #0d9488;padding:16px 0">
-      <strong style="font-size:18px;color:#0f766e">一棟貸し宿「日靜」</strong>
+      <strong style="font-size:18px;color:#0f766e">一棟貸ゲストハウス日靜</strong>
     </div>
 
     <div style="padding:24px 0">
@@ -161,7 +161,7 @@ export function reviewRequestCustomHtml(customBody: string): string {
     </div>
 
     <div style="border-top:1px solid #e5e7eb;padding:16px 0;color:#6b7280;font-size:12px;line-height:1.6">
-      <strong style="color:#374151">一棟貸し宿「日靜」</strong><br>
+      <strong style="color:#374151">一棟貸ゲストハウス日靜</strong><br>
       住所: 北海道広尾郡広尾町音調津733番地<br>
       メール: info@gh-nissei.jp
     </div>

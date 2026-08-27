@@ -13,7 +13,7 @@ export default function TermsPage() {
       </header>
 
       <p className="text-sm leading-7 text-gray-700">
-        本利用規約（以下「本規約」）は、一棟貸し宿「日靜」（以下「当宿」）が運営する宿泊予約・決済サイト（以下「本サービス」）の利用条件を定めるものです。本サービスをご利用いただいた方（以下「利用者」）は、本規約に同意したものとみなします。
+        本利用規約（以下「本規約」）は、一棟貸ゲストハウス日靜（以下「当宿」）が運営する宿泊予約・決済サイト（以下「本サービス」）の利用条件を定めるものです。本サービスをご利用いただいた方（以下「利用者」）は、本規約に同意したものとみなします。
       </p>
 
       <Section title="第1条（適用）">
@@ -99,7 +99,7 @@ function OperatorInfo() {
     <section className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-700">
       <h2 className="mb-2 text-base font-semibold text-gray-900">事業者情報</h2>
       <dl className="space-y-1">
-        <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">名称</dt><dd>一棟貸し宿「日靜」</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">名称</dt><dd>一棟貸ゲストハウス日靜</dd></div>
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">所在地</dt><dd>〒089-2771 北海道広尾郡広尾町音調津733番地</dd></div>
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">連絡先</dt><dd><a href="tel:07012516275" className="text-teal-700 underline">070-1251-6275</a></dd></div>
       </dl>

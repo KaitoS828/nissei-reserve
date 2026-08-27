@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       </header>
 
       <p className="text-sm leading-7 text-gray-700">
-        一棟貸し宿「日靜」（以下「当宿」）は、宿泊予約・決済サイト（以下「本サービス」）における利用者の個人情報を、以下の方針に基づき適切に取り扱います。
+        一棟貸ゲストハウス日靜（以下「当宿」）は、宿泊予約・決済サイト（以下「本サービス」）における利用者の個人情報を、以下の方針に基づき適切に取り扱います。
       </p>
 
       <Section title="1. 取得する情報">
@@ -84,7 +84,7 @@ export default function PrivacyPage() {
       <section className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-700">
         <h2 className="mb-2 text-base font-semibold text-gray-900">お問い合わせ窓口</h2>
         <dl className="space-y-1">
-          <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">名称</dt><dd>一棟貸し宿「日靜」</dd></div>
+          <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">名称</dt><dd>一棟貸ゲストハウス日靜</dd></div>
           <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">所在地</dt><dd>〒089-2771 北海道広尾郡広尾町音調津733番地</dd></div>
           <div className="flex gap-2"><dt className="w-20 shrink-0 text-gray-500">連絡先</dt><dd><a href="tel:07012516275" className="text-teal-700 underline">070-1251-6275</a></dd></div>
         </dl>

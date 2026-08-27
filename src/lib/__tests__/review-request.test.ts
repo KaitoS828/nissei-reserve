@@ -11,11 +11,11 @@ describe("reviewRequestSubject", () => {
   it("件名を統一して返す", () => {
     assert.strictEqual(
       reviewRequestSubject("山田 太郎"),
-      "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い",
+      "【一棟貸ゲストハウス日靜】ご宿泊の御礼とご感想（口コミ）のお願い",
     );
     assert.strictEqual(
       reviewRequestSubject(null),
-      "【一棟貸し宿 日靜】ご宿泊の御礼とご感想（口コミ）のお願い",
+      "【一棟貸ゲストハウス日靜】ご宿泊の御礼とご感想（口コミ）のお願い",
     );
   });
 });

@@ -24,7 +24,7 @@ export default async function SiteSettingsPage() {
   ]);
 
   const settings = (facility?.settings as FacilitySettings) ?? {};
-  const heroTitle = settings.hero_title ?? "日靜 — ご宿泊予約";
+  const heroTitle = settings.hero_title ?? "一棟貸ゲストハウス日靜 — ご宿泊予約";
   const heroSub = settings.hero_sub ?? "PRIVATE VILLA & SAUNA";
   const heroDescription =
     settings.hero_description ??
@@ -55,7 +55,7 @@ export default async function SiteSettingsPage() {
   }));
 
   const initialData = {
-    name: facility?.name ?? "日靜",
+    name: facility?.name ?? "一棟貸ゲストハウス日靜",
     phone: facility?.phone ?? "",
     address: facility?.address ?? "",
     heroTitle,

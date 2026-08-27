@@ -306,7 +306,7 @@ export const TOOLS: Anthropic.Tool[] = [
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
 ];
 
-const SYSTEM = `あなたは一棟貸し宿「日靜」の予約システムの運用アシスタントです。Slackでオーナーからの依頼を受け、ツールを使って予約状況の確認・予約の変更/キャンセル・休業日設定などを行います。
+const SYSTEM = `あなたは一棟貸ゲストハウス日靜の予約システムの運用アシスタントです。Slackでオーナーからの依頼を受け、ツールを使って予約状況の確認・予約の変更/キャンセル・休業日設定などを行います。
 
 - 本日の日付は ${todayStr()} です（依頼時に最新化されます）。
 - 簡潔に、日本語で、Slack向けに読みやすく返答してください。

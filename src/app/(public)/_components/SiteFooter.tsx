@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { dict, localeOf, localePath } from "@/lib/i18n";
+import { SITE } from "@/lib/site";
 
 // 利用規約とプライバシーポリシーはまだ日本語ページしかない。
 // ラベルだけ英語にして、リンク先は日本語ページのままにしている。
@@ -22,6 +23,8 @@ export function SiteFooter() {
         <Link href="/terms" className="hover:text-gray-800">{t.site.terms}</Link>
         <span className="text-gray-300">|</span>
         <Link href="/privacy" className="hover:text-gray-800">{t.site.privacy}</Link>
+        <span className="text-gray-300">|</span>
+        <a href={SITE.officialSiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gray-800">{t.site.officialSite}</a>
       </div>
       <p className="mt-3 text-center text-xs text-gray-400">
         © {new Date().getFullYear()} {t.site.name}

@@ -66,7 +66,7 @@ describe("reminderText", () => {
 
   it("末尾に施設名と住所を載せる", () => {
     const text = reminderText(base);
-    assert.ok(text.includes("一棟貸し宿「日靜」"));
+    assert.ok(text.includes("一棟貸ゲストハウス日靜"));
     assert.ok(text.includes("北海道広尾郡広尾町音調津733番地"));
   });
 
