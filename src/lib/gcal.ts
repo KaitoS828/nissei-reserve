@@ -83,3 +83,30 @@ export async function gcalDeleteEvent(eventId: string): Promise<void> {
     console.error("Googleカレンダーの削除に失敗:", e);
   }
 }
+
+// 休業日をカレンダーに作成し、作成された event_id を返す
+export async function gcalCreateBlockEvent(p: {
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}): Promise<string | null> {
+  const calendar = getCalendar();
+  if (!calendar) return null;
+
+  try {
+    const end = p.end_date >= p.start_date ? nextDay(p.end_date) : nextDay(p.start_date);
+    const event = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      requestBody: {
+        summary: `[nissei] ${p.reason ?? "休業"}`,
+        description: `期間: ${p.start_date}〜${p.end_date}\n理由: ${p.reason ?? "休業"}`,
+        start: { date: p.start_date },
+        end: { date: end },
+      },
+    });
+    return event.data.id ?? null;
+  } catch (e) {
+    console.error("Googleカレンダーへの休業日登録に失敗:", e);
+    return null;
+  }
+}

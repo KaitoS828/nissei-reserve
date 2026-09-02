@@ -20,7 +20,7 @@ import { generateReservationCode, canBook } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
 import { auditLog } from "@/lib/audit";
 import { issueDoorPin, revokeDoorPin } from "@/lib/smart-lock";
-import { gcalCreateEvent, gcalDeleteEvent } from "@/lib/gcal";
+import { gcalCreateEvent, gcalDeleteEvent, gcalCreateBlockEvent } from "@/lib/gcal";
 import type { ReservationStatus, PaymentStatus } from "@/types/db";
 
 const PATH = "/admin/reservations";
@@ -525,27 +525,32 @@ export async function unarchiveReservation(formData: FormData) {
   revalidatePath("/admin/calendar");
 }
 
-// まだGoogleカレンダーに反映されていない予約（作成時の同期失敗・過去分など）をまとめて反映する
+// まだGoogleカレンダーに反映されていない予約・休業日をまとめて反映する
 export async function syncGcalFromReservations(formData: FormData) {
   const redirectTo = String(formData.get("redirect_to") ?? "/admin/calendar").trim() || "/admin/calendar";
   const supabase = createAdminClient();
 
+  // 1. 予約の同期
   // 記録として残すため、チェックアウト済みの過去分もカレンダーに反映する。
   // キャンセル・ノーショーは反映しない。
   const { data: rows } = await supabase
     .from("reservations")
-    .select("id, code, check_in, check_out, num_guests, amount, customers(last_name, first_name)")
+    .select("id, code, check_in, check_out, num_guests, amount, customers(last_name, first_name, email, phone), plans(name)")
     .in("status", [...OCCUPYING_STATUSES, "checked_out"])
     .is("archived_at", null)
     .is("gcal_event_id", null);
 
-  let synced = 0;
+  let syncedResv = 0;
   for (const r of rows ?? []) {
-    const cust = r.customers as unknown as { last_name: string | null; first_name: string | null } | null;
+    const cust = r.customers as unknown as { last_name: string | null; first_name: string | null; email: string | null; phone: string | null } | null;
     const customerName = [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || undefined;
+    const plan = r.plans as unknown as { name: string } | null;
     const eventId = await gcalCreateEvent({
       code: r.code as string,
       customer: customerName,
+      email: cust?.email ?? undefined,
+      phone: cust?.phone ?? undefined,
+      plan: plan?.name ?? undefined,
       check_in: r.check_in as string,
       check_out: r.check_out as string,
       guests: r.num_guests as number,
@@ -553,7 +558,26 @@ export async function syncGcalFromReservations(formData: FormData) {
     }).catch(() => null);
     if (eventId) {
       await supabase.from("reservations").update({ gcal_event_id: eventId }).eq("id", r.id);
-      synced++;
+      syncedResv++;
+    }
+  }
+
+  // 2. 休業日（blocked_dates）の同期（手動設定・AI設定・全館休業など、未同期分）
+  const { data: blockedRows } = await supabase
+    .from("blocked_dates")
+    .select("id, start_date, end_date, reason")
+    .is("gcal_event_id", null);
+
+  let syncedBlocked = 0;
+  for (const b of blockedRows ?? []) {
+    const eventId = await gcalCreateBlockEvent({
+      start_date: b.start_date as string,
+      end_date: b.end_date as string,
+      reason: (b.reason as string) || "休業",
+    }).catch(() => null);
+    if (eventId) {
+      await supabase.from("blocked_dates").update({ gcal_event_id: eventId }).eq("id", b.id);
+      syncedBlocked++;
     }
   }
 
@@ -562,13 +586,16 @@ export async function syncGcalFromReservations(formData: FormData) {
 
   const [path, query] = redirectTo.split("?");
   const sp = new URLSearchParams(query ?? "");
-  const total = rows?.length ?? 0;
-  if (total === 0) {
-    sp.set("done", "Googleカレンダー同期: 未反映の予約はありませんでした");
-  } else if (synced < total) {
-    sp.set("error", `Googleカレンダー同期: ${synced}/${total}件のみ反映できました（連携設定をご確認ください）`);
+  const totalResv = rows?.length ?? 0;
+  const totalBlocked = blockedRows?.length ?? 0;
+
+  if (totalResv === 0 && totalBlocked === 0) {
+    sp.set("done", "Googleカレンダー同期: 未反映の予約・休業日はありませんでした");
   } else {
-    sp.set("done", `Googleカレンダー同期: ${synced}件の予約を反映しました`);
+    const parts: string[] = [];
+    if (totalResv > 0) parts.push(`予約: ${syncedResv}/${totalResv}件`);
+    if (totalBlocked > 0) parts.push(`休業日: ${syncedBlocked}/${totalBlocked}件`);
+    sp.set("done", `Googleカレンダー同期完了（${parts.join(", ")} を反映しました）`);
   }
   redirect(`${path}?${sp.toString()}`);
 }

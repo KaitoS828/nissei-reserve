@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDefaultFacilityId } from "@/lib/facility";
 import { auditLog } from "@/lib/audit";
+import { gcalCreateBlockEvent, gcalDeleteEvent } from "@/lib/gcal";
 
 const PATH = "/admin/blocked";
 
@@ -18,13 +19,20 @@ export async function createBlocked(formData: FormData) {
 
   const supabase = createAdminClient();
   const facilityId = await getDefaultFacilityId(supabase);
-  const { error } = await supabase.from("blocked_dates").insert({
+  const { data: inserted, error } = await supabase.from("blocked_dates").insert({
     facility_id: facilityId,
     start_date: start,
     end_date: end,
     reason,
-  });
+  }).select("id").single();
   if (error) redirect(`${PATH}?error=${encodeURIComponent(error.message)}`);
+
+  // Googleカレンダーに休業日を登録
+  const eventId = await gcalCreateBlockEvent({ start_date: start, end_date: end, reason }).catch(() => null);
+  if (eventId && inserted) {
+    await supabase.from("blocked_dates").update({ gcal_event_id: eventId }).eq("id", inserted.id);
+  }
+
   await auditLog(supabase, {
     action: "blocked.create",
     entityType: "blocked_dates",
@@ -41,9 +49,15 @@ export async function deleteBlocked(formData: FormData) {
   // 何を消したか残すため、削除前に対象を控える
   const { data: target } = await supabase
     .from("blocked_dates")
-    .select("start_date, end_date, reason")
+    .select("start_date, end_date, reason, gcal_event_id")
     .eq("id", id)
     .maybeSingle();
+
+  // Googleカレンダーのイベントを先に削除
+  if (target?.gcal_event_id) {
+    await gcalDeleteEvent(target.gcal_event_id).catch(() => null);
+  }
+
   await supabase.from("blocked_dates").delete().eq("id", id);
   await auditLog(supabase, {
     action: "blocked.delete",
@@ -77,7 +91,7 @@ export async function toggleBlockedDate(formData: FormData) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("blocked_dates")
-    .select("id, start_date, end_date, reason")
+    .select("id, start_date, end_date, reason, gcal_event_id")
     .is("room_type_id", null)
     .lte("start_date", date)
     .gte("end_date", date);
@@ -86,38 +100,51 @@ export async function toggleBlockedDate(formData: FormData) {
     start_date: string;
     end_date: string;
     reason: string | null;
+    gcal_event_id: string | null;
   }[];
 
   let error: { message: string } | null = null;
 
   if (covering.length === 0) {
+    // 予約不可に設定 → カレンダーにも登録
     const facilityId = await getDefaultFacilityId(supabase);
-    ({ error } = await supabase.from("blocked_dates").insert({
+    const { data: inserted } = await supabase.from("blocked_dates").insert({
       facility_id: facilityId,
       start_date: date,
       end_date: date,
       reason: "休業",
-    }));
+    }).select("id").single();
+    if (inserted) {
+      const eventId = await gcalCreateBlockEvent({ start_date: date, end_date: date, reason: "休業" }).catch(() => null);
+      if (eventId) {
+        await supabase.from("blocked_dates").update({ gcal_event_id: eventId }).eq("id", inserted.id);
+      }
+    }
   } else {
     for (const b of covering) {
       if (b.start_date === date && b.end_date === date) {
+        // 1日のみのブロックを解除 → カレンダーからも削除
+        if (b.gcal_event_id) await gcalDeleteEvent(b.gcal_event_id).catch(() => null);
         ({ error } = await supabase.from("blocked_dates").delete().eq("id", b.id));
       } else if (b.start_date === date) {
         ({ error } = await supabase
           .from("blocked_dates")
-          .update({ start_date: shiftDay(date, 1) })
+          .update({ start_date: shiftDay(date, 1), gcal_event_id: null })
           .eq("id", b.id));
+        if (!error && b.gcal_event_id) await gcalDeleteEvent(b.gcal_event_id).catch(() => null);
       } else if (b.end_date === date) {
         ({ error } = await supabase
           .from("blocked_dates")
-          .update({ end_date: shiftDay(date, -1) })
+          .update({ end_date: shiftDay(date, -1), gcal_event_id: null })
           .eq("id", b.id));
+        if (!error && b.gcal_event_id) await gcalDeleteEvent(b.gcal_event_id).catch(() => null);
       } else {
         // 期間の途中 → 前半を縮めて、後半を新しい行として作り直す
         ({ error } = await supabase
           .from("blocked_dates")
-          .update({ end_date: shiftDay(date, -1) })
+          .update({ end_date: shiftDay(date, -1), gcal_event_id: null })
           .eq("id", b.id));
+        if (!error && b.gcal_event_id) await gcalDeleteEvent(b.gcal_event_id).catch(() => null);
         if (!error) {
           const facilityId = await getDefaultFacilityId(supabase);
           ({ error } = await supabase.from("blocked_dates").insert({
