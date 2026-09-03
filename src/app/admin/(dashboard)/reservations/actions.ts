@@ -280,7 +280,7 @@ export async function createPaymentLink(formData: FormData) {
   const supabase = createAdminClient();
   const { data: r } = await supabase
     .from("reservations")
-    .select("id, code, check_in, check_out, lookup_token, customers(email), plans(name)")
+    .select("id, code, check_in, check_out, lookup_token, custom_payment_link_url, customers(email), plans(name)")
     .eq("id", id)
     .single();
   if (!r) redirectError("予約が見つかりません");
@@ -301,6 +301,14 @@ export async function createPaymentLink(formData: FormData) {
   const h = await headers();
   const origin = originFromHeaders(h);
   const stripe = getStripe();
+
+  // 再発行時は前回のリンクを無効化する。有効な決済リンクが複数残ると紛らわしいため。
+  const prevUrl = r.custom_payment_link_url as string | null;
+  const prevSessionId = prevUrl?.match(/\/pay\/(cs_[A-Za-z0-9]+)/)?.[1];
+  if (prevSessionId) {
+    await stripe.checkout.sessions.expire(prevSessionId).catch(() => {});
+  }
+
   let session;
   try {
     session = await stripe.checkout.sessions.create({
