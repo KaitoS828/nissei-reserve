@@ -65,7 +65,8 @@ export async function gcalCreateEvent(p: CreatePayload): Promise<string | null> 
         start: { date: p.check_in },
         end: { date: end },
       },
-    });
+      // Google側が応答しないと予約登録ボタン全体が固まってしまうため上限を設ける
+    }, { timeout: 8000 });
     return event.data.id ?? null;
   } catch (e) {
     console.error("Googleカレンダーへの登録に失敗:", e);
@@ -78,7 +79,7 @@ export async function gcalDeleteEvent(eventId: string): Promise<void> {
   const calendar = getCalendar();
   if (!calendar) return;
   try {
-    await calendar.events.delete({ calendarId: CALENDAR_ID, eventId });
+    await calendar.events.delete({ calendarId: CALENDAR_ID, eventId }, { timeout: 8000 });
   } catch (e) {
     console.error("Googleカレンダーの削除に失敗:", e);
   }
@@ -103,7 +104,7 @@ export async function gcalCreateBlockEvent(p: {
         start: { date: p.start_date },
         end: { date: end },
       },
-    });
+    }, { timeout: 8000 });
     return event.data.id ?? null;
   } catch (e) {
     console.error("Googleカレンダーへの休業日登録に失敗:", e);

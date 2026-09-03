@@ -12,6 +12,8 @@ export async function notifyOwner(text: string): Promise<boolean> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
+        // 通知先が応答しないと呼び出し元の操作全体が固まってしまうため上限を設ける
+        signal: AbortSignal.timeout(8000),
       });
       return res.ok;
     }
@@ -20,6 +22,7 @@ export async function notifyOwner(text: string): Promise<boolean> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(8000),
       });
       return res.ok;
     }

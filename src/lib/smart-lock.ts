@@ -43,6 +43,8 @@ async function command(cred: Cred, body: Record<string, unknown>): Promise<void>
     method: "POST",
     headers: buildHeaders(cred.token, cred.secret),
     body: JSON.stringify(body),
+    // SwitchBot側が応答しないとタイムアウトなしにボタン操作全体が固まってしまうため上限を設ける
+    signal: AbortSignal.timeout(8000),
   });
   const data = (await res.json()) as { statusCode?: number };
   // HTTP 200 でも statusCode で成否を返す。100 でもキーパッドが受理したとは限らない。
@@ -57,6 +59,7 @@ type KeypadKey = { id: number; name: string; type: string; status: string };
 async function listKeypadKeys(cred: Cred): Promise<KeypadKey[]> {
   const res = await fetch(`${API}/devices`, {
     headers: buildHeaders(cred.token, cred.secret),
+    signal: AbortSignal.timeout(8000),
   });
   const data = (await res.json()) as {
     statusCode?: number;
@@ -120,14 +123,19 @@ export async function issueDoorPin(args: IssueArgs): Promise<IssueResult> {
   if (existing) return { ok: true, doorPin: existing.door_pin as string };
 
   const name = keypadKeyName(args.guestName, args.code);
-  // 同名の鍵があると createKey は（成功を返したまま）登録されない。先に消しておく。
-  const stale = (await listKeypadKeys(cred)).find((k) => isKeyForReservation(k.name, args.code));
-  if (stale) {
-    await command(cred, {
-      command: "deleteKey",
-      commandType: "command",
-      parameter: { id: stale.id },
-    });
+  try {
+    // 同名の鍵があると createKey は（成功を返したまま）登録されない。先に消しておく。
+    const stale = (await listKeypadKeys(cred)).find((k) => isKeyForReservation(k.name, args.code));
+    if (stale) {
+      await command(cred, {
+        command: "deleteKey",
+        commandType: "command",
+        parameter: { id: stale.id },
+      });
+    }
+  } catch (e) {
+    console.error("SwitchBotの鍵一覧取得/削除に失敗:", e);
+    return { ok: false, reason: e instanceof Error ? e.message : "SwitchBot 通信に失敗" };
   }
 
   const doorPin = randomPin();
