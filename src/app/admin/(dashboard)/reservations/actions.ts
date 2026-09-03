@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { sendEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
@@ -332,6 +332,20 @@ export async function createPaymentLink(formData: FormData) {
   }
   if (!session.url) redirectError("決済リンクの作成に失敗しました");
 
+  // Stripe の Checkout URL はそのままだと長大でLINE等に貼りづらいため、
+  // 自ドメイン配下の短いトークンでリダイレクトする。
+  const linkToken = randomBytes(8).toString("base64url");
+  const linkExpiresAt = new Date((Math.floor(Date.now() / 1000) + 24 * 60 * 60) * 1000).toISOString();
+  await supabase
+    .from("reservations")
+    .update({
+      custom_payment_link_token: linkToken,
+      custom_payment_link_url: session.url,
+      custom_payment_link_expires_at: linkExpiresAt,
+    })
+    .eq("id", id);
+  const shortUrl = `${origin}/pay/${linkToken}`;
+
   await auditLog(supabase, {
     action: "payment.custom_link_created",
     entityType: "reservations",
@@ -341,7 +355,7 @@ export async function createPaymentLink(formData: FormData) {
   });
 
   revalidatePath(PATH);
-  redirect(`${PATH}?pay_url=${encodeURIComponent(session.url)}&pay_code=${encodeURIComponent(r.code)}`);
+  redirect(`${PATH}?pay_url=${encodeURIComponent(shortUrl)}&pay_code=${encodeURIComponent(r.code)}`);
 }
 
 export async function archiveReservation(formData: FormData) {
