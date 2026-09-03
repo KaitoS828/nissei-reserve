@@ -44,7 +44,7 @@ describe("bookingGuideText", () => {
   it("Wi-Fi の接続情報を載せる", () => {
     const text = bookingGuideText(base);
     assert.ok(text.includes("nissei-guest"));
-    assert.ok(text.includes("gh-nissei37"));
+    assert.ok(text.includes("Gh-nissei37"));
   });
 
   it("チェックイン・チェックアウト時刻を項目として載せる", () => {

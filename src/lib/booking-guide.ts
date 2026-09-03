@@ -4,7 +4,7 @@
 
 // 館内の案内。変更はここだけ直せば全文に反映される。
 export const WIFI_SSID = "nissei-guest";
-export const WIFI_PASSWORD = "gh-nissei37";
+export const WIFI_PASSWORD = "Gh-nissei37";
 export const HOUSE_NOTES = [
   "漁師町のため、夜間はお静かにお過ごしください。近隣の方は早朝から漁に出られます。",
   "館内は禁煙です。喫煙は屋外の灰皿をご利用ください。",
