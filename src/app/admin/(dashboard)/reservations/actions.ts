@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { randomUUID } from "crypto";
 import { sendEmail } from "@/lib/email";
+import { getStripe } from "@/lib/stripe";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
 import { reviewRequestHtml, reviewRequestSubject, reviewRequestCustomHtml } from "@/lib/review-request";
 import {
@@ -260,6 +262,86 @@ export async function updateReservation(formData: FormData) {
   revalidatePath(PATH);
   revalidatePath("/admin/calendar");
   redirect(PATH);
+}
+
+// 知人・特別価格など、プラン料金と異なる任意の金額でカード決済を求めたいときに使う。
+// 予約自体はすでに管理画面で確定済みという前提のため、webhook 側では
+// 在庫確保やドアPIN発行・案内メール送信はせず、支払い状態の更新だけを行う。
+export async function createPaymentLink(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const amountInput = Number(formData.get("amount") ?? 0);
+  if (!id) redirectError("予約が指定されていません");
+  if (!Number.isFinite(amountInput) || !Number.isInteger(amountInput) || amountInput < 1) {
+    redirectError("金額は1円以上の整数で指定してください");
+  }
+  // Stripe Checkout の1回あたりの上限に合わせる
+  if (amountInput > 9_999_999) redirectError("金額が大きすぎます");
+
+  const supabase = createAdminClient();
+  const { data: r } = await supabase
+    .from("reservations")
+    .select("id, code, check_in, check_out, lookup_token, customers(email), plans(name)")
+    .eq("id", id)
+    .single();
+  if (!r) redirectError("予約が見つかりません");
+
+  // 決済後の受付/領収書ページで参照するトークン。管理画面からの直予約には無いので無ければ発行する。
+  let lookupToken = r.lookup_token as string | null;
+  if (!lookupToken) {
+    lookupToken = randomUUID();
+    await supabase.from("reservations").update({ lookup_token: lookupToken }).eq("id", id);
+  }
+
+  // 決済リンクの金額を、予約に記録された金額としても反映しておく（管理画面上の表示と一致させるため）
+  await supabase.from("reservations").update({ amount: amountInput }).eq("id", id);
+
+  const custEmail = (r.customers as unknown as { email: string | null } | null)?.email ?? undefined;
+  const planName = (r.plans as unknown as { name: string } | null)?.name ?? "ご宿泊";
+
+  const h = await headers();
+  const origin = originFromHeaders(h);
+  const stripe = getStripe();
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      locale: "ja",
+      payment_method_types: ["card"],
+      ...(custEmail ? { customer_email: custEmail } : {}),
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "jpy",
+            unit_amount: amountInput,
+            product_data: {
+              name: `${planName}（特別価格）`,
+              description: `${r.check_in} 〜 ${r.check_out} / 予約番号 ${r.code}`,
+            },
+          },
+        },
+      ],
+      metadata: { reservation_id: id, code: r.code, kind: "admin_custom_payment" },
+      expires_at: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+      success_url: `${origin}/reserve/complete?code=${r.code}&token=${lookupToken}`,
+      cancel_url: `${origin}${PATH}?error=${encodeURIComponent("決済がキャンセルされました")}`,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "決済リンクの作成に失敗しました";
+    redirectError(msg);
+  }
+  if (!session.url) redirectError("決済リンクの作成に失敗しました");
+
+  await auditLog(supabase, {
+    action: "payment.custom_link_created",
+    entityType: "reservations",
+    entityId: id,
+    summary: `¥${amountInput.toLocaleString()} の決済リンクを発行`,
+    metadata: { amount: amountInput, code: r.code },
+  });
+
+  revalidatePath(PATH);
+  redirect(`${PATH}?pay_url=${encodeURIComponent(session.url)}&pay_code=${encodeURIComponent(r.code)}`);
 }
 
 export async function archiveReservation(formData: FormData) {

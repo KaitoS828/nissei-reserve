@@ -47,6 +47,43 @@ export async function POST(req: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const reservationId = session.metadata?.reservation_id;
+    // 管理画面から知人向けなどに任意金額で発行した決済リンク。
+    // 予約はすでに確定済み・鍵や案内メールも個別に手配されている前提なので、
+    // 通常フロー（新規予約確定）の副作用は起こさず、支払い状態の更新だけ行う。
+    const isAdminCustomPayment = session.metadata?.kind === "admin_custom_payment";
+
+    if (reservationId && session.payment_status === "paid" && isAdminCustomPayment) {
+      const supabase = createAdminClient();
+
+      await supabase
+        .from("reservations")
+        .update({ payment_status: "paid" })
+        .eq("id", reservationId);
+
+      await supabase.from("payments").insert({
+        reservation_id: reservationId,
+        stripe_payment_intent_id:
+          typeof session.payment_intent === "string" ? session.payment_intent : null,
+        stripe_checkout_session_id: session.id,
+        amount: session.amount_total ?? 0,
+        status: "paid",
+      });
+
+      const { data: r } = await supabase
+        .from("reservations")
+        .select("code, customers(last_name, first_name)")
+        .eq("id", reservationId)
+        .single();
+      if (r) {
+        const cust = r.customers as unknown as { last_name: string | null; first_name: string | null } | null;
+        const name = [cust?.last_name, cust?.first_name].filter(Boolean).join(" ") || "お客";
+        await notifyOwner(
+          `【入金確認】${r.code}（${name}様）¥${(session.amount_total ?? 0).toLocaleString()} の決済リンクが支払われました`,
+        ).catch(() => {});
+      }
+
+      return NextResponse.json({ received: true });
+    }
 
     if (reservationId && session.payment_status === "paid") {
       const supabase = createAdminClient();

@@ -20,11 +20,13 @@ import {
   revokeDoorPinManually,
   sendBookingGuideEmail,
   sendReviewRequestEmail,
+  createPaymentLink,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
 import { DateField } from "./DateField";
 import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
+import { PaymentLinkBanner } from "./PaymentLinkBanner";
 import { ReviewRequestGuide } from "./ReviewRequestGuide";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
@@ -94,9 +96,18 @@ const custName = (c: ReservationWithRefs["customers"]) =>
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string; done?: string; q?: string; month?: string; range?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    error?: string;
+    done?: string;
+    q?: string;
+    month?: string;
+    range?: string;
+    pay_url?: string;
+    pay_code?: string;
+  }>;
 }) {
-  const { status, error, done, q, month, range } = await searchParams;
+  const { status, error, done, q, month, range, pay_url, pay_code } = await searchParams;
   const supabase = createAdminClient();
 
   // 既定は「すべて」。「これから」を既定にすると、チェックアウト済みの予約が
@@ -362,6 +373,8 @@ export default async function ReservationsPage({
         </div>
       )}
 
+      {pay_url && pay_code && <PaymentLinkBanner url={pay_url} code={pay_code} />}
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -589,6 +602,33 @@ function ReservationCard({
                     )}
                   </span>
                 </div>
+
+                {/* 知人・特別価格など、プラン料金と異なる金額でカード決済を求めたいときに使う。
+                    未回収のときだけ出す（回収済みに重ねて発行させない）。 */}
+                {r.status !== "cancelled" && r.payment_status !== "paid" && (
+                  <form
+                    action={createPaymentLink}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3"
+                  >
+                    <input type="hidden" name="id" value={r.id} />
+                    <span className="text-sm text-gray-600">Stripe決済リンク:</span>
+                    <span className="text-sm text-gray-500">¥</span>
+                    <input
+                      type="number"
+                      name="amount"
+                      min={1}
+                      step={1}
+                      defaultValue={r.amount}
+                      className="w-28 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 outline-none focus:border-cyan-600"
+                    />
+                    <SubmitButton className="rounded-lg bg-cyan-600 px-3 py-1 text-sm font-medium text-white hover:bg-cyan-700">
+                      リンクを発行
+                    </SubmitButton>
+                    <span className="text-xs text-gray-500">
+                      任意の金額でカード決済リンクを作成できます（特別価格など）
+                    </span>
+                  </form>
+                )}
 
                 {/* 決済が通れば webhook で自動発行される。現地精算や管理画面からの
                     代理予約は webhook を通らないので、ここから手動で出せるようにする。 */}
