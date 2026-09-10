@@ -58,6 +58,15 @@ function monthKey(d: string) {
   return d.slice(0, 7);
 }
 
+function daysInMonth(year: string, month: string) {
+  return new Date(Number(year), Number(month), 0).getDate();
+}
+
+function daysInYear(year: string) {
+  const y = Number(year);
+  return (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 366 : 365;
+}
+
 export default async function AnalyticsPage({
   searchParams,
 }: {
@@ -66,7 +75,7 @@ export default async function AnalyticsPage({
   const { year: yearParam, month: monthParam, done, error } = await searchParams;
   const supabase = createAdminClient();
 
-  const [{ data: resvData }, { data: costData, error: costError }] = await Promise.all([
+  const [{ data: resvData }, { data: costData, error: costError }, { count: roomCountRaw }] = await Promise.all([
     supabase
       .from("reservations")
       .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, cancel_reason, archived_at, customers(last_name, first_name), room_types(name)")
@@ -76,11 +85,16 @@ export default async function AnalyticsPage({
       .select("*")
       .order("year_month", { ascending: false })
       .order("recorded_date", { ascending: false }),
+    supabase
+      .from("rooms")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
   ]);
 
   const all = (resvData ?? []) as unknown as Row[];
   const allCosts = (costData ?? []) as OperatingCost[];
   const dbReady = !costError;
+  const roomCount = roomCountRaw ?? 0;
 
   // 期間の指定はチェックイン日で行う。未指定なら今年。
   const years = [...new Set(all.map((r) => r.check_in.slice(0, 4)))].sort().reverse();
@@ -115,6 +129,11 @@ export default async function AnalyticsPage({
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
 
+  // 稼働率 = 稼働室泊数 ÷ 提供可能室泊数（客室マスタの稼働中の号室数 × 期間の日数）
+  const periodDays = month ? daysInMonth(year, month) : daysInYear(year);
+  const availableRoomNights = roomCount * periodDays;
+  const occupancyRate = availableRoomNights > 0 ? Math.round((totalNights / availableRoomNights) * 1000) / 10 : 0;
+
   // 選んだ年の12ヶ月の売上とコスト（集計対象のみ）
   const yearRows = all.filter((r) => !r.archived_at && r.check_in.slice(0, 4) === year);
   const yearCosts = allCosts.filter((c) => c.year_month.startsWith(`${year}-`));
@@ -129,6 +148,11 @@ export default async function AnalyticsPage({
       .filter((c) => c.year_month === targetKey)
       .reduce((s, c) => s + c.amount, 0);
     const mProfit = mRevenue - mCost;
+    const mNights = yearRows
+      .filter((r) => !["cancelled", "no_show"].includes(r.status) && monthKey(r.check_in) === targetKey)
+      .reduce((s, r) => s + (r.nights ?? 0), 0);
+    const mAvailable = roomCount * daysInMonth(year, mm);
+    const mOccupancy = mAvailable > 0 ? Math.round((mNights / mAvailable) * 1000) / 10 : 0;
     return {
       key: targetKey,
       mm,
@@ -136,6 +160,8 @@ export default async function AnalyticsPage({
       revenue: mRevenue,
       cost: mCost,
       profit: mProfit,
+      nights: mNights,
+      occupancyRate: mOccupancy,
     };
   });
 
@@ -155,6 +181,14 @@ export default async function AnalyticsPage({
       value: `${total}件 / ${totalNights}泊`,
       color: "text-gray-900",
       sub: `キャンセル率: ${cancelRate}% (${cancelled}件)`,
+    },
+    {
+      label: "稼働率",
+      value: roomCount > 0 ? `${occupancyRate}%` : "—",
+      color: "text-cyan-700",
+      sub: roomCount > 0
+        ? `延べ${totalNights}泊 / 提供可能${availableRoomNights}泊（客室${roomCount}室）`
+        : "客室マスタに稼働中の号室がありません",
     },
   ];
 
@@ -243,7 +277,7 @@ export default async function AnalyticsPage({
       </div>
 
       {/* サマリーカード */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {cards.map((c) => (
           <div key={c.label} className="rounded-2xl border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-600">{c.label}</p>
@@ -310,6 +344,34 @@ export default async function AnalyticsPage({
             })}
           </div>
         </div>
+      </section>
+
+      {/* 月別稼働率 */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-medium text-gray-900">{year}年の月別稼働率</h2>
+          <span className="text-xs text-gray-500">客室{roomCount}室 稼働中</span>
+        </div>
+        {roomCount > 0 ? (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+            {monthlyStats.map((m) => (
+              <div key={m.key} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-700">{m.label}月</span>
+                  <span className="text-gray-600">{m.occupancyRate}%（{m.nights}泊）</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full bg-cyan-600"
+                    style={{ width: `${Math.min(100, m.occupancyRate)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">客室マスタに稼働中の号室が登録されていないため稼働率を算出できません。</p>
+        )}
       </section>
 
       {/* コスト（経費）手打ち管理セクション */}
