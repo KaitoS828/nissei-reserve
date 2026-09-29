@@ -7,14 +7,15 @@ import type { BookingGuideInput } from "./booking-guide";
 export const GUIDE_SELECT =
   "id, code, check_in, check_out, check_in_time, num_guests, status, customers(last_name, first_name, email), plans(name), access_keys(door_pin, status)";
 
-/** リクエストヘッダから公開URLの起点を作る。
- *  ローカル開発は http なので、https を決め打ちすると案内文のURLが開けなくなる。 */
+const PUBLIC_ORIGIN = "https://reserve.gh-nissei.jp";
+
+/** お客様に送るURLの起点。
+ *  リクエストの host は使わない。Vercel の cron や webhook はデプロイ個別の
+ *  *.vercel.app で呼ばれ、そこは Vercel の認証がかかっていて、お客様は開けない。
+ *  ローカル開発だけは http の localhost を返す。 */
 export function originFromHeaders(h: { get(name: string): string | null }): string {
-  const origin = h.get("origin");
-  if (origin) return origin;
-  const host = h.get("host") ?? "reserve.gh-nissei.jp";
-  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host);
-  return `${isLocal ? "http" : "https"}://${host}`;
+  const host = h.get("host") ?? "";
+  return /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host) ? `http://${host}` : PUBLIC_ORIGIN;
 }
 
 export type GuideRow = {

@@ -106,6 +106,7 @@ export function bookingConfirmedHtml(p: {
 // オーナー宛（新規予約）
 export function ownerBookingHtml(p: {
   name: string; code: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number; email?: string; phone?: string;
+  survey?: string | null; note?: string | null;
 }): string {
   return wrap(`
     <p><strong>🆕 新規予約が入りました</strong></p>
@@ -116,6 +117,8 @@ export function ownerBookingHtml(p: {
       ${row("プラン", esc(p.plan))}
       ${row("日程", `${esc(p.checkIn)} 〜 ${esc(p.checkOut)}（${p.nights}泊）`)}
       ${row("金額", `¥${p.amount.toLocaleString()}`)}
+      ${p.survey ? row("ご要望・アンケート", esc(p.survey).replace(/\n/g, "<br>")) : ""}
+      ${p.note ? row("連絡事項", esc(p.note).replace(/\n/g, "<br>")) : ""}
     </table>`);
 }
 

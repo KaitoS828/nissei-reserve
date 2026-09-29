@@ -4,7 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, ownerBookingHtml, ownerEmails } from "@/lib/email";
 import { bookingGuideHtml, bookingGuideSubject } from "@/lib/booking-guide";
-import { GUIDE_SELECT, guideInput, type GuideFacility, type GuideRow } from "@/lib/booking-guide-server";
+import { GUIDE_SELECT, guideInput, originFromHeaders, type GuideFacility, type GuideRow } from "@/lib/booking-guide-server";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { notifyOwner, newBookingMessage, notifyFailure } from "@/lib/notify";
 import { gcalCreateEvent } from "@/lib/gcal";
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       // 通知（メール: ゲスト / Discord・Slack: オーナー）。失敗しても止めない。
       const { data: r } = await supabase
         .from("reservations")
-        .select("code, check_in, check_out, nights, num_guests, amount, plans(name), customers(last_name, first_name, email, phone)")
+        .select("code, check_in, check_out, nights, num_guests, amount, survey, note, plans(name), customers(last_name, first_name, email, phone)")
         .eq("id", reservationId)
         .single();
       if (r) {
@@ -117,14 +117,15 @@ export async function POST(req: NextRequest) {
           checkIn: r.check_in as string, checkOut: r.check_out as string,
           nights: r.nights as number, guests: r.num_guests as number, amount: r.amount as number,
         };
-        await notifyOwner(newBookingMessage(info)).catch(() => {});
+        const memo = { survey: r.survey as string | null, note: r.note as string | null };
+        await notifyOwner(newBookingMessage({ ...info, ...memo })).catch(() => {});
         // オーナーにもメール通知
         const owners = ownerEmails();
         if (owners.length) {
           await sendEmail({
             to: owners,
             subject: `【日靜】新規予約 ${r.code}（${info.name}様）`,
-            html: ownerBookingHtml({ ...info, email: cust?.email ?? undefined, phone: cust?.phone ?? undefined }),
+            html: ownerBookingHtml({ ...info, ...memo, email: cust?.email ?? undefined, phone: cust?.phone ?? undefined }),
           }).catch(() => {});
         }
 
@@ -165,8 +166,7 @@ export async function POST(req: NextRequest) {
             .eq("id", reservationId)
             .maybeSingle();
           const secret = await ensureSecretCode(supabase, reservationId);
-          const host = req.headers.get("host");
-          const origin = host ? `https://${host}` : "https://reserve.gh-nissei.jp";
+          const origin = originFromHeaders(req.headers);
           const subject = bookingGuideSubject(info.name);
           const lookupUrl = `${origin}/reserve/lookup?code=${encodeURIComponent(info.code)}&email=${encodeURIComponent(cust.email)}`;
           const html = bookingGuideHtml(

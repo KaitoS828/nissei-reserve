@@ -55,6 +55,7 @@ export async function notifyFailure(
 
 export function newBookingMessage(p: {
   code: string; name: string; plan: string; checkIn: string; checkOut: string; nights: number; guests: number; amount: number;
+  survey?: string | null; note?: string | null;
 }): string {
   return [
     "🆕 **新規予約が入りました**",
@@ -63,6 +64,8 @@ export function newBookingMessage(p: {
     `プラン: ${p.plan}`,
     `日程: ${p.checkIn} 〜 ${p.checkOut}（${p.nights}泊）`,
     `金額: ¥${p.amount.toLocaleString()}`,
+    ...(p.survey ? [`ご要望・アンケート:\n${p.survey}`] : []),
+    ...(p.note ? [`連絡事項:\n${p.note}`] : []),
   ].join("\n");
 }
 
