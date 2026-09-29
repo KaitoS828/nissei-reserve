@@ -614,6 +614,49 @@ export async function sendReviewRequestEmail(formData: FormData) {
   redirect(`${PATH}?done=${encodeURIComponent(`${to} へレビュー依頼メールを送信しました`)}`);
 }
 
+export async function sendCustomEmail(formData: FormData) {
+  const id = String(formData.get("id"));
+  const subject = String(formData.get("subject") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!subject || !body) redirectError("件名と本文を入力してください");
+
+  const supabase = createAdminClient();
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("id, code, customers(email)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!resv) redirectError("予約が見つかりません");
+
+  const row = resv as unknown as { code: string; customers: { email: string | null } | null };
+  const to = row.customers?.email?.trim();
+  if (!to) redirectError("この予約にはメールアドレスが登録されていません");
+
+  const ok = await sendEmail({ to, subject, html: reviewRequestCustomHtml(body) });
+
+  await supabase.from("guest_message_deliveries").insert({
+    reservation_id: id,
+    message_type: "custom",
+    channel: "email",
+    sent_to: to,
+    subject,
+    status: ok ? "sent" : "failed",
+    error: ok ? null : "送信に失敗しました",
+    sent_at: new Date().toISOString(),
+  });
+
+  await auditLog(supabase, {
+    action: "custom_email_send",
+    entityType: "reservation",
+    entityId: id,
+    summary: `${row.code} のお客様へ「${subject}」を ${to} へ${ok ? "送信" : "送信失敗"}`,
+  }).catch(() => {});
+
+  if (!ok) redirectError("メールの送信に失敗しました。設定をご確認ください");
+  revalidatePath(PATH);
+  redirect(`${PATH}?done=${encodeURIComponent(`${to} へメールを送信しました`)}`);
+}
+
 export async function unarchiveReservation(formData: FormData) {
   const id = String(formData.get("id"));
   const supabase = createAdminClient();

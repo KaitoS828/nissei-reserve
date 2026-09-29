@@ -20,6 +20,7 @@ import {
   revokeDoorPinManually,
   sendBookingGuideEmail,
   sendReviewRequestEmail,
+  sendCustomEmail,
   createPaymentLink,
 } from "./actions";
 import { CustomerPicker } from "./CustomerPicker";
@@ -28,6 +29,7 @@ import { EditToggle } from "./EditToggle";
 import { BookingGuide } from "./BookingGuide";
 import { PaymentLinkBanner } from "./PaymentLinkBanner";
 import { ReviewRequestGuide } from "./ReviewRequestGuide";
+import { CustomEmailForm } from "./CustomEmailForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
@@ -730,6 +732,12 @@ function ReservationCard({
                     reservationId={r.id}
                   />
                 )}
+
+                <CustomEmailForm
+                  email={r.customers?.email ?? null}
+                  sendAction={sendCustomEmail}
+                  reservationId={r.id}
+                />
 
                 <EditToggle
                   actions={
