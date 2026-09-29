@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { CHECKOUT_WINDOW_MINUTES } from "@/lib/hold";
+import { originFromHeaders } from "@/lib/booking-guide-server";
 import { canBook, generateReservationCode } from "@/lib/reservations";
 import { eachNight } from "@/lib/availability";
 import { calcPrice, guestRange, nightlyRateForGuests, type Discount, type GuestPrices } from "@/lib/pricing";
@@ -153,7 +154,7 @@ export async function startCheckout(formData: FormData) {
 
   // Stripe Checkout Session
   const h = await headers();
-  const origin = h.get("origin") ?? `https://${h.get("host")}`;
+  const origin = originFromHeaders(h);
   const stripe = getStripe();
   const nightsLabel =
     locale === "en" ? (price.nights === 1 ? "1 night" : `${price.nights} nights`) : `${price.nights}泊`;
