@@ -7,7 +7,7 @@ import {
 } from "./availability";
 
 // 人間が実際の予約を把握して登録する経路。iCal取込のブロックは同じ予約自身のことが多いので無視する。
-export const IGNORE_BLOCKED_SOURCES = ["admin", "airbnb", "booking", "rakuten"];
+export const IGNORE_BLOCKED_SOURCES = ["admin", "airbnb", "booking", "rakuten", "vacation_stay"];
 
 // 人間可読な予約番号（例: R-20260601-A1B2）
 export function generateReservationCode(checkIn: DateStr): string {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { runAssistant, type GroqHistory } from "@/lib/groq-agent";
+import { runAssistant, type ChatHistory } from "@/lib/gemini-agent";
 import { loadSession, saveSession } from "@/lib/assistant-session";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("sessionId") ?? "";
   if (!SESSION_ID.test(sessionId)) return NextResponse.json({ messages: [] });
 
-  const history = await loadSession<GroqHistory[number]>(`admin:${user.id}:${sessionId}`);
+  const history = await loadSession<ChatHistory[number]>(`admin:${user.id}:${sessionId}`);
   const messages = history.flatMap((m) =>
     (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content
       ? [{ role: m.role, text: m.content }]
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   const sessionKey = `admin:${user.id}:${sessionId}`;
 
   try {
-    const history = await loadSession<GroqHistory[number]>(sessionKey);
+    const history = await loadSession<ChatHistory[number]>(sessionKey);
     const { reply, history: nextHistory } = await runAssistant(message, history);
     await saveSession(sessionKey, "admin", nextHistory);
     return NextResponse.json({ reply });

@@ -498,7 +498,7 @@ export const ADMIN_TOOLS: Anthropic.Tool[] = [
         amount: { type: "number" },
         payment_status: { type: "string", enum: PAYMENT_STATUSES },
         note: { type: "string", description: "備考（空文字で消去）" },
-        source: { type: "string", enum: ["admin", "airbnb", "booking", "rakuten", "phone", "walkin", "web"] },
+        source: { type: "string", enum: ["admin", "airbnb", "booking", "rakuten", "vacation_stay", "phone", "walkin", "web"] },
         receipt_name: { type: "string" },
         last_name: { type: "string" },
         first_name: { type: "string" },

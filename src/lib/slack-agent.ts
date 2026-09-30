@@ -175,11 +175,18 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const amount_override = input.amount != null ? Number(input.amount) : null;
     const payment_status = input.payment_status ? String(input.payment_status) : "unpaid";
     const channel = input.channel ? String(input.channel) : "admin";
-    const note = input.note ? String(input.note) : null;
+    const external_id = input.external_id ? String(input.external_id).trim() : null;
+    const noteBody = input.note ? String(input.note) : null;
+    const note = external_id ? `[${channel}:${external_id}]${noteBody ? `\n${noteBody}` : ""}` : noteBody;
 
     if (!last_name || !first_name) return "氏名（姓・名）は必須です。";
 
     const supabase = createAdminClient();
+
+    if (external_id) {
+      const { data: dup } = await supabase.from("reservations").select("code, check_in, check_out").like("note", `%[${channel}:${external_id}]%`).limit(1).maybeSingle();
+      if (dup) return `OTA予約ID ${external_id} はすでに登録済みです（${dup.code} / ${dup.check_in}〜${dup.check_out}）。二重登録を防ぐため登録しませんでした。`;
+    }
 
     type PlanRow = { id: string; name: string; discounts: unknown; plan_prices: Array<{ price_per_night: number; guest_prices: GuestPrices; room_type_id: string }> };
     let planData: PlanRow | null = null;
@@ -216,6 +223,11 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const nightly = nightlyRateForGuests(num_guests, pp.guest_prices, pp.price_per_night);
     const price = calcPrice(check_in, check_out, nightly, (planData.discounts ?? []) as Discount[]);
     const amount = amount_override ?? price.total;
+
+    // OTA予約の貼り付けは、読み取りミス（特に人数）がそのまま台帳に残るので、必ず内容を見せて同意を得てから登録する。
+    if (external_id && input.confirm !== true) {
+      return `【未登録・確認待ち】以下の内容で登録します。\n・氏名: ${last_name} ${first_name}\n・経路: ${channel}（OTA予約ID ${external_id}）\n・日程: ${check_in}〜${check_out}（${price.nights}泊）\n・人数: ${num_guests}名${input.num_guests == null ? "（未指定のため仮の値。必ずユーザーに人数を確認すること）" : ""}\n・プラン: ${planData.name}\n・金額: ¥${amount.toLocaleString()}（${payment_status === "paid" ? "支払済" : "未払い"}）\nユーザーの同意を得てから、同じ内容に confirm=true を付けて再度呼び出してください。人数が貼り付けに無い場合は、推測せず先に質問すること。`;
+    }
 
     const facilityId = await getDefaultFacilityId(supabase);
     const custFields = { last_name, first_name, facility_id: facilityId, ...(email ? { email } : {}), ...(phone ? { phone } : {}) };
@@ -335,7 +347,7 @@ export const TOOLS: Anthropic.Tool[] = [
   { name: "cancel_reservation", description: "予約をキャンセルする（取り消し不可）。キャンセルポリシーに従いStripe返金も行う。実行前にユーザーの明確な同意が必要。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
   { name: "block_dates", description: "休業日（予約不可日）を設定する。公開カレンダーがグレーになる。", input_schema: { type: "object", properties: { start: { type: "string", description: "開始日 YYYY-MM-DD" }, end: { type: "string", description: "終了日 YYYY-MM-DD（省略時は1日）" }, reason: { type: "string" } }, required: ["start"] } },
   { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
-  { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" }, channel: { type: "string", enum: ["admin", "airbnb", "booking", "rakuten"], description: "予約経路。Airbnb/Booking.com/楽天トラベル経由ならそれを指定（iCal取込済みのブロックを無視して登録できる）。省略時はadmin" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
+  { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" }, external_id: { type: "string", description: "OTA側の予約ID。二重登録の防止に使う（備考にも記録される）。指定すると、confirm=true を付けるまでは登録せずプレビューだけ返す" }, confirm: { type: "boolean", description: "OTA予約で、ユーザーがプレビュー内容に同意した場合のみ true" }, channel: { type: "string", enum: ["admin", "airbnb", "booking", "rakuten", "vacation_stay"], description: "予約経路。Airbnb/Booking.com/楽天トラベル/Vacation STAY経由ならそれを指定（iCal取込済みのブロックを無視して登録できる）。省略時はadmin" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
   { name: "list_ical_sources", description: "登録済みのiCal連携先（Airbnb等）の一覧と最終取り込み日時を取得する。", input_schema: { type: "object", properties: {}, required: [] } },
   { name: "sync_ical", description: "外部カレンダー（Airbnb等）のiCalを取り込み、blocked_datesに反映する。idを指定するとその連携先のみ、省略時は有効な連携先すべてを同期する。", input_schema: { type: "object", properties: { id: { type: "string", description: "iCal連携先のid（省略時は全件同期）" } }, required: [] } },
@@ -352,6 +364,15 @@ const SYSTEM = `あなたは一棟貸ゲストハウス日靜の予約システ�
 - 【重要・確認ステップ】キャンセル・休業日設定/解除・予約変更など「取り消せない操作」は、いきなり実行しないこと。まず対象予約を特定し（必要なら get_reservation / list_reservations）、影響を提示する。キャンセルの場合は必ず quote_cancellation で返金額・キャンセル料を試算して提示し、「実行してよろしいですか？」と確認する。ユーザーが同じスレッドで明確に同意（「はい」「OK」「お願いします」等）した場合に限り、対応する実行ツール（cancel_reservation / block_dates / unblock_dates / update_reservation）を呼ぶ。会話はスレッド単位で文脈が保持されるので、前のメッセージの対象を引き継いでよい。
 - 【メール送信】お客様へのメール（send_email）は必ず先に confirm なしで呼び、返ってきた宛先・件名・本文をそのまま提示して同意を得る。同意後にだけ confirm=true で再度呼ぶ。
 - 【プラン料金の変更】update_plan も同様に、変更前後のプレビューを提示して同意を得てから confirm=true で実行する。公開サイトの料金に即時反映される。
+- 【OTA予約の貼り付け】Airbnb/Booking.com/楽天トラベル/Vacation STAY等の予約通知テキストが貼られたら、内容を読み取って create_reservation で登録する。
+  ・氏名は姓と名に分ける（「さわだいし こうた」→姓 さわだいし / 名 こうた）。メール・電話は貼り付けのものをそのまま使う。
+  ・channel は OTA 名から選ぶ。external_id には予約ID（例 V056-KSJY4TOC）を入れる。宿泊期間の終了日がチェックアウト日。
+  ・plan には「素泊まり」「サウナ付き」「日帰り」のような短いキーワードだけを渡す（OTAのプラン名全文は渡さない）。素泊まり/カジュアル→素泊まり、サウナ→サウナ付き。
+  ・事前カード決済などOTA側で決済済みなら payment_status=paid、現地払いなら unpaid。
+  ・amount は宿の売上として「宿泊料金合計＋清掃料金」を基本とし、OTAの手配手数料などは含めない。内訳（OTAの合計金額・手数料・部屋タイプ名・キャンセルポリシー・予約受付日）は note に残す。
+  ・登録は2段階。まず confirm なしで create_reservation を呼ぶとプレビューが返る（この時点では未登録）。読み取り結果と金額の解釈をユーザーに見せて同意を得てから、同じ内容に confirm=true を付けて再度呼ぶ。
+  ・貼り付けに宿泊人数が無い場合は、人数を推測せず、先にユーザーへ質問する（num_guests を仮の値で渡さない）。
+  ・external_id が登録済みなら二重登録されない。その場合は既存の予約番号を伝える。
 - 決済リンク（create_payment_link）は発行前に金額を確認する。発行してもお客様へは自動送信されない。
 - 予約情報の編集（edit_reservation）・iCal連携先の追加/変更は、内容が明確なら確認なしで実行してよい。実行後は何を変えたかを一言で報告する。
 - 経費の登録・修正（add_cost / update_cost）は内容が明確なら確認なしで実行し、実行後に内容を報告する。削除（delete_cost）は先に confirm なしで呼んで対象を提示し、同意を得てから confirm=true で実行する。集計は get_analytics の結果をそのまま伝え、憶測で数字を補わない。

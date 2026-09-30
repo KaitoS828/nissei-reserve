@@ -84,6 +84,7 @@ const SOURCE_LABEL: Record<string, string> = {
   airbnb: "Airbnb",
   booking: "Booking.com",
   rakuten: "楽天トラベル",
+  vacation_stay: "Vacation STAY",
   walkin: "飛込み・現地",
 };
 const SOURCES = [
@@ -94,6 +95,7 @@ const SOURCES = [
   { value: "airbnb", label: "Airbnb" },
   { value: "booking", label: "Booking.com" },
   { value: "rakuten", label: "楽天トラベル" },
+  { value: "vacation_stay", label: "Vacation STAY" },
   { value: "ical", label: "iCal" },
 ];
 const sourceLabel = (s: string | null) => (s ? (SOURCE_LABEL[s] ?? s) : "—");

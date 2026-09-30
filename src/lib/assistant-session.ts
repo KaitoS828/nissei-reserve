@@ -1,4 +1,4 @@
-// 内部AIチャットの会話ログをDBに保存する。Slack(Anthropic形式)と管理画面(Groq形式)の
+// 内部AIチャットの会話ログをDBに保存する。Slack(Anthropic形式)と管理画面(OpenAI互換形式)の
 // どちらのメッセージ配列もそのまま jsonb で持つ。
 
 import { createAdminClient } from "./supabase/admin";
