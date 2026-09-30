@@ -12,6 +12,14 @@ function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function addDays(date: string, n: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+// 決済リンクで回収する経路。OTA経由は各サイト側で決済されるので未回収の対象にしない
+const DIRECT_SOURCES = ["web", "admin", "phone", "walkin"];
+
 const custName = (c: ReservationWithRefs["customers"]) =>
   c ? [c.last_name, c.first_name].filter(Boolean).join(" ") || "（無名）" : "—";
 
@@ -119,12 +127,50 @@ export default async function DashboardPage() {
 
   const pendingList = upcoming.filter((r) => r.status === "pending");
 
+  // 直近3日以内に来る予約について、当日までにやり残しがないかを調べる
+  const soon = upcoming.filter((r) => r.check_in <= addDays(today, 2));
+  const soonIds = soon.map((r) => r.id);
+  const [guestRows, deliveryRows] = soonIds.length
+    ? await Promise.all([
+        supabase.from("reservation_guests").select("reservation_id").in("reservation_id", soonIds),
+        supabase
+          .from("guest_message_deliveries")
+          .select("reservation_id")
+          .in("reservation_id", soonIds)
+          .eq("message_type", "booking_guide")
+          .eq("status", "sent"),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const guestCount = new Map<string, number>();
+  for (const g of (guestRows.data ?? []) as { reservation_id: string }[]) {
+    guestCount.set(g.reservation_id, (guestCount.get(g.reservation_id) ?? 0) + 1);
+  }
+  const guideSent = new Set(((deliveryRows.data ?? []) as { reservation_id: string }[]).map((d) => d.reservation_id));
+
+  type Task = { key: string; code: string; label: string; r: ReservationWithRefs };
+  const tasks: Task[] = [];
+  for (const r of soon) {
+    if (r.status !== "confirmed" && r.status !== "pending") continue;
+    if ((guestCount.get(r.id) ?? 0) < r.num_guests) {
+      tasks.push({ key: `${r.id}:registry`, code: r.code, label: `名簿 ${guestCount.get(r.id) ?? 0}/${r.num_guests}`, r });
+    }
+    if (!guideSent.has(r.id) && r.customers?.email) {
+      tasks.push({ key: `${r.id}:guide`, code: r.code, label: "案内メール未送信", r });
+    }
+  }
+  for (const r of upcoming) {
+    if (r.check_in > addDays(today, 7)) continue;
+    if (r.payment_status === "unpaid" && r.status === "confirmed" && DIRECT_SOURCES.includes(r.source)) {
+      tasks.push({ key: `${r.id}:pay`, code: r.code, label: "決済 未回収", r });
+    }
+  }
+
   const sections = [
     { id: "todo", title: "要対応", node: (
 <>
       <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
         <h2 className="mb-3 font-semibold text-gray-900">要対応</h2>
-        {pendingList.length === 0 && (openInquiriesRes.count ?? 0) === 0 ? (
+        {pendingList.length === 0 && tasks.length === 0 && (openInquiriesRes.count ?? 0) === 0 ? (
           <p className="text-sm text-gray-700">対応が必要なものはありません</p>
         ) : (
           <ul className="space-y-2 text-sm">
@@ -135,6 +181,17 @@ export default async function DashboardPage() {
                 </Link>
               </li>
             )}
+            {tasks.map((t) => (
+              <li key={t.key} className="flex flex-wrap items-center gap-2">
+                <span className="rounded bg-white px-2 py-0.5 text-xs font-bold text-amber-900">{t.label}</span>
+                <Link href={`/admin/reservations?q=${encodeURIComponent(t.code)}`} className="font-medium text-gray-900 hover:underline">
+                  {custName(t.r.customers)}
+                </Link>
+                <span className="text-gray-700">
+                  {t.r.check_in === today ? "本日" : t.r.check_in} チェックイン / {t.r.num_guests}名
+                </span>
+              </li>
+            ))}
             {pendingList.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-2">
                 <span className="rounded bg-white px-2 py-0.5 text-xs font-medium text-gray-800">仮予約</span>

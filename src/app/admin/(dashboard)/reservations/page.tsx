@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PinButton } from "../_components/pins";
+import { SavedViews } from "./SavedViews";
 import { headers } from "next/headers";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -219,6 +220,8 @@ export default async function ReservationsPage({
     return `/admin/reservations${p.size ? `?${p}` : ""}`;
   };
 
+  const currentQs = buildHref({}).split("?")[1] ?? "";
+
   const ids = reservations.map((r) => r.id);
   const [{ data: deliveries }, { data: registered }] = await Promise.all([
     ids.length
@@ -305,6 +308,8 @@ export default async function ReservationsPage({
           <Link href="/admin/reservations/archive" className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100">アーカイブ一覧</Link>
         </div>
       </header>
+
+      <SavedViews currentQs={currentQs} />
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4">
         {status && <input type="hidden" name="status" value={status} />}
