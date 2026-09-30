@@ -30,6 +30,7 @@ const NAV = [
     items: [
       { href: "/admin/analytics", label: "集計・分析" },
       { href: "/admin/payments", label: "決済" },
+      { href: "/admin/lodging-tax", label: "宿泊税" },
     ],
   },
   {
