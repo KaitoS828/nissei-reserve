@@ -3,11 +3,10 @@ import crypto from "crypto";
 import { waitUntil } from "@vercel/functions";
 import { WebClient } from "@slack/web-api";
 import { runAgent } from "@/lib/slack-agent";
+import { loadSession, saveSession } from "@/lib/assistant-session";
 
-// スレッドごとの会話履歴（確認ステップの文脈保持用）。ウォームインスタンス内でのみ保持される
-// ベストエフォート。コールドスタートをまたぐと履歴は失われ、AIは再確認を求める。
+// スレッドごとの会話履歴は assistant_sessions に保存する（コールドスタートをまたいでも文脈が続く）。
 type History = Awaited<ReturnType<typeof runAgent>>["messages"];
-const threadHistory = new Map<string, History>();
 
 // 本番(Vercel)用 Slack Event Subscriptions エンドポイント。
 // ローカルでは Socket Mode（scripts/slack-agent.ts）を使う。
@@ -63,9 +62,10 @@ export async function POST(req: NextRequest) {
       (async () => {
         const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
         try {
-          const history = threadHistory.get(thread) ?? [];
+          const sessionKey = `slack:${channel}:${thread}`;
+          const history = await loadSession<History[number]>(sessionKey);
           const { reply, messages } = await runAgent(text, history);
-          threadHistory.set(thread, messages.slice(-24));
+          await saveSession(sessionKey, "slack", messages);
           await slack.chat.postMessage({ channel, thread_ts: thread, text: reply });
         } catch (e) {
           await slack.chat.postMessage({ channel, thread_ts: thread, text: `エラー: ${e instanceof Error ? e.message : String(e)}` });

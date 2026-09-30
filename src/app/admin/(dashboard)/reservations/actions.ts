@@ -18,7 +18,7 @@ import {
 } from "@/lib/booking-guide-server";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateReservationCode, canBook } from "@/lib/reservations";
+import { generateReservationCode, canBook, IGNORE_BLOCKED_SOURCES } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
 import { auditLog } from "@/lib/audit";
 import { issueDoorPin, revokeDoorPin } from "@/lib/smart-lock";
@@ -104,7 +104,7 @@ export async function createReservation(formData: FormData) {
   // 空室チェック。「管理画面（知人・直予約）」は人間が実際の予約を把握して登録するため、
   // iCal取込等のカレンダーブロックは無視し、実際の予約との重複だけを見る。
   const ok = await canBook(roomTypeId, checkIn, checkOut, {
-    ignoreBlocked: source === "admin",
+    ignoreBlocked: IGNORE_BLOCKED_SOURCES.includes(source),
   });
   if (!ok) {
     redirectError("指定期間に空きがありません（既に予約が入っています）");
@@ -227,6 +227,7 @@ export async function updateReservation(formData: FormData) {
   if (occupies && !(staySame && wasOccupying)) {
     const ok = await canBook(roomTypeId, checkIn, checkOut, {
       excludeReservationId: id,
+      ignoreBlocked: source !== null && IGNORE_BLOCKED_SOURCES.includes(source),
     });
     if (!ok) redirectError("指定期間に空きがありません");
   }

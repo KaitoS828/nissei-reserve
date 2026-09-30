@@ -81,6 +81,9 @@ const SOURCE_LABEL: Record<string, string> = {
   admin: "管理画面（知人・直予約）",
   phone: "電話",
   ical: "iCal",
+  airbnb: "Airbnb",
+  booking: "Booking.com",
+  rakuten: "楽天トラベル",
   walkin: "飛込み・現地",
 };
 const SOURCES = [
@@ -88,6 +91,9 @@ const SOURCES = [
   { value: "walkin", label: "飛込み・現地" },
   { value: "phone", label: "電話" },
   { value: "web", label: "Web予約" },
+  { value: "airbnb", label: "Airbnb" },
+  { value: "booking", label: "Booking.com" },
+  { value: "rakuten", label: "楽天トラベル" },
   { value: "ical", label: "iCal" },
 ];
 const sourceLabel = (s: string | null) => (s ? (SOURCE_LABEL[s] ?? s) : "—");

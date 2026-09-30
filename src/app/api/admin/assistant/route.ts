@@ -1,21 +1,43 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runAssistant, type GroqHistory } from "@/lib/groq-agent";
+import { loadSession, saveSession } from "@/lib/assistant-session";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function requireAdmin() {
   // このエンドポイントは予約のキャンセルや返金まで実行できるため、管理者のみに限定する。
   // middleware の matcher は /admin/:path* のみで /api は対象外なので、ここで明示的に検証する。
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.app_metadata?.role !== "admin") {
-    return NextResponse.json({ error: "権限がありません" }, { status: 403 });
-  }
+  return user && user.app_metadata?.role === "admin" ? user : null;
+}
 
-  let body: { message?: unknown; history?: unknown };
+const SESSION_ID = /^[A-Za-z0-9-]{8,64}$/;
+
+// 画面を開き直したときに会話を復元するため、保存済みの発言（ユーザー/アシスタントのテキストのみ）を返す。
+export async function GET(request: Request) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+  const sessionId = new URL(request.url).searchParams.get("sessionId") ?? "";
+  if (!SESSION_ID.test(sessionId)) return NextResponse.json({ messages: [] });
+
+  const history = await loadSession<GroqHistory[number]>(`admin:${user.id}:${sessionId}`);
+  const messages = history.flatMap((m) =>
+    (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content
+      ? [{ role: m.role, text: m.content }]
+      : [],
+  );
+  return NextResponse.json({ messages });
+}
+
+export async function POST(request: Request) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+
+  let body: { message?: unknown; sessionId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -26,11 +48,17 @@ export async function POST(request: Request) {
   if (!message) {
     return NextResponse.json({ error: "メッセージが空です" }, { status: 400 });
   }
-  const history = Array.isArray(body.history) ? (body.history as GroqHistory) : [];
+  const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+  if (!SESSION_ID.test(sessionId)) {
+    return NextResponse.json({ error: "セッションIDが不正です" }, { status: 400 });
+  }
+  const sessionKey = `admin:${user.id}:${sessionId}`;
 
   try {
+    const history = await loadSession<GroqHistory[number]>(sessionKey);
     const { reply, history: nextHistory } = await runAssistant(message, history);
-    return NextResponse.json({ reply, history: nextHistory });
+    await saveSession(sessionKey, "admin", nextHistory);
+    return NextResponse.json({ reply });
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: detail }, { status: 500 });

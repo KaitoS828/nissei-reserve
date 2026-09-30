@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/SubmitButton";
 
 type Msg = { role: "user" | "assistant"; text: string };
-type History = unknown[];
+const SESSION_KEY = "assistant-session-id";
 
 const SUGGESTIONS = [
   "今後の予約を教えて",
@@ -18,10 +18,29 @@ export function Assistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [history, setHistory] = useState<History>([]);
+  const sessionId = useRef("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // 会話はサーバーに保存されている。ブラウザにはセッションIDだけ持ち、開き直したら復元する。
+  useEffect(() => {
+    let id = "";
+    try {
+      id = localStorage.getItem(SESSION_KEY) ?? "";
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(SESSION_KEY, id);
+      }
+    } catch {
+      id = crypto.randomUUID();
+    }
+    sessionId.current = id;
+    fetch(`/api/admin/assistant?sessionId=${id}`)
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d.messages) && setMsgs(d.messages))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,12 +57,11 @@ export function Assistant() {
       const res = await fetch("/api/admin/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({ message, sessionId: sessionId.current }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "エラーが発生しました");
       setMsgs((m) => [...m, { role: "assistant", text: data.reply }]);
-      setHistory(data.history ?? []);
       // 予約・休業日が変更された可能性があるので、表示中の画面を最新化する
       router.refresh();
     } catch (e) {

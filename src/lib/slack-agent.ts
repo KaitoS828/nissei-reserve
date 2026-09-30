@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "./supabase/admin";
 import { getDefaultFacilityId } from "./facility";
-import { getTypeAvailability, canBook, generateReservationCode } from "./reservations";
+import { getTypeAvailability, canBook, generateReservationCode, IGNORE_BLOCKED_SOURCES } from "./reservations";
 import { eachNight } from "./availability";
 import { calcPrice, nightlyRateForGuests, type Discount, type GuestPrices } from "./pricing";
 import { computeRefund } from "./cancel";
@@ -10,6 +10,7 @@ import { getStripe } from "./stripe";
 import { gcalCreateEvent, gcalDeleteEvent } from "./gcal";
 import { revokeDoorPin } from "./smart-lock";
 import { importAllIcalSources, importIcalSource } from "./ical-import";
+import { adminToolImpls, ADMIN_TOOLS } from "./agent-admin-tools";
 
 // コスト重視で Sonnet（現行は 4.6。「4.7」は存在しないため 4.6 を使用）
 const MODEL = "claude-sonnet-4-6";
@@ -173,6 +174,7 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     const plan_query = input.plan ? String(input.plan) : null;
     const amount_override = input.amount != null ? Number(input.amount) : null;
     const payment_status = input.payment_status ? String(input.payment_status) : "unpaid";
+    const channel = input.channel ? String(input.channel) : "admin";
     const note = input.note ? String(input.note) : null;
 
     if (!last_name || !first_name) return "氏名（姓・名）は必須です。";
@@ -206,7 +208,9 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
     if (!pp) return `プラン「${planData.name}」に料金が設定されていません。`;
     const roomTypeId = pp.room_type_id;
 
-    const ok = await canBook(roomTypeId, check_in, check_out);
+    const ok = await canBook(roomTypeId, check_in, check_out, {
+      ignoreBlocked: channel !== "admin" && IGNORE_BLOCKED_SOURCES.includes(channel),
+    });
     if (!ok) return `${check_in}〜${check_out} は満室のため予約できません。`;
 
     const nightly = nightlyRateForGuests(num_guests, pp.guest_prices, pp.price_per_night);
@@ -240,7 +244,7 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
         code, customer_id: customerId, plan_id: planData.id, room_type_id: roomTypeId,
         facility_id: facilityId,
         check_in, check_out, num_guests, num_children: 0,
-        amount, status: "confirmed", payment_status, source: "admin",
+        amount, status: "confirmed", payment_status, source: channel,
         ...(note ? { note } : {}),
         lookup_token: randomUUID(),
       })
@@ -268,14 +272,17 @@ export const toolImpls: Record<string, (input: Record<string, unknown>) => Promi
   async update_reservation(input) {
     const code = String(input.code);
     const supabase = createAdminClient();
-    const { data: resv } = await supabase.from("reservations").select("id, room_type_id, check_in, check_out").eq("code", code).maybeSingle();
+    const { data: resv } = await supabase.from("reservations").select("id, room_type_id, check_in, check_out, source").eq("code", code).maybeSingle();
     if (!resv) return `予約番号 ${code} は見つかりません。`;
     const patch: Record<string, unknown> = {};
     const newIn = input.check_in ? String(input.check_in) : (resv.check_in as string);
     const newOut = input.check_out ? String(input.check_out) : (resv.check_out as string);
     if (input.check_in || input.check_out) {
       if (eachNight(newIn, newOut).length < 1) return "チェックアウトはチェックインの翌日以降にしてください。";
-      const ok = await canBook(resv.room_type_id as string, newIn, newOut, { excludeReservationId: resv.id as string });
+      const ok = await canBook(resv.room_type_id as string, newIn, newOut, {
+        excludeReservationId: resv.id as string,
+        ignoreBlocked: IGNORE_BLOCKED_SOURCES.includes(String(resv.source)),
+      });
       if (!ok) return `${newIn}〜${newOut} は空きがないため変更できません。`;
       patch.check_in = newIn;
       patch.check_out = newOut;
@@ -328,11 +335,14 @@ export const TOOLS: Anthropic.Tool[] = [
   { name: "cancel_reservation", description: "予約をキャンセルする（取り消し不可）。キャンセルポリシーに従いStripe返金も行う。実行前にユーザーの明確な同意が必要。理由を添える。", input_schema: { type: "object", properties: { code: { type: "string" }, reason: { type: "string" } }, required: ["code"] } },
   { name: "block_dates", description: "休業日（予約不可日）を設定する。公開カレンダーがグレーになる。", input_schema: { type: "object", properties: { start: { type: "string", description: "開始日 YYYY-MM-DD" }, end: { type: "string", description: "終了日 YYYY-MM-DD（省略時は1日）" }, reason: { type: "string" } }, required: ["start"] } },
   { name: "unblock_dates", description: "指定開始日の休業日設定を解除する。", input_schema: { type: "object", properties: { start: { type: "string" } }, required: ["start"] } },
-  { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
+  { name: "create_reservation", description: "新規予約を登録する。空室確認・料金計算・顧客登録・Googleカレンダー反映まで行う。電話・対面・Airbnb等の外部チャネル経由の予約を手動登録する際に使う。", input_schema: { type: "object", properties: { last_name: { type: "string", description: "姓" }, first_name: { type: "string", description: "名" }, email: { type: "string", description: "メールアドレス（任意）" }, phone: { type: "string", description: "電話番号（任意）" }, check_in: { type: "string", description: "チェックイン日 YYYY-MM-DD" }, check_out: { type: "string", description: "チェックアウト日 YYYY-MM-DD" }, num_guests: { type: "number", description: "人数" }, plan: { type: "string", description: "プラン名（部分一致。省略時はデフォルトプラン）" }, amount: { type: "number", description: "金額（省略時は自動計算）" }, payment_status: { type: "string", enum: ["unpaid", "paid"], description: "支払状況（デフォルト: unpaid）" }, note: { type: "string", description: "備考・特記事項" }, channel: { type: "string", enum: ["admin", "airbnb", "booking", "rakuten"], description: "予約経路。Airbnb/Booking.com/楽天トラベル経由ならそれを指定（iCal取込済みのブロックを無視して登録できる）。省略時はadmin" } }, required: ["last_name", "first_name", "check_in", "check_out", "num_guests"] } },
   { name: "update_reservation", description: "予約の日程・人数・ステータスを変更する。日程変更時は空室を確認する。", input_schema: { type: "object", properties: { code: { type: "string" }, check_in: { type: "string" }, check_out: { type: "string" }, num_guests: { type: "number" }, status: { type: "string", enum: ["pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] } }, required: ["code"] } },
   { name: "list_ical_sources", description: "登録済みのiCal連携先（Airbnb等）の一覧と最終取り込み日時を取得する。", input_schema: { type: "object", properties: {}, required: [] } },
   { name: "sync_ical", description: "外部カレンダー（Airbnb等）のiCalを取り込み、blocked_datesに反映する。idを指定するとその連携先のみ、省略時は有効な連携先すべてを同期する。", input_schema: { type: "object", properties: { id: { type: "string", description: "iCal連携先のid（省略時は全件同期）" } }, required: [] } },
+  ...ADMIN_TOOLS,
 ];
+
+Object.assign(toolImpls, adminToolImpls);
 
 const SYSTEM = `あなたは一棟貸ゲストハウス日靜の予約システムの運用アシスタントです。Slackでオーナーからの依頼を受け、ツールを使って予約状況の確認・予約の変更/キャンセル・休業日設定などを行います。
 
@@ -340,6 +350,10 @@ const SYSTEM = `あなたは一棟貸ゲストハウス日靜の予約システ�
 - 簡潔に、日本語で、Slack向けに読みやすく返答してください。
 - 予約番号は R-YYYYMMDD-XXXX 形式です。
 - 【重要・確認ステップ】キャンセル・休業日設定/解除・予約変更など「取り消せない操作」は、いきなり実行しないこと。まず対象予約を特定し（必要なら get_reservation / list_reservations）、影響を提示する。キャンセルの場合は必ず quote_cancellation で返金額・キャンセル料を試算して提示し、「実行してよろしいですか？」と確認する。ユーザーが同じスレッドで明確に同意（「はい」「OK」「お願いします」等）した場合に限り、対応する実行ツール（cancel_reservation / block_dates / unblock_dates / update_reservation）を呼ぶ。会話はスレッド単位で文脈が保持されるので、前のメッセージの対象を引き継いでよい。
+- 【メール送信】お客様へのメール（send_email）は必ず先に confirm なしで呼び、返ってきた宛先・件名・本文をそのまま提示して同意を得る。同意後にだけ confirm=true で再度呼ぶ。
+- 【プラン料金の変更】update_plan も同様に、変更前後のプレビューを提示して同意を得てから confirm=true で実行する。公開サイトの料金に即時反映される。
+- 決済リンク（create_payment_link）は発行前に金額を確認する。発行してもお客様へは自動送信されない。
+- 予約情報の編集（edit_reservation）・iCal連携先の追加/変更は、内容が明確なら確認なしで実行してよい。実行後は何を変えたかを一言で報告する。
 - 同意が曖昧な場合（「どうしよう」等）は実行せず、再確認する。
 - 返金額やポリシーはツールが自動計算します。憶測で金額を答えないこと。`;
 
