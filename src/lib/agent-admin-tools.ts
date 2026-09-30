@@ -347,6 +347,144 @@ export const adminToolImpls: Record<string, ToolImpl> = {
     }).catch(() => {});
     return `iCal連携「${data.name}」を更新しました（${Object.keys(patch).join(", ")}）。`;
   },
+  async get_analytics(input) {
+    const year = str(input.year) || String(new Date().getFullYear());
+    const month = str(input.month).padStart(2, "0");
+    if (!/^\d{4}$/.test(year)) return "year は YYYY で指定してください。";
+    if (str(input.month) && !/^(0[1-9]|1[0-2])$/.test(month)) return "month は 1〜12 で指定してください。";
+    const prefix = str(input.month) ? `${year}-${month}` : year;
+    // check_in は date 型で like が使えないので範囲で絞る
+    const from = str(input.month) ? `${year}-${month}-01` : `${year}-01-01`;
+    const to = str(input.month)
+      ? (month === "12" ? `${Number(year) + 1}-01-01` : `${year}-${String(Number(month) + 1).padStart(2, "0")}-01`)
+      : `${Number(year) + 1}-01-01`;
+
+    const supabase = createAdminClient();
+    const [{ data: resvData }, { data: costData }, { count: roomCount }] = await Promise.all([
+      supabase.from("reservations").select("status, payment_status, amount, check_in, nights").is("archived_at", null).gte("check_in", from).lt("check_in", to),
+      supabase.from("operating_costs").select("category, amount").like("year_month", `${prefix}%`),
+      supabase.from("rooms").select("id", { count: "exact", head: true }).eq("is_active", true),
+    ]);
+    const rows = (resvData ?? []) as { status: string; payment_status: string; amount: number; nights: number | null }[];
+    const costs = (costData ?? []) as { category: string; amount: number }[];
+
+    const revenue = rows.filter((r) => r.payment_status === "paid").reduce((a, r) => a + r.amount, 0);
+    const totalCost = costs.reduce((a, c) => a + c.amount, 0);
+    const profit = revenue - totalCost;
+    const cancelled = rows.filter((r) => r.status === "cancelled").length;
+    const nights = rows.filter((r) => !["cancelled", "no_show"].includes(r.status)).reduce((a, r) => a + (r.nights ?? 0), 0);
+    const days = str(input.month)
+      ? new Date(Number(year), Number(month), 0).getDate()
+      : (Number(year) % 4 === 0 && (Number(year) % 100 !== 0 || Number(year) % 400 === 0) ? 366 : 365);
+    const available = (roomCount ?? 0) * days;
+
+    const byCategory = new Map<string, number>();
+    for (const c of costs) byCategory.set(c.category, (byCategory.get(c.category) ?? 0) + c.amount);
+    const costLines = [...byCategory].sort((a, b) => b[1] - a[1]).map(([k, v]) => `  ・${k}: ${yen(v)}`);
+
+    return [
+      `【${str(input.month) ? `${year}年${Number(month)}月` : `${year}年`}の集計】（チェックイン日ベース・除外済み予約は含まない）`,
+      `確定売上（支払済）: ${yen(revenue)}`,
+      `経費: ${yen(totalCost)}${costLines.length ? "\n" + costLines.join("\n") : ""}`,
+      `粗利益: ${yen(profit)}（利益率 ${revenue > 0 ? Math.round((profit / revenue) * 100) : 0}%）`,
+      `予約数: ${rows.length}件 / 延べ宿泊: ${nights}泊 / キャンセル: ${cancelled}件（${rows.length ? Math.round((cancelled / rows.length) * 100) : 0}%）`,
+      `稼働率: ${available > 0 ? `${Math.round((nights / available) * 1000) / 10}%（${nights}泊 / 提供可能${available}泊）` : "—（稼働中の客室なし）"}`,
+    ].join("\n");
+  },
+
+  async list_costs(input) {
+    const ym = str(input.year_month);
+    if (ym && !/^\d{4}(-\d{2})?$/.test(ym)) return "year_month は YYYY-MM（または年のみ YYYY）で指定してください。";
+    const supabase = createAdminClient();
+    let q = supabase.from("operating_costs").select("id, year_month, category, amount, description, recorded_date").order("year_month", { ascending: false }).order("created_at", { ascending: false }).limit(50);
+    if (ym) q = q.like("year_month", `${ym}%`);
+    const { data } = await q;
+    const rows = (data ?? []) as { id: string; year_month: string; category: string; amount: number; description: string | null; recorded_date: string | null }[];
+    if (rows.length === 0) return "該当する経費はありません。";
+    return rows.map((c) => `・${c.year_month} | ${c.category} | ${yen(c.amount)}${c.description ? ` | ${c.description}` : ""} | id: ${c.id}`).join("\n");
+  },
+
+  async add_cost(input) {
+    const ym = str(input.year_month);
+    if (!/^\d{4}-\d{2}$/.test(ym)) return "年月は YYYY-MM で指定してください。";
+    const amount = Number(input.amount);
+    if (!Number.isInteger(amount) || amount < 0) return "金額は0以上の整数で指定してください。";
+    const category = str(input.category) || "その他";
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("operating_costs")
+      .insert({ year_month: ym, category, amount, description: str(input.description) || null, recorded_date: str(input.recorded_date) || null })
+      .select("id")
+      .single();
+    if (error) return `経費の登録に失敗しました: ${error.message}`;
+    await auditLog(supabase, {
+      action: "operating_cost_create",
+      entityType: "operating_cost",
+      entityId: data.id,
+      summary: `${ym} の経費「${category}」${yen(amount)} を登録（AIアシスタント）`,
+    }).catch(() => {});
+    return `経費を登録しました: ${ym} | ${category} | ${yen(amount)}（id: ${data.id}）`;
+  },
+
+  async update_cost(input) {
+    const id = str(input.id);
+    if (!id) return "経費のidを指定してください（list_costs で確認できます）。";
+    const patch: Record<string, unknown> = {};
+    if (input.year_month != null) {
+      const ym = str(input.year_month);
+      if (!/^\d{4}-\d{2}$/.test(ym)) return "年月は YYYY-MM で指定してください。";
+      patch.year_month = ym;
+    }
+    if (input.category != null) patch.category = str(input.category) || "その他";
+    if (input.amount != null) {
+      const amount = Number(input.amount);
+      if (!Number.isInteger(amount) || amount < 0) return "金額は0以上の整数で指定してください。";
+      patch.amount = amount;
+    }
+    if (input.description != null) patch.description = str(input.description) || null;
+    if (input.recorded_date != null) patch.recorded_date = str(input.recorded_date) || null;
+    if (Object.keys(patch).length === 0) return "変更内容がありません。";
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("operating_costs")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("year_month, category, amount")
+      .maybeSingle();
+    if (error) return `更新に失敗しました: ${error.message}`;
+    if (!data) return `id ${id} の経費は見つかりません。`;
+    await auditLog(supabase, {
+      action: "operating_cost_update",
+      entityType: "operating_cost",
+      entityId: id,
+      summary: `経費を更新（AIアシスタント）`,
+      metadata: patch,
+    }).catch(() => {});
+    return `経費を更新しました: ${data.year_month} | ${data.category} | ${yen(data.amount)}`;
+  },
+
+  async delete_cost(input) {
+    const id = str(input.id);
+    if (!id) return "経費のidを指定してください（list_costs で確認できます）。";
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("operating_costs").select("year_month, category, amount, description").eq("id", id).maybeSingle();
+    if (!data) return `id ${id} の経費は見つかりません。`;
+    const label = `${data.year_month} | ${data.category} | ${yen(data.amount)}${data.description ? ` | ${data.description}` : ""}`;
+
+    if (input.confirm !== true) {
+      return `【未削除・確認待ち】次の経費を削除します（取り消せません）。\n${label}\nユーザーの同意を得てから confirm=true で再度呼び出してください。`;
+    }
+    const { error } = await supabase.from("operating_costs").delete().eq("id", id);
+    if (error) return `削除に失敗しました: ${error.message}`;
+    await auditLog(supabase, {
+      action: "operating_cost_delete",
+      entityType: "operating_cost",
+      entityId: id,
+      summary: `経費「${label}」を削除（AIアシスタント）`,
+    }).catch(() => {});
+    return `経費を削除しました: ${label}`;
+  },
 };
 
 export const ADMIN_TOOLS: Anthropic.Tool[] = [
@@ -414,5 +552,26 @@ export const ADMIN_TOOLS: Anthropic.Tool[] = [
     name: "update_ical_source",
     description: "iCal連携先の名称・URL・有効/無効を変更する。idは list_ical_sources で確認する。",
     input_schema: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, url: { type: "string" }, is_active: { type: "boolean" } }, required: ["id"] },
+  },
+  {
+    name: "get_analytics",
+    description: "売上・経費・粗利益・予約数・キャンセル率・稼働率の集計を取得する。管理画面の分析ページと同じ計算（チェックイン日ベース、確定売上は支払済のみ）。month を省略すると年間。",
+    input_schema: { type: "object", properties: { year: { type: "string", description: "YYYY（省略時は今年）" }, month: { type: "string", description: "1〜12（省略時は年間）" } }, required: [] },
+  },
+  { name: "list_costs", description: "登録済みの経費を新しい順に最大50件取得する。修正・削除に使う id も分かる。", input_schema: { type: "object", properties: { year_month: { type: "string", description: "YYYY-MM または YYYY（省略時は全期間）" } }, required: [] } },
+  {
+    name: "add_cost",
+    description: "経費（コスト）を登録する。カテゴリ例: 家賃・電気代・ガス代・水道代・Wi-Fi通信費・清掃費・消耗品・広告費・その他。登録後に内容を報告すること。",
+    input_schema: { type: "object", properties: { year_month: { type: "string", description: "計上する年月 YYYY-MM" }, category: { type: "string" }, amount: { type: "number", description: "円（整数）" }, description: { type: "string" }, recorded_date: { type: "string", description: "支払日 YYYY-MM-DD（任意）" } }, required: ["year_month", "amount"] },
+  },
+  {
+    name: "update_cost",
+    description: "登録済みの経費を修正する。idは list_costs で確認する。",
+    input_schema: { type: "object", properties: { id: { type: "string" }, year_month: { type: "string" }, category: { type: "string" }, amount: { type: "number" }, description: { type: "string" }, recorded_date: { type: "string" } }, required: ["id"] },
+  },
+  {
+    name: "delete_cost",
+    description: "経費を削除する（取り消せない）。confirm なしで呼ぶと対象のプレビューだけ返し、削除しない。ユーザーの同意を得てから confirm=true で再度呼ぶこと。",
+    input_schema: { type: "object", properties: { id: { type: "string" }, confirm: { type: "boolean", description: "ユーザーが削除に同意した場合のみ true" } }, required: ["id"] },
   },
 ];
