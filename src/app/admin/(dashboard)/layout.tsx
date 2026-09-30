@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminNav } from "./_components/AdminNav";
+import { SearchTrigger } from "./_components/AdminSearch";
+import { SectionTabs } from "./_components/SectionTabs";
 import { Assistant } from "@/app/admin/_components/Assistant";
 
 // 探すときの頭の中の順番に合わせてまとめる。
@@ -68,11 +70,35 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
     ).map(({ href, label }) => ({ href, label })),
   })).filter((g) => g.items.length > 0);
 
+  // サイドバーは毎日使う先頭グループだけ全部並べ、残りはグループ単位に1つへまとめる。
+  // まとめたページはページ上部のタブで切り替える（SectionTabs）。
+  const sidebar = groups.map((g, i) =>
+    i === 0 || g.items.length === 1
+      ? g
+      : {
+          group: g.group,
+          items: [{ href: g.items[0].href, label: g.group, matches: g.items.map((x) => x.href) }],
+        },
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900 font-[family-name:var(--font-biz-ud)] md:flex-row">
-      <AdminNav groups={groups} />
+      <AdminNav groups={sidebar} searchGroups={groups} />
 
-      <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* 検索は常に一番上。スクロールしても見える位置に固定する（スマホは上部バーの🔍） */}
+        <div className="sticky top-0 z-20 hidden border-b border-gray-200 bg-white/95 px-8 py-3 backdrop-blur md:block">
+          <SearchTrigger className="flex w-full max-w-2xl items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-left text-sm text-gray-600 transition hover:border-cyan-600">
+            <span aria-hidden>🔍</span>
+            <span className="flex-1">お客様の名前・予約番号・ページ名で検索</span>
+            <kbd className="rounded border border-gray-300 px-1.5 text-[11px] text-gray-600">⌘K</kbd>
+          </SearchTrigger>
+        </div>
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+          <SectionTabs groups={groups.slice(1)} />
+          {children}
+        </main>
+      </div>
 
       {/* アシスタントは予約の個人情報を扱うため、本部ロールには出さない */}
       {role === "admin" && <Assistant />}

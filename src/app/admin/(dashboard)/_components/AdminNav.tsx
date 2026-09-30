@@ -8,10 +8,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { logout } from "@/app/admin/login/actions";
 import { AdminSearch, SearchTrigger } from "./AdminSearch";
 
-type NavItem = { href: string; label: string };
+type NavItem = { href: string; label: string; matches?: string[] };
 type NavGroup = { group: string; items: NavItem[] };
 
-export function AdminNav({ groups }: { groups: NavGroup[] }) {
+export function AdminNav({ groups, searchGroups }: { groups: NavGroup[]; searchGroups: NavGroup[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -26,8 +26,8 @@ export function AdminNav({ groups }: { groups: NavGroup[] }) {
     };
   }, [open]);
 
-  const isActive = (href: string) =>
-    href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+  const isActive = (item: NavItem) =>
+    (item.matches ?? [item.href]).some((href) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href)));
 
   const links = (
     <nav className="flex flex-col gap-4 p-3">
@@ -41,7 +41,7 @@ export function AdminNav({ groups }: { groups: NavGroup[] }) {
               key={item.href}
               href={item.href}
               className={`block rounded-lg px-3 py-2.5 text-sm transition md:py-2 ${
-                isActive(item.href)
+                isActive(item)
                   ? "bg-cyan-50 font-medium text-cyan-800"
                   : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
               }`}
@@ -158,17 +158,10 @@ export function AdminNav({ groups }: { groups: NavGroup[] }) {
             <span className="ml-1 text-sm text-cyan-700">予約</span>
           </Link>
         </div>
-        <div className="px-3 pt-3">
-          <SearchTrigger className="flex w-full items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-600 transition hover:border-cyan-600">
-            <span aria-hidden>🔍</span>
-            <span className="flex-1">検索・ページ移動</span>
-            <kbd className="rounded border border-gray-300 px-1.5 text-[11px] text-gray-600">⌘K</kbd>
-          </SearchTrigger>
-        </div>
         <div className="flex-1 overflow-y-auto">{links}</div>
         {footer}
       </aside>
-      <AdminSearch groups={groups} />
+      <AdminSearch groups={searchGroups} />
     </>
   );
 }
