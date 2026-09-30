@@ -150,7 +150,7 @@ export function AdminNav({ groups, searchGroups }: { groups: NavGroup[]; searchG
       )}
 
       {/* PC: 固定サイドバー */}
-      <aside className="hidden shrink-0 flex-col border-r border-gray-200 bg-white md:flex md:w-56">
+      <aside className="hidden shrink-0 flex-col border-r border-gray-200 bg-white md:sticky md:top-0 md:flex md:h-screen md:w-56">
         <div className="border-b border-gray-200 px-4 py-4">
           <Link href="/admin" className="flex items-center gap-2">
             <Image src="/logo.png" alt="日靜" width={28} height={28} className="h-7 w-7" />

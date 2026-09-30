@@ -14,6 +14,7 @@ const NAV = [
       { href: "/admin/calendar", label: "予約カレンダー" },
       { href: "/admin/reservations", label: "予約リスト" },
       { href: "/admin/guests", label: "宿泊者名簿" },
+      { href: "/admin/customers", label: "顧客" },
       { href: "/admin/links", label: "各種リンク" },
     ],
   },
@@ -25,11 +26,10 @@ const NAV = [
     ],
   },
   {
-    group: "お客様・お金",
+    group: "決済・集計",
     items: [
-      { href: "/admin/customers", label: "顧客" },
-      { href: "/admin/payments", label: "決済" },
       { href: "/admin/analytics", label: "集計・分析" },
+      { href: "/admin/payments", label: "決済" },
     ],
   },
   {
