@@ -52,7 +52,7 @@ export default async function ArchivePage({
 
       <div className="space-y-3">
         {reservations.length === 0 && (
-          <p className="text-sm text-gray-500">アーカイブされた予約はありません。</p>
+          <p className="text-sm text-gray-600">アーカイブされた予約はありません。</p>
         )}
         {reservations.map((r) => {
           const meta = STATUS[r.status] ?? STATUS.pending;
@@ -60,7 +60,7 @@ export default async function ArchivePage({
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-5">
               <span className="flex flex-wrap items-center gap-3">
                 <span className={`rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
-                <span className="font-mono text-xs text-gray-500">{r.code}</span>
+                <span className="font-mono text-xs text-gray-600">{r.code}</span>
                 <span className="font-medium text-gray-900">{custName(r.customers)}</span>
                 <span className="text-sm text-gray-600">
                   {r.check_in} → {r.check_out}（{r.nights}泊） / {r.room_types?.name ?? "—"} / ¥{r.amount.toLocaleString()}

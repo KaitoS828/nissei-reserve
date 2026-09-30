@@ -13,7 +13,7 @@ export default async function CustomizePage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-serif text-xl font-bold tracking-widest text-gray-900">カスタマイズ</h1>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-600">
           予約サイトのボタンなどに使うアクセントカラーを選べます。選ぶとすぐに予約TOPページへ反映されます。
         </p>
       </div>
@@ -37,7 +37,7 @@ export default async function CustomizePage() {
                     style={{ backgroundColor: shades[600] }}
                   />
                 </button>
-                <p className="mt-1 text-center text-[11px] text-gray-500">{label}</p>
+                <p className="mt-1 text-center text-[11px] text-gray-600">{label}</p>
               </form>
             ),
           )}

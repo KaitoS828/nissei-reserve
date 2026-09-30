@@ -36,7 +36,7 @@ export function GuestRegistry({
 
       <div className="space-y-3 border-t border-gray-200 p-4">
         {guests.length === 0 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600">
             まだご記入がありません。予約時メールのフォームからご記入いただけます。
           </p>
         )}
@@ -49,7 +49,7 @@ export function GuestRegistry({
               </span>
               <span className="font-medium text-gray-900">{g.full_name}</span>
               {g.furigana && (
-                <span className="text-xs text-gray-500">（{g.furigana}）</span>
+                <span className="text-xs text-gray-600">（{g.furigana}）</span>
               )}
               {g.is_foreign_national && (
                 <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">

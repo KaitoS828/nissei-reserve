@@ -324,11 +324,11 @@ export function CostManager({
               <strong className="text-gray-900 text-sm">¥{totalCost.toLocaleString()}</strong>
             </span>
             <span className="text-gray-300">|</span>
-            <span className="text-gray-500">
+            <span className="text-gray-600">
               固定・インフラ: <strong>¥{baseCostTotal.toLocaleString()}</strong>
             </span>
             <span className="text-gray-300">|</span>
-            <span className="text-gray-500">
+            <span className="text-gray-600">
               変動・個別: <strong>¥{variableCostTotal.toLocaleString()}</strong>
             </span>
           </div>
@@ -354,7 +354,7 @@ export function CostManager({
       {isYearly && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600">
               各月をタップまたは「管理する →」を押すと、その月の経費詳細・固定費入力画面へ移動します。
             </p>
           </div>
@@ -362,7 +362,7 @@ export function CostManager({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
+                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-600">
                   <th className="py-2.5 px-3">対象月</th>
                   <th className="py-2.5 px-3 text-right">固定・インフラ費</th>
                   <th className="py-2.5 px-3 text-right">変動・個別経費</th>
@@ -469,7 +469,7 @@ export function CostManager({
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
               <label className="text-xs font-medium text-gray-700">家賃</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <span className="absolute left-2.5 top-2 text-xs text-gray-500">¥</span>
                 <input
                   type="number"
                   name="rent"
@@ -485,7 +485,7 @@ export function CostManager({
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
               <label className="text-xs font-medium text-gray-700">電気代</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <span className="absolute left-2.5 top-2 text-xs text-gray-500">¥</span>
                 <input
                   type="number"
                   name="electricity"
@@ -501,7 +501,7 @@ export function CostManager({
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
               <label className="text-xs font-medium text-gray-700">ガス代</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <span className="absolute left-2.5 top-2 text-xs text-gray-500">¥</span>
                 <input
                   type="number"
                   name="gas"
@@ -517,7 +517,7 @@ export function CostManager({
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
               <label className="text-xs font-medium text-gray-700">水道代</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <span className="absolute left-2.5 top-2 text-xs text-gray-500">¥</span>
                 <input
                   type="number"
                   name="water"
@@ -533,7 +533,7 @@ export function CostManager({
             <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1">
               <label className="text-xs font-medium text-gray-700">Wi-Fi通信費</label>
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-xs text-gray-400">¥</span>
+                <span className="absolute left-2.5 top-2 text-xs text-gray-500">¥</span>
                 <input
                   type="number"
                   name="wifi"
@@ -558,7 +558,7 @@ export function CostManager({
       <details className="rounded-xl border border-gray-200 bg-gray-50/70 p-4" open={!isYearly}>
         <summary className="cursor-pointer font-medium text-sm text-gray-800 hover:text-cyan-800 flex items-center justify-between">
           <span>＋ 個別の経費を追加（清掃費・消耗品・アメニティ・修繕費など）</span>
-          <span className="text-xs text-gray-500 font-normal">1件追加 / まとめて一括登録</span>
+          <span className="text-xs text-gray-600 font-normal">1件追加 / まとめて一括登録</span>
         </summary>
 
         {/* 登録モード切り替えタブ */}
@@ -594,9 +594,9 @@ export function CostManager({
           <div>
             {/* クイック選択タグ */}
             <div className="mt-3 pt-1">
-              <div className="text-[11px] font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
+              <div className="text-[11px] font-medium text-gray-600 mb-1.5 flex items-center gap-1.5">
                 <span>よく使うカテゴリを選択:</span>
-                <span className="text-gray-400 font-normal">（クリックで選択されます）</span>
+                <span className="text-gray-500 font-normal">（クリックで選択されます）</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {DEFAULT_VARIABLE_CATEGORIES.map((cat) => {
@@ -790,11 +790,11 @@ export function CostManager({
               </div>
 
               <div className="flex items-center gap-3 text-xs">
-                <span className="text-gray-500">
+                <span className="text-gray-600">
                   有効入力: <strong className="text-cyan-700">{validBulkRows.length}件</strong>
                 </span>
                 <span className="text-gray-300">|</span>
-                <span className="text-gray-500">
+                <span className="text-gray-600">
                   一括合計金額: <strong className="text-gray-900 text-sm">¥{bulkTotalAmount.toLocaleString()}</strong>
                 </span>
               </div>
@@ -815,7 +815,7 @@ export function CostManager({
                 <tbody className="divide-y divide-gray-100">
                   {bulkItems.map((item, index) => (
                     <tr key={item.id} className="hover:bg-gray-50/60 transition">
-                      <td className="py-2 px-3 text-center text-gray-400 font-mono">
+                      <td className="py-2 px-3 text-center text-gray-500 font-mono">
                         {index + 1}
                       </td>
                       <td className="py-2 px-3">
@@ -832,7 +832,7 @@ export function CostManager({
                               <button
                                 type="button"
                                 onClick={() => updateBulkItem(item.id, { isCustom: false, category: DEFAULT_VARIABLE_CATEGORIES[0] })}
-                                className="text-[10px] text-gray-500 hover:text-gray-800 shrink-0 cursor-pointer"
+                                className="text-[10px] text-gray-600 hover:text-gray-800 shrink-0 cursor-pointer"
                                 title="一覧選択に戻る"
                               >
                                 取消
@@ -875,7 +875,7 @@ export function CostManager({
                       </td>
                       <td className="py-2 px-3">
                         <div className="relative">
-                          <span className="absolute left-2 top-1 text-xs text-gray-400">¥</span>
+                          <span className="absolute left-2 top-1 text-xs text-gray-500">¥</span>
                           <input
                             type="number"
                             min={0}
@@ -908,7 +908,7 @@ export function CostManager({
                           type="button"
                           onClick={() => removeBulkRow(item.id)}
                           disabled={bulkItems.length <= 1}
-                          className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          className="rounded p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                           title="行を削除"
                         >
                           ✕
@@ -930,7 +930,7 @@ export function CostManager({
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-600">
                   ※ 金額が入力された行（1円以上）のみ一括登録されます
                 </span>
                 <SubmitButton
@@ -953,7 +953,7 @@ export function CostManager({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
+                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-600">
                   <th className="py-2.5 px-3">対象年月</th>
                   <th className="py-2.5 px-3">区分</th>
                   <th className="py-2.5 px-3">項目</th>
@@ -994,7 +994,7 @@ export function CostManager({
                       <td className="py-2.5 px-3 text-right font-semibold text-gray-900 tabular-nums">
                         ¥{c.amount.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-gray-500">
+                      <td className="py-2.5 px-3 text-xs text-gray-600">
                         {c.recorded_date ?? "—"}
                       </td>
                       <td className="py-2.5 px-3 text-xs text-gray-600 truncate max-w-xs" title={c.description ?? ""}>
@@ -1032,7 +1032,7 @@ export function CostManager({
             </table>
           </div>
         ) : (
-          <p className="text-center py-6 text-xs text-gray-400">
+          <p className="text-center py-6 text-xs text-gray-500">
             この月に登録されたコスト（経費）はありません。上のフォームから登録できます。
           </p>
         )

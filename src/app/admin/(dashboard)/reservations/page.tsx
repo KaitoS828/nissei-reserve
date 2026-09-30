@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PinButton } from "../_components/pins";
 import { headers } from "next/headers";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -321,7 +322,7 @@ export default async function ReservationsPage({
             条件をクリア
           </Link>
         )}
-        <span className="ml-auto self-center text-sm text-gray-500">{reservations.length}件</span>
+        <span className="ml-auto self-center text-sm text-gray-600">{reservations.length}件</span>
       </form>
 
       {/* 月で辿る。予約がある月だけ出すので、空振りしない。 */}
@@ -337,7 +338,7 @@ export default async function ReservationsPage({
           </Link>
           {[...monthsByYear.entries()].map(([year, keys]) => (
             <div key={year} className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium text-gray-400">{year}年</span>
+              <span className="text-xs font-medium text-gray-500">{year}年</span>
               {keys.map((key) => (
                 <Link
                   key={key}
@@ -349,7 +350,7 @@ export default async function ReservationsPage({
                   }`}
                 >
                   {Number(key.slice(5))}月
-                  <span className={`ml-1 text-xs ${month === key ? "text-cyan-100" : "text-gray-400"}`}>
+                  <span className={`ml-1 text-xs ${month === key ? "text-cyan-100" : "text-gray-500"}`}>
                     {monthCounts.get(key)}
                   </span>
                 </Link>
@@ -478,7 +479,7 @@ export default async function ReservationsPage({
       {/* 一覧（年 → 月 でフォルダ分け） */}
       <div className="space-y-3">
         {reservations.length === 0 && (
-          <p className="text-sm text-gray-500">予約がありません。</p>
+          <p className="text-sm text-gray-600">予約がありません。</p>
         )}
         {/* 日付で追えるよう、開閉するフォルダではなく一続きのリストにする。
             月が変わるところに見出しを挟むだけで、折りたためない＝隠れない。 */}
@@ -489,9 +490,9 @@ export default async function ReservationsPage({
           return (
             <div key={r.id}>
               {showHeading && (
-                <h2 className="sticky top-0 z-10 -mx-1 mb-2 mt-6 bg-gray-50/95 px-1 py-2 text-sm font-semibold text-gray-500 backdrop-blur first:mt-0">
+                <h2 className="sticky top-0 z-10 -mx-1 mb-2 mt-6 bg-gray-50/95 px-1 py-2 text-sm font-semibold text-gray-600 backdrop-blur first:mt-0">
                   {y}年{Number(m)}月
-                  <span className="ml-2 font-normal text-gray-400">
+                  <span className="ml-2 font-normal text-gray-500">
                     {reservations.filter((x) => x.check_in.slice(0, 7) === `${y}-${m}`).length}件
                   </span>
                 </h2>
@@ -561,21 +562,28 @@ function ReservationCard({
               <summary className="flex cursor-pointer items-center gap-3">
                 <span className="shrink-0 text-sm tabular-nums">
                   <span className="font-medium text-gray-900">{r.check_in}</span>
-                  <span className="text-gray-400"> → </span>
+                  <span className="text-gray-500"> → </span>
                   <span className="text-gray-600">{r.check_out}</span>
-                  <span className="ml-1 text-xs text-gray-400">{r.nights}泊</span>
+                  <span className="ml-1 text-xs text-gray-500">{r.nights}泊</span>
                 </span>
                 <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${meta.cls}`}>{meta.label}</span>
                 <span className="min-w-0 flex-1 truncate">
                   <span className="font-medium text-gray-900">{custName(r.customers)}</span>
-                  <span className="ml-2 font-mono text-xs text-gray-400">{r.code}</span>
+                  <span className="ml-2 font-mono text-xs text-gray-500">{r.code}</span>
                 </span>
+                <PinButton
+                  pin={{
+                    code: r.code,
+                    label: `${custName(r.customers)}　${r.check_in} → ${r.check_out}`,
+                    sub: `${meta.label}・${r.code}`,
+                  }}
+                />
                 {registryMeta && (
                   <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${registryMeta.cls}`}>
                     {registryMeta.label}
                   </span>
                 )}
-                <span className="shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-500">
+                <span className="shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-600">
                   {sourceLabel(r.source)}
                 </span>
               </summary>
@@ -608,7 +616,7 @@ function ReservationCard({
                         {r.customers.email}
                       </a>
                     ) : (
-                      <span className="text-gray-400">未登録</span>
+                      <span className="text-gray-500">未登録</span>
                     )}
                   </span>
                 </div>
@@ -622,7 +630,7 @@ function ReservationCard({
                   >
                     <input type="hidden" name="id" value={r.id} />
                     <span className="text-sm text-gray-600">Stripe決済リンク:</span>
-                    <span className="text-sm text-gray-500">¥</span>
+                    <span className="text-sm text-gray-600">¥</span>
                     <input
                       type="number"
                       name="amount"
@@ -634,7 +642,7 @@ function ReservationCard({
                     <SubmitButton className="rounded-lg bg-cyan-600 px-3 py-1 text-sm font-medium text-white hover:bg-cyan-700">
                       リンクを発行
                     </SubmitButton>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-600">
                       任意の金額でカード決済リンクを作成できます（特別価格など）
                     </span>
                   </form>
@@ -672,13 +680,13 @@ function ReservationCard({
                             無効化
                           </ConfirmButton>
                         </form>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-600">
                           キーパッドに「{custName(r.customers)}様 {r.code}」として登録されています
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-sm text-gray-500">未発行</span>
+                        <span className="text-sm text-gray-600">未発行</span>
                         <form action={issueDoorPinManually}>
                           <ConfirmButton
                             hidden={{ id: r.id }}
@@ -698,7 +706,7 @@ function ReservationCard({
                             ドアPINを発行
                           </ConfirmButton>
                         </form>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-600">
                           滞在期間だけ有効な番号をキーパッドに登録します
                         </span>
                       </>

@@ -80,7 +80,7 @@ export default async function PaymentsPage({
       </section>
 
       <div className="space-y-3">
-        {payments.length === 0 && <p className="text-sm text-gray-500">決済がありません。</p>}
+        {payments.length === 0 && <p className="text-sm text-gray-600">決済がありません。</p>}
         {payments.map((p) => {
           const remaining = p.amount - (p.refunded_amount ?? 0);
           return (
@@ -90,7 +90,7 @@ export default async function PaymentsPage({
                   <span className={`rounded px-2 py-0.5 text-xs ${STATUS_CLS[p.status] ?? "bg-gray-100 text-gray-600"}`}>
                     {STATUS_LABEL[p.status] ?? p.status}
                   </span>
-                  <span className="font-mono text-xs text-gray-500">{p.reservations?.code ?? "—"}</span>
+                  <span className="font-mono text-xs text-gray-600">{p.reservations?.code ?? "—"}</span>
                   <span className="text-sm text-gray-900">{custName(p.reservations)}</span>
                 </div>
                 <div className="text-right text-sm">

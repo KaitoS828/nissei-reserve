@@ -32,7 +32,7 @@ export default async function ApiDocsPage() {
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-semibold text-gray-900">API / MCP 連携</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-600">
           外部ツール・AIエージェント（Claude Code等）から空室確認や予約操作を行うための連携情報です。
           詳細はリポジトリの <code className="rounded bg-gray-100 px-1 py-0.5">docs/api.md</code> を参照してください。
         </p>
@@ -42,7 +42,7 @@ export default async function ApiDocsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-gray-900">利用状況</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600">
               {apiKey
                 ? "APIキーが設定されており、REST API・MCPサーバーとも利用できます。"
                 : "EXTERNAL_API_KEY が未設定のため、書き込み系APIとMCPは利用できません。Vercelの環境変数で設定してください。"}
@@ -104,7 +104,7 @@ export default async function ApiDocsPage() {
         <h2 className="mb-3 font-semibold text-gray-900">REST APIエンドポイント</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs text-gray-500">
+            <thead className="text-xs text-gray-600">
               <tr>
                 <th className="pb-2 pr-4">メソッド</th>
                 <th className="pb-2 pr-4">パス</th>
@@ -117,7 +117,7 @@ export default async function ApiDocsPage() {
                 <tr key={`${e.method} ${e.path}`} className="border-t border-gray-100">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-700">{e.method}</td>
                   <td className="py-2 pr-4 font-mono text-xs text-gray-700">{e.path}</td>
-                  <td className="py-2 pr-4 text-xs text-gray-500">{e.auth}</td>
+                  <td className="py-2 pr-4 text-xs text-gray-600">{e.auth}</td>
                   <td className="py-2 text-gray-700">{e.desc}</td>
                 </tr>
               ))}

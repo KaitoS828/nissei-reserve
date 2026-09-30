@@ -53,7 +53,7 @@ export default async function RoomsPage() {
 
       <div className="space-y-3">
         {rooms.length === 0 && (
-          <p className="text-sm text-gray-500">客室がまだありません。</p>
+          <p className="text-sm text-gray-600">客室がまだありません。</p>
         )}
         {rooms.map((room) => (
           <details

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCheckInTime } from "@/lib/reservations";
 import type { ReservationWithRefs, AdminLink } from "@/types/db";
+import { DashboardSections } from "./_components/DashboardSections";
+import { PinnedReservations } from "./_components/pins";
 
 export const dynamic = "force-dynamic";
 
@@ -115,18 +117,41 @@ export default async function DashboardPage() {
     { label: "未対応の問合せ", value: `${openInquiriesRes.count ?? 0}件`, href: "/admin/reservations" },
   ];
 
-  return (
-    <div className="space-y-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">ダッシュボード</h1>
-          <p className="mt-1 text-sm text-gray-600">{today}・{user?.email}</p>
-        </div>
-        <Link href="/admin/reservations" className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700">
-          ＋ 予約を登録
-        </Link>
-      </header>
+  const pendingList = upcoming.filter((r) => r.status === "pending");
 
+  const sections = [
+    { id: "todo", title: "要対応", node: (
+<>
+      <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
+        <h2 className="mb-3 font-semibold text-gray-900">要対応</h2>
+        {pendingList.length === 0 && (openInquiriesRes.count ?? 0) === 0 ? (
+          <p className="text-sm text-gray-700">対応が必要なものはありません</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {(openInquiriesRes.count ?? 0) > 0 && (
+              <li>
+                <Link href="/admin/reservations" className="font-medium text-amber-900 hover:underline">
+                  未対応の問合せが {openInquiriesRes.count} 件あります →
+                </Link>
+              </li>
+            )}
+            {pendingList.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2">
+                <span className="rounded bg-white px-2 py-0.5 text-xs font-medium text-gray-800">仮予約</span>
+                <Link href={`/admin/reservations?q=${encodeURIComponent(r.code)}`} className="font-medium text-gray-900 hover:underline">
+                  {custName(r.customers)}
+                </Link>
+                <span className="text-gray-700">{r.check_in} / {r.nights}泊 / {r.num_guests}名</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+</>
+    ) },
+    { id: "pinned", title: "ピン留めした予約", node: <PinnedReservations /> },
+    { id: "cards", title: "本日の数字", node: (
+<>
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (
           <Link key={c.label} href={c.href} className="rounded-2xl border border-gray-200 bg-white p-5 transition hover:border-gray-300">
@@ -136,6 +161,50 @@ export default async function DashboardPage() {
         ))}
       </section>
 
+</>
+    ) },
+    { id: "today", title: "本日のチェックイン・チェックアウト", node: (
+<>
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-medium text-gray-900">本日チェックイン</h2>
+          {checkIns.length === 0 ? (
+            <p className="text-sm text-gray-600">予定なし</p>
+          ) : (
+            <ul className="space-y-2">
+              {checkIns.map((r) => (
+                <li key={r.id} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-mono text-xs text-cyan-700">{formatCheckInTime(r.check_in_time)}</span>
+                    <span className="text-gray-800">{custName(r.customers)}</span>
+                  </span>
+                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""} / {r.num_guests}名</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-medium text-gray-900">本日チェックアウト</h2>
+          {checkOuts.length === 0 ? (
+            <p className="text-sm text-gray-600">予定なし</p>
+          ) : (
+            <ul className="space-y-2">
+              {checkOuts.map((r) => (
+                <li key={r.id} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-800">{custName(r.customers)}</span>
+                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+</>
+    ) },
+    { id: "upcoming", title: "予定しているチェックイン", node: (
+<>
       {/* 予定しているチェックイン */}
       <section className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
@@ -143,7 +212,7 @@ export default async function DashboardPage() {
           <Link href="/admin/calendar" className="text-xs text-cyan-700 hover:underline">カレンダーで見る →</Link>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-gray-500">今後の予約はありません</p>
+          <p className="text-sm text-gray-600">今後の予約はありません</p>
         ) : (
           <ul className="divide-y divide-gray-200">
             {upcoming.map((r) => (
@@ -167,48 +236,16 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-3 font-medium text-gray-900">本日チェックイン</h2>
-          {checkIns.length === 0 ? (
-            <p className="text-sm text-gray-500">予定なし</p>
-          ) : (
-            <ul className="space-y-2">
-              {checkIns.map((r) => (
-                <li key={r.id} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-mono text-xs text-cyan-700">{formatCheckInTime(r.check_in_time)}</span>
-                    <span className="text-gray-800">{custName(r.customers)}</span>
-                  </span>
-                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""} / {r.num_guests}名</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-3 font-medium text-gray-900">本日チェックアウト</h2>
-          {checkOuts.length === 0 ? (
-            <p className="text-sm text-gray-500">予定なし</p>
-          ) : (
-            <ul className="space-y-2">
-              {checkOuts.map((r) => (
-                <li key={r.id} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-800">{custName(r.customers)}</span>
-                  <span className="text-gray-600">{r.room_types?.name ?? "—"}{r.rooms ? ` ${r.rooms.name}` : ""}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
+</>
+    ) },
+    { id: "links", title: "各種リンク・管理ショートカット", node: (
+<>
       {/* 各種リンク・管理ショートカット */}
       <section className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h2 className="font-medium text-gray-900">各種リンク・管理ショートカット</h2>
-            <p className="text-xs text-gray-500">外部の管理画面やよく使うページへワンタッチでアクセスできます</p>
+            <p className="text-xs text-gray-600">外部の管理画面やよく使うページへワンタッチでアクセスできます</p>
           </div>
           <Link href="/admin/links" className="text-xs font-medium text-cyan-700 hover:underline">
             リンク管理・追加 →
@@ -236,7 +273,7 @@ export default async function DashboardPage() {
                   {link.title}
                 </p>
                 {link.description && (
-                  <p className="text-xs text-gray-500 line-clamp-1">
+                  <p className="text-xs text-gray-600 line-clamp-1">
                     {link.description}
                   </p>
                 )}
@@ -245,6 +282,23 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
+</>
+    ) },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">ダッシュボード</h1>
+          <p className="mt-1 text-sm text-gray-600">{today}・{user?.email}</p>
+        </div>
+        <Link href="/admin/reservations" className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700">
+          ＋ 予約を登録
+        </Link>
+      </header>
+
+      <DashboardSections sections={sections} />
     </div>
   );
 }

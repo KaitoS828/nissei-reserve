@@ -17,7 +17,7 @@ export default async function MfaPage({
         >
           <div className="space-y-1">
             <h1 className="text-xl font-semibold text-gray-900">2段階認証</h1>
-            <p className="text-sm text-gray-500">認証アプリに表示されている6桁の数字を入力してください</p>
+            <p className="text-sm text-gray-600">認証アプリに表示されている6桁の数字を入力してください</p>
           </div>
 
           {error && (
@@ -27,7 +27,7 @@ export default async function MfaPage({
           <input type="hidden" name="redirect" value={redirect ?? "/admin"} />
 
           <label className="block space-y-1">
-            <span className="text-sm text-gray-500">認証コード</span>
+            <span className="text-sm text-gray-600">認証コード</span>
             <input
               name="code"
               inputMode="numeric"
@@ -49,7 +49,7 @@ export default async function MfaPage({
         </form>
 
         <form action={logout} className="text-center">
-          <button className="text-xs text-gray-500 underline hover:text-gray-800">
+          <button className="text-xs text-gray-600 underline hover:text-gray-800">
             別のアカウントでログインし直す
           </button>
         </form>

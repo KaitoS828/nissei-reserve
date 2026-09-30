@@ -130,7 +130,7 @@ export default async function IcalPage({
 
       <div className="space-y-3">
         {sources.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+          <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-600">
             連携先がまだありません。Airbnb の「カレンダーをエクスポート」で取得した URL を登録してください。
           </p>
         )}
@@ -141,7 +141,7 @@ export default async function IcalPage({
               <span className="flex items-center gap-3">
                 <span
                   className={`rounded px-2 py-0.5 text-xs ${
-                    source.is_active ? "bg-cyan-50 text-cyan-700" : "bg-gray-100 text-gray-500"
+                    source.is_active ? "bg-cyan-50 text-cyan-700" : "bg-gray-100 text-gray-600"
                   }`}
                 >
                   {source.is_active ? "有効" : "無効"}
@@ -210,7 +210,7 @@ export default async function IcalPage({
           <h2 className="text-sm font-medium text-gray-900">取り込み履歴</h2>
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 text-left text-xs text-gray-500">
+              <thead className="border-b border-gray-200 text-left text-xs text-gray-600">
                 <tr>
                   <th className="px-4 py-2">日時</th>
                   <th className="px-4 py-2">連携先</th>

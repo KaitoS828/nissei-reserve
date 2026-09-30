@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-gray-500">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-gray-600">
       <span
         aria-hidden
         className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-cyan-600"

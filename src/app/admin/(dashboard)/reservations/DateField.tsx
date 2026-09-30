@@ -57,7 +57,7 @@ export function DateField({
         onClick={() => setOpen((o) => !o)}
         className={`${field} flex items-center justify-between text-left`}
       >
-        <span className={value ? "text-gray-900" : "text-gray-500"}>{value || "日付を選択"}</span>
+        <span className={value ? "text-gray-900" : "text-gray-600"}>{value || "日付を選択"}</span>
         <span className="text-gray-600">📅</span>
       </button>
 
@@ -70,7 +70,7 @@ export function DateField({
           </div>
           <div className="grid grid-cols-7 gap-0.5">
             {WEEK.map((w, i) => (
-              <div key={w} className={`py-1 text-center text-[10px] ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-500"}`}>{w}</div>
+              <div key={w} className={`py-1 text-center text-[10px] ${i === 0 ? "text-red-600" : i === 6 ? "text-cyan-700" : "text-gray-600"}`}>{w}</div>
             ))}
             {cells.map((d, i) => {
               if (d === null) return <div key={i} />;

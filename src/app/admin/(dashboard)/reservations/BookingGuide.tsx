@@ -82,12 +82,12 @@ export function BookingGuide({
                 </ConfirmButton>
               </form>
               <span className="text-xs text-gray-600">宛先: {email}</span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-600">
                 {lastSentAt ? `送信済み（${lastSentAt}）` : "未送信"}
               </span>
             </>
           ) : (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600">
               メールアドレスが未登録のため送信できません。下記をコピーしてお使いください。
             </span>
           )}
@@ -95,7 +95,7 @@ export function BookingGuide({
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">件名</span>
+            <span className="text-xs text-gray-600">件名</span>
             <button
               type="button"
               onClick={() => copy("subject", subject)}
@@ -111,7 +111,7 @@ export function BookingGuide({
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">本文</span>
+            <span className="text-xs text-gray-600">本文</span>
             <button
               type="button"
               onClick={() => copy("body", body)}

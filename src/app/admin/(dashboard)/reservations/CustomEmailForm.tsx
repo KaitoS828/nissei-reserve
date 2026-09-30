@@ -42,7 +42,7 @@ export function CustomEmailForm({
             </ConfirmButton>
           </form>
         ) : (
-          <p className="text-xs text-gray-500">メールアドレスが未登録のため送信できません。</p>
+          <p className="text-xs text-gray-600">メールアドレスが未登録のため送信できません。</p>
         )}
       </div>
     </details>

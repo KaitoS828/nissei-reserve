@@ -76,7 +76,7 @@ export default async function HqPage() {
       </section>
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div className="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] gap-3 border-b border-gray-200 px-4 py-3 text-xs font-medium text-gray-500">
+        <div className="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_0.8fr_1fr] gap-3 border-b border-gray-200 px-4 py-3 text-xs font-medium text-gray-600">
           <span>施設</span>
           <span>状態</span>
           <span className="text-right">予約</span>
@@ -85,7 +85,7 @@ export default async function HqPage() {
           <span>最終予約</span>
         </div>
         {rows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-500">施設データがありません。</p>
+          <p className="px-4 py-6 text-sm text-gray-600">施設データがありません。</p>
         ) : rows.map((row) => (
           <div
             key={row.facility_id}

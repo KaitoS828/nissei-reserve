@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_JP, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_JP, Inter, BIZ_UDPGothic } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SITE, siteUrl } from "@/lib/site";
@@ -28,6 +28,13 @@ const notoSansJp = Noto_Sans_JP({
 const inter = Inter({
   variable: "--font-inter",
   weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+});
+
+// 管理画面専用のユニバーサルデザイン書体（公開サイトには使わない）
+const bizUdGothic = BIZ_UDPGothic({
+  variable: "--font-biz-ud",
+  weight: ["400", "700"],
   subsets: ["latin"],
 });
 
@@ -73,7 +80,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSansJp.variable} ${inter.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoSansJp.variable} ${inter.variable} ${bizUdGothic.variable} h-full antialiased`}
     >
       <head>
         {/* Zen Old Mincho: next/fontのローカル最適化だとサブセット定義に日本語が無く

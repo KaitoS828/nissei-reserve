@@ -72,7 +72,7 @@ export default async function SiteSettingsPage() {
         <h1 className="font-serif text-xl font-bold tracking-widest text-gray-900">
           ビジュアルサイトビルダー
         </h1>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-600">
           テキストの編集や画像のアップロードをプレビューを見ながらリアルタイムで行えます。「保存して本番に反映」で即座に予約TOPページへ適用されます。
         </p>
       </div>

@@ -74,7 +74,7 @@ export function LinkCardManager({ links }: { links: AdminLink[] }) {
             placeholder="リンクを検索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 outline-none focus:border-cyan-600"
+            className="w-full sm:w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-500 outline-none focus:border-cyan-600"
           />
           <button
             type="button"
@@ -93,7 +93,7 @@ export function LinkCardManager({ links }: { links: AdminLink[] }) {
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
           <p className="text-sm font-medium text-gray-600">登録されているリンクがありません</p>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-500">
             「＋ リンクを追加」ボタンからよく使う管理画面や外部サイトのURLを登録できます。
           </p>
         </div>
@@ -118,7 +118,7 @@ export function LinkCardManager({ links }: { links: AdminLink[] }) {
                         setIsCreating(false);
                         setEditingLink(link);
                       }}
-                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 text-xs"
+                      className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs"
                       title="編集"
                     >
                       編集
@@ -183,7 +183,7 @@ export function LinkCardManager({ links }: { links: AdminLink[] }) {
                   setIsCreating(false);
                   setEditingLink(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="text-gray-500 hover:text-gray-600 text-lg leading-none"
               >
                 ✕
               </button>

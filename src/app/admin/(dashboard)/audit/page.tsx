@@ -23,7 +23,7 @@ export default async function AuditPage() {
 
       <div className="space-y-2">
         {logs.length === 0 && (
-          <p className="text-sm text-gray-500">操作履歴はまだありません。</p>
+          <p className="text-sm text-gray-600">操作履歴はまだありません。</p>
         )}
         {logs.map((log) => (
           <div key={log.id} className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -34,11 +34,11 @@ export default async function AuditPage() {
                 </span>
                 <span className="font-medium text-gray-900">{log.summary}</span>
               </div>
-              <span className="font-mono text-xs text-gray-500">
+              <span className="font-mono text-xs text-gray-600">
                 {log.created_at.slice(0, 19).replace("T", " ")}
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+            <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-600">
               <span>操作者: {log.actor_email ?? "system"}</span>
               <span>
                 対象: {log.entity_type}

@@ -48,7 +48,7 @@ export function ReviewRequestGuide({
             送信済（{lastSentAt}）
           </span>
         ) : (
-          <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+          <span className="text-xs font-normal text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
             未送信
           </span>
         )}
@@ -100,7 +100,7 @@ export function ReviewRequestGuide({
               </span>
             </div>
           ) : (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600">
               メールアドレスが未登録のため送信できません。下記をコピーしてお使いください。
             </span>
           )}
@@ -109,7 +109,7 @@ export function ReviewRequestGuide({
             <button
               type="button"
               onClick={handleReset}
-              className="text-xs text-gray-500 hover:text-gray-800 underline"
+              className="text-xs text-gray-600 hover:text-gray-800 underline"
             >
               初期文面に戻す
             </button>
@@ -159,7 +159,7 @@ export function ReviewRequestGuide({
             onChange={(e) => setCurrentBody(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-xs leading-relaxed text-gray-900 font-mono focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
-          <p className="text-[11px] text-gray-400">
+          <p className="text-[11px] text-gray-500">
             ※ 本文内のURLは自動的にリンクとして送信されます。
           </p>
         </div>

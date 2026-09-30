@@ -29,7 +29,7 @@ export default async function SecurityPage() {
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-semibold text-gray-900">セキュリティ</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-600">
           管理画面のログインに、パスワードに加えて認証アプリの6桁コードを要求します。
         </p>
       </header>
@@ -42,7 +42,7 @@ export default async function SecurityPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-gray-900">2段階認証</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600">
               {enabled
                 ? "有効です。次回ログインから6桁コードの入力が必要になります。"
                 : "未設定です。予約情報と個人情報を扱うため、有効化を強くおすすめします。"}
@@ -69,7 +69,7 @@ export default async function SecurityPage() {
                     <p className="text-sm font-medium text-gray-900">
                       {factor.friendly_name || "認証アプリ"}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
+                    <p className="mt-0.5 text-xs text-gray-600">
                       登録日: {formatDate(factor.created_at)}
                     </p>
                   </div>

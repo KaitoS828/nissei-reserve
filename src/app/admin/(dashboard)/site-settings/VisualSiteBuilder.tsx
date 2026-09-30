@@ -146,7 +146,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               📱 スマホ表示
             </button>
           </div>
-          <span className="text-xs text-gray-400">| ライブ編集モード</span>
+          <span className="text-xs text-gray-500">| ライブ編集モード</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -175,7 +175,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               className={`pb-2 px-3 font-semibold transition ${
                 activeTab === "text"
                   ? "border-b-2 border-cyan-700 text-cyan-800"
-                  : "text-gray-500 hover:text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               テキスト・情報
@@ -185,7 +185,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               className={`pb-2 px-3 font-semibold transition ${
                 activeTab === "images"
                   ? "border-b-2 border-cyan-700 text-cyan-800"
-                  : "text-gray-500 hover:text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               写真アップロード ({heroImages.length})
@@ -195,7 +195,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               className={`pb-2 px-3 font-semibold transition ${
                 activeTab === "features"
                   ? "border-b-2 border-cyan-700 text-cyan-800"
-                  : "text-gray-500 hover:text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               特徴タグ
@@ -205,7 +205,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               className={`pb-2 px-3 font-semibold transition ${
                 activeTab === "planPhotos"
                   ? "border-b-2 border-cyan-700 text-cyan-800"
-                  : "text-gray-500 hover:text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               プラン別写真
@@ -294,13 +294,13 @@ export function VisualSiteBuilder({ initialData }: Props) {
                 <label htmlFor="file-upload" className="cursor-pointer font-semibold text-gray-900 hover:underline">
                   {isUploading ? "アップロード中..." : "📸 パソコンから写真を選択 / 追加"}
                 </label>
-                <p className="mt-1 text-[11px] text-gray-400">JPEG, PNG, WebP に対応</p>
+                <p className="mt-1 text-[11px] text-gray-500">JPEG, PNG, WebP に対応</p>
               </div>
 
               <div className="space-y-2">
                 <p className="font-semibold text-gray-800">掲載中の写真リスト ({heroImages.length})</p>
                 {heroImages.length === 0 ? (
-                  <p className="text-gray-400">現在カスタム写真はありません（客室マスタ写真が表示されます）。</p>
+                  <p className="text-gray-500">現在カスタム写真はありません（客室マスタ写真が表示されます）。</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto pr-1">
                     {heroImages.map((url, idx) => (
@@ -344,7 +344,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
                     />
                     <button
                       onClick={() => removeFeature(idx)}
-                      className="px-1 font-bold text-gray-400 hover:text-red-600"
+                      className="px-1 font-bold text-gray-500 hover:text-red-600"
                     >
                       ×
                     </button>
@@ -357,11 +357,11 @@ export function VisualSiteBuilder({ initialData }: Props) {
           {/* TAB 4: プラン別写真 */}
           {activeTab === "planPhotos" && (
             <div className="space-y-4 text-xs">
-              <p className="text-gray-500">
+              <p className="text-gray-600">
                 各プランの詳細ページ（見出しの下）に載る写真です。プランごとに個別に保存します。
               </p>
               {initialData.plans.length === 0 && (
-                <p className="text-gray-400">有効なプランがありません。</p>
+                <p className="text-gray-500">有効なプランがありません。</p>
               )}
               <div className="max-h-[32rem] space-y-4 overflow-y-auto pr-1">
                 {initialData.plans.map((p) => (
@@ -378,7 +378,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
         {/* 右側: リアルタイム ライブプレビュー */}
         <div className={`mx-auto w-full transition-all duration-300 ${device === "mobile" ? "max-w-md" : "max-w-none"}`}>
           <div className="rounded border-2 border-gray-900 bg-gray-100 p-2 shadow-2xl">
-            <div className="mb-2 flex items-center justify-between rounded border border-gray-200 bg-white p-4 font-mono text-xs text-gray-400">
+            <div className="mb-2 flex items-center justify-between rounded border border-gray-200 bg-white p-4 font-mono text-xs text-gray-500">
               <span>LIVE PREVIEW — /reserve</span>
               <span>{device === "mobile" ? "375px (Mobile)" : "Responsive (PC)"}</span>
             </div>
@@ -388,7 +388,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
               {/* ヒーロー（フル幅） */}
               <section className="space-y-4 rounded border border-gray-200 bg-white p-6">
                 <div className="space-y-2 border-b border-gray-100 pb-4">
-                  <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-gray-500">
                     {heroSub}
                   </span>
                   <h1 className="font-serif text-xl font-bold tracking-widest text-gray-900">{heroTitle}</h1>
@@ -444,7 +444,7 @@ export function VisualSiteBuilder({ initialData }: Props) {
                         <h3 className="font-serif text-sm font-bold text-gray-900">{p.name}</h3>
                         <span className="font-serif text-sm font-bold text-gray-900">¥{p.price.toLocaleString()}〜</span>
                       </div>
-                      <p className="text-[11px] text-gray-500">{p.description}</p>
+                      <p className="text-[11px] text-gray-600">{p.description}</p>
                       <div className="pt-2 text-right">
                         <span className="rounded bg-gray-900 px-4 py-1.5 text-[10px] font-semibold text-white">
                           空室状況・日程を選択 →

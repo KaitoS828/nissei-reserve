@@ -64,7 +64,7 @@ export default async function CustomersPage({
 
       <div className="space-y-3">
         {customers.length === 0 && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600">
             {q ? "該当する顧客がいません。" : "顧客がまだいません。"}
           </p>
         )}

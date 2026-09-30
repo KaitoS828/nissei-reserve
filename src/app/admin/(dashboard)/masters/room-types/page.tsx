@@ -48,7 +48,7 @@ export default async function RoomTypesPage() {
       {/* 一覧 */}
       <div className="space-y-3">
         {roomTypes.length === 0 && (
-          <p className="text-sm text-gray-500">客室タイプがまだありません。</p>
+          <p className="text-sm text-gray-600">客室タイプがまだありません。</p>
         )}
         {roomTypes.map((rt) => (
           <details

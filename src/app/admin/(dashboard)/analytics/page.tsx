@@ -228,7 +228,7 @@ export default async function AnalyticsPage({
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-gray-50 px-3.5 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-100"
             title="全期間・全データをまとめてCSV出力"
           >
-            <svg className="h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg className="h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             全期間（全データ）CSV出力
@@ -239,7 +239,7 @@ export default async function AnalyticsPage({
       {/* 期間選択フィルター */}
       <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-gray-500 font-medium">年:</span>
+          <span className="text-xs text-gray-600 font-medium">年:</span>
           {years.map((y) => (
             <Link
               key={y}
@@ -253,7 +253,7 @@ export default async function AnalyticsPage({
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-gray-500 font-medium">月:</span>
+          <span className="text-xs text-gray-600 font-medium">月:</span>
           <Link
             href={`/admin/analytics?year=${year}`}
             className={`rounded-full px-3 py-1 text-sm transition ${
@@ -282,7 +282,7 @@ export default async function AnalyticsPage({
           <div key={c.label} className="rounded-2xl border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-600">{c.label}</p>
             <p className={`mt-2 text-2xl font-semibold ${c.color}`}>{c.value}</p>
-            {c.sub && <p className="mt-1 text-xs font-medium text-gray-500">{c.sub}</p>}
+            {c.sub && <p className="mt-1 text-xs font-medium text-gray-600">{c.sub}</p>}
           </div>
         ))}
       </section>
@@ -317,7 +317,7 @@ export default async function AnalyticsPage({
                     title={`${m.mm}月 経費: ¥${m.cost.toLocaleString()}`}
                   />
                 </div>
-                <span className="text-xs text-gray-500">{m.label}月</span>
+                <span className="text-xs text-gray-600">{m.label}月</span>
               </div>
             ))}
           </div>
@@ -350,7 +350,7 @@ export default async function AnalyticsPage({
       <section className="rounded-2xl border border-gray-200 bg-white p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-medium text-gray-900">{year}年の月別稼働率</h2>
-          <span className="text-xs text-gray-500">客室{roomCount}室 稼働中</span>
+          <span className="text-xs text-gray-600">客室{roomCount}室 稼働中</span>
         </div>
         {roomCount > 0 ? (
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -370,7 +370,7 @@ export default async function AnalyticsPage({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">客室マスタに稼働中の号室が登録されていないため稼働率を算出できません。</p>
+          <p className="text-sm text-gray-600">客室マスタに稼働中の号室が登録されていないため稼働率を算出できません。</p>
         )}
       </section>
 
@@ -398,7 +398,7 @@ export default async function AnalyticsPage({
           {rows.length > 0 ? (
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-500 font-medium">
+                <tr className="border-b border-gray-200 text-gray-600 font-medium">
                   <th className="py-2 px-2">予約番号</th>
                   <th className="py-2 px-2">宿泊日</th>
                   <th className="py-2 px-2">予約者名</th>
@@ -435,7 +435,7 @@ export default async function AnalyticsPage({
                           {PAYMENT_LABELS[r.payment_status] ?? r.payment_status}
                         </span>
                       </td>
-                      <td className="py-2 px-2 text-gray-500">
+                      <td className="py-2 px-2 text-gray-600">
                         {SOURCE_LABELS[r.source ?? ""] ?? r.source ?? "—"}
                       </td>
                       <td className="py-2 px-2">
@@ -472,7 +472,7 @@ export default async function AnalyticsPage({
                                       className="w-full rounded border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:border-cyan-500 focus:outline-none"
                                     />
                                   </label>
-                                  <p className="text-[11px] text-gray-500">※ 売上や予約件数などの集計から除外されます。後から「集計外の予約」から復元することも可能です。</p>
+                                  <p className="text-[11px] text-gray-600">※ 売上や予約件数などの集計から除外されます。後から「集計外の予約」から復元することも可能です。</p>
                                 </div>
                               }
                               confirmLabel="集計から削除する"
@@ -489,7 +489,7 @@ export default async function AnalyticsPage({
               </tbody>
             </table>
           ) : (
-            <p className="text-center py-6 text-xs text-gray-400">対象の予約はありません。</p>
+            <p className="text-center py-6 text-xs text-gray-500">対象の予約はありません。</p>
           )}
         </div>
       </details>
@@ -504,13 +504,13 @@ export default async function AnalyticsPage({
                 {excludedRows.length}件
               </span>
             </span>
-            <span className="text-xs text-gray-500">クリックで開閉</span>
+            <span className="text-xs text-gray-600">クリックで開閉</span>
           </summary>
 
           <div className="mt-4 border-t border-gray-200 pt-4 overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-500 font-medium">
+                <tr className="border-b border-gray-200 text-gray-600 font-medium">
                   <th className="py-2 px-2">予約番号</th>
                   <th className="py-2 px-2">宿泊日</th>
                   <th className="py-2 px-2">予約者名</th>
@@ -530,15 +530,15 @@ export default async function AnalyticsPage({
 
                   return (
                     <tr key={r.id} className="hover:bg-white transition opacity-80">
-                      <td className="py-2 px-2 font-mono font-medium line-through text-gray-500">{r.code}</td>
+                      <td className="py-2 px-2 font-mono font-medium line-through text-gray-600">{r.code}</td>
                       <td className="py-2 px-2 whitespace-nowrap">
                         {r.check_in} 〜 {r.check_out}
                       </td>
                       <td className="py-2 px-2">{custName}</td>
-                      <td className="py-2 px-2 text-right font-medium tabular-nums text-gray-500">
+                      <td className="py-2 px-2 text-right font-medium tabular-nums text-gray-600">
                         ¥{r.amount.toLocaleString()}
                       </td>
-                      <td className="py-2 px-2 text-gray-500">
+                      <td className="py-2 px-2 text-gray-600">
                         {SOURCE_LABELS[r.source ?? ""] ?? r.source ?? "—"}
                       </td>
                       <td className="py-2 px-2 text-gray-600 max-w-xs truncate" title={reason}>

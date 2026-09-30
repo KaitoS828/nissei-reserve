@@ -72,7 +72,7 @@ export default async function PlansPage() {
 
       <div className="space-y-3">
         {plans.length === 0 && (
-          <p className="text-sm text-gray-500">プランがまだありません。</p>
+          <p className="text-sm text-gray-600">プランがまだありません。</p>
         )}
         {plans.map((plan) => (
           <details
@@ -117,7 +117,7 @@ export default async function PlansPage() {
               <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-100 p-4">
                 <p className="text-xs font-medium text-gray-600">1泊あたりの料金（客室タイプ別）</p>
                 {roomTypes.length === 0 && (
-                  <p className="text-sm text-gray-500">客室タイプが未登録です。</p>
+                  <p className="text-sm text-gray-600">客室タイプが未登録です。</p>
                 )}
                 {roomTypes.map((rt) => (
                   <form
@@ -130,8 +130,8 @@ export default async function PlansPage() {
 
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="min-w-20 text-sm font-medium text-gray-800">{rt.name}</span>
-                      <span className="text-xs text-gray-500">設定料金</span>
-                      <span className="text-sm text-gray-500">¥</span>
+                      <span className="text-xs text-gray-600">設定料金</span>
+                      <span className="text-sm text-gray-600">¥</span>
                       <input
                         name="price_per_night"
                         type="number"
@@ -142,7 +142,7 @@ export default async function PlansPage() {
                         required
                         className={`${field} w-32`}
                       />
-                      <span className="text-xs text-gray-500">/泊（人数別が空の人数のフォールバック）</span>
+                      <span className="text-xs text-gray-600">/泊（人数別が空の人数のフォールバック）</span>
                     </div>
 
                     <div>

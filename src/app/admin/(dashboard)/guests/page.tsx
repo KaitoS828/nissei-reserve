@@ -86,7 +86,7 @@ export default async function GuestsPage({
           { label: "旅券の写し未提出", value: `${missingPassport}名`, warn: missingPassport > 0 },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-gray-200 bg-white p-4">
-            <p className="text-xs text-gray-500">{s.label}</p>
+            <p className="text-xs text-gray-600">{s.label}</p>
             <p className={`mt-1 text-lg font-semibold ${s.warn ? "text-amber-700" : "text-gray-900"}`}>
               {s.value}
             </p>
@@ -137,7 +137,7 @@ export default async function GuestsPage({
       </div>
 
       {ordered.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+        <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-600">
           該当する記録がありません。
         </p>
       )}
@@ -153,7 +153,7 @@ export default async function GuestsPage({
                   <span className="font-medium tabular-nums text-gray-900">
                     {r?.check_in} → {r?.check_out}
                   </span>
-                  <span className="font-mono text-xs text-gray-400">{r?.code}</span>
+                  <span className="font-mono text-xs text-gray-500">{r?.code}</span>
                 </span>
                 <span className={`text-xs ${complete ? "text-emerald-700" : "text-amber-700"}`}>
                   {list.length} / {r?.num_guests ?? list.length} 名
@@ -172,7 +172,7 @@ export default async function GuestsPage({
                         </span>
                         <span className="font-medium text-gray-900">{g.full_name}</span>
                         {g.furigana && (
-                          <span className="text-xs text-gray-500">（{g.furigana}）</span>
+                          <span className="text-xs text-gray-600">（{g.furigana}）</span>
                         )}
                         {g.is_foreign_national && (
                           <span className="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800">

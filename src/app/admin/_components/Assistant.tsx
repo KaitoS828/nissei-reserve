@@ -87,11 +87,11 @@ export function Assistant() {
       <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div>
           <p className="text-sm font-medium text-gray-900">AIアシスタント</p>
-          <p className="text-[11px] text-gray-500">話しかけると予約や休業日を操作します</p>
+          <p className="text-[11px] text-gray-600">話しかけると予約や休業日を操作します</p>
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="rounded-lg px-2 py-1 text-sm text-gray-500 transition hover:bg-gray-100"
+          className="rounded-lg px-2 py-1 text-sm text-gray-600 transition hover:bg-gray-100"
           aria-label="閉じる"
         >
           ✕
@@ -101,7 +101,7 @@ export function Assistant() {
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {msgs.length === 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">例えばこんなふうに指示できます:</p>
+            <p className="text-xs text-gray-600">例えばこんなふうに指示できます:</p>
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
@@ -126,7 +126,7 @@ export function Assistant() {
           </div>
         ))}
         {pending && (
-          <div className="mr-auto flex items-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-500">
+          <div className="mr-auto flex items-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-600">
             <Spinner /> 考えています…
           </div>
         )}

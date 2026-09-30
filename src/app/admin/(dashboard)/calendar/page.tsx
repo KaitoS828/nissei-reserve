@@ -238,7 +238,7 @@ export default async function CalendarPage({
                     isToday
                       ? "font-bold text-cyan-700"
                       : isPast
-                        ? "text-gray-400 line-through"
+                        ? "text-gray-500 line-through"
                         : "font-medium text-gray-700"
                   }`}
                 >
@@ -247,7 +247,7 @@ export default async function CalendarPage({
                 <span
                   className={`rounded px-1.5 py-0.5 text-[11px] ${
                     isPast
-                      ? "bg-gray-100 text-gray-400"
+                      ? "bg-gray-100 text-gray-500"
                       : cell.isBlocked || cell.avail === 0
                         ? "bg-red-50 text-red-600"
                         : "bg-gray-100 text-gray-600"
@@ -259,7 +259,7 @@ export default async function CalendarPage({
               </div>
               {cell.resv.slice(0, 3).map((r) => (
                 // セルが狭いのでメールは title に入れる（ホバーで確認できる）
-                <Link key={r.id} href="/admin/reservations" title={[r.code, [r.customers?.last_name, r.customers?.first_name].filter(Boolean).join(" "), r.customers?.email].filter(Boolean).join(" / ")} className={`block truncate rounded px-1.5 py-1 text-xs transition ${isPast ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`}>
+                <Link key={r.id} href="/admin/reservations" title={[r.code, [r.customers?.last_name, r.customers?.first_name].filter(Boolean).join(" "), r.customers?.email].filter(Boolean).join(" / ")} className={`block truncate rounded px-1.5 py-1 text-xs transition ${isPast ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-cyan-50 text-cyan-800 hover:bg-cyan-100"}`}>
                   {r.check_in === cell.date && r.check_in_time && (
                     <span className="font-mono font-medium">{formatCheckInTime(r.check_in_time)} </span>
                   )}
@@ -268,9 +268,9 @@ export default async function CalendarPage({
                 </Link>
               ))}
               {cell.resv.length > 3 && (
-                <span className="text-xs text-gray-500">+{cell.resv.length - 3}件</span>
+                <span className="text-xs text-gray-600">+{cell.resv.length - 3}件</span>
               )}
-              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1.5 py-1 text-xs text-gray-500 transition hover:bg-gray-100 hover:text-cyan-700">＋ 予約</Link>
+              <Link href={`/admin/calendar?month=${monthStr(year, month0)}&new=${cell.date}`} className="block rounded px-1.5 py-1 text-xs text-gray-600 transition hover:bg-gray-100 hover:text-cyan-700">＋ 予約</Link>
               {!isPast && (
                 <form action={toggleBlockedDate}>
                   <input type="hidden" name="date" value={cell.date} />
@@ -279,7 +279,7 @@ export default async function CalendarPage({
                     className={`w-full justify-start rounded px-1.5 py-1 text-left text-xs transition ${
                       cell.isBlocked
                         ? "text-red-600 hover:bg-red-50"
-                        : "text-gray-500 hover:bg-red-50 hover:text-red-700"
+                        : "text-gray-600 hover:bg-red-50 hover:text-red-700"
                     }`}
                     pendingLabel="更新中"
                   >

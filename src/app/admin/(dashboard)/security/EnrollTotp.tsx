@@ -105,7 +105,7 @@ export function EnrollTotp() {
         className="h-48 w-48 rounded-xl border border-gray-200 bg-white p-2"
       />
 
-      <details className="text-sm text-gray-500">
+      <details className="text-sm text-gray-600">
         <summary className="cursor-pointer">QRコードを読み取れない場合</summary>
         <p className="mt-2">アプリに次のキーを手入力してください。</p>
         <code className="mt-1 block break-all rounded-lg bg-gray-50 p-3 font-mono text-xs text-gray-800">
