@@ -3,7 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ReservationStatus, OperatingCost } from "@/types/db";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CostManager } from "./CostManager";
-import { archiveReservationFromAnalytics, unarchiveReservationFromAnalytics } from "./actions";
+import { archiveReservationFromAnalytics, unarchiveReservationFromAnalytics, saveOtaFeeRates } from "./actions";
+import { OTA_SOURCES, otaFee, type OtaFeeRates } from "@/lib/ota-fee";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export default async function AnalyticsPage({
   const { year: yearParam, month: monthParam, done, error } = await searchParams;
   const supabase = createAdminClient();
 
-  const [{ data: resvData }, { data: costData, error: costError }, { count: roomCountRaw }] = await Promise.all([
+  const [{ data: resvData }, { data: costData, error: costError }, { count: roomCountRaw }, { data: rateData }] = await Promise.all([
     supabase
       .from("reservations")
       .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, cancel_reason, archived_at, customers(last_name, first_name), room_types(name)")
@@ -89,7 +90,13 @@ export default async function AnalyticsPage({
       .from("rooms")
       .select("id", { count: "exact", head: true })
       .eq("is_active", true),
+    supabase.from("ota_fee_rates").select("source, rate"),
   ]);
+
+  // 手数料率が未設定（テーブル未作成を含む）の経路は0円として扱う
+  const rates: OtaFeeRates = Object.fromEntries(
+    ((rateData ?? []) as { source: string; rate: number }[]).map((r) => [r.source, Number(r.rate)]),
+  );
 
   const all = (resvData ?? []) as unknown as Row[];
   const allCosts = (costData ?? []) as OperatingCost[];
@@ -119,7 +126,11 @@ export default async function AnalyticsPage({
   const total = rows.length;
   const byStatus = (s: ReservationStatus) => rows.filter((r) => r.status === s).length;
   const revenue = rows.filter((r) => r.payment_status === "paid").reduce((s, r) => s + r.amount, 0);
-  const totalCost = periodCosts.reduce((s, c) => s + c.amount, 0);
+  // OTAの販売手数料は、売上（回収済みの予約金額）に経路ごとの率を掛けて自動で経費に入れる
+  const otaFeeTotal = rows
+    .filter((r) => r.payment_status === "paid")
+    .reduce((s, r) => s + otaFee(r.amount, r.source, rates), 0);
+  const totalCost = periodCosts.reduce((s, c) => s + c.amount, 0) + otaFeeTotal;
   const grossProfit = revenue - totalCost;
   const profitMargin = revenue > 0 ? Math.round((grossProfit / revenue) * 100) : 0;
 
@@ -144,9 +155,11 @@ export default async function AnalyticsPage({
     const mRevenue = yearRows
       .filter((r) => r.payment_status === "paid" && monthKey(r.check_in) === targetKey)
       .reduce((s, r) => s + r.amount, 0);
-    const mCost = yearCosts
-      .filter((c) => c.year_month === targetKey)
-      .reduce((s, c) => s + c.amount, 0);
+    const mCost =
+      yearCosts.filter((c) => c.year_month === targetKey).reduce((s, c) => s + c.amount, 0) +
+      yearRows
+        .filter((r) => r.payment_status === "paid" && monthKey(r.check_in) === targetKey)
+        .reduce((s, r) => s + otaFee(r.amount, r.source, rates), 0);
     const mProfit = mRevenue - mCost;
     const mNights = yearRows
       .filter((r) => !["cancelled", "no_show"].includes(r.status) && monthKey(r.check_in) === targetKey)
@@ -169,7 +182,12 @@ export default async function AnalyticsPage({
 
   const cards = [
     { label: "確定売上", value: `¥${revenue.toLocaleString()}`, color: "text-cyan-700" },
-    { label: "経費（コスト）", value: `¥${totalCost.toLocaleString()}`, color: "text-amber-700" },
+    {
+      label: "経費（コスト）",
+      value: `¥${totalCost.toLocaleString()}`,
+      color: "text-amber-700",
+      sub: otaFeeTotal > 0 ? `うちOTA手数料（自動） ¥${otaFeeTotal.toLocaleString()}` : undefined,
+    },
     {
       label: "粗利益",
       value: `¥${grossProfit.toLocaleString()}`,
@@ -372,6 +390,36 @@ export default async function AnalyticsPage({
         ) : (
           <p className="text-sm text-gray-600">客室マスタに稼働中の号室が登録されていないため稼働率を算出できません。</p>
         )}
+      </section>
+
+      {/* OTA手数料率の設定。売上に掛けて経費へ自動計上する */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
+        <h2 className="font-medium text-gray-900">OTA手数料率（経費へ自動計上）</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          回収済みの予約金額に、予約経路ごとの率を掛けて、経費に自動で入れます。空欄は0%（手数料なし）として扱います。
+        </p>
+        <form action={saveOtaFeeRates} className="mt-4 flex flex-wrap items-end gap-4">
+          {OTA_SOURCES.map((o) => (
+            <label key={o.source} className="space-y-1">
+              <span className="block text-xs text-gray-700">{o.label}</span>
+              <span className="flex items-center gap-1">
+                <input
+                  name={o.source}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  defaultValue={rates[o.source] ?? ""}
+                  className="w-24 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-cyan-600"
+                />
+                <span className="text-sm text-gray-700">%</span>
+              </span>
+            </label>
+          ))}
+          <button type="submit" className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700">
+            保存
+          </button>
+        </form>
       </section>
 
       {/* コスト（経費）手打ち管理セクション */}
