@@ -83,7 +83,7 @@ export function Assistant() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex h-[32rem] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+    <div className="fixed bottom-5 right-5 z-50 flex h-[min(46rem,calc(100vh-2.5rem))] w-[min(38rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div>
           <p className="text-sm font-medium text-gray-900">AIアシスタント</p>
