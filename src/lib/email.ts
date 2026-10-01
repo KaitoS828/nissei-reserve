@@ -42,7 +42,36 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<boolea
       }
     }),
   );
-  return results.some(Boolean);
+  const delivered = results.some(Boolean);
+
+  // お客様宛に送ったメールは、オーナーにも「送信控え」として届ける（オーナー宛の通知そのものは対象外）。
+  // 本物のメールとは別便にして、控えの失敗がお客様への送信に影響しないようにする。
+  const owners = ownerEmails();
+  const customerRecipients = recipients.filter((r) => !owners.includes(r));
+  if (delivered && customerRecipients.length > 0 && owners.length > 0) {
+    const copyHtml = `<div style="font-family:sans-serif;max-width:560px;margin:0 auto 12px;padding:10px 12px;background:#f3f4f6;border-radius:8px;font-size:13px;color:#374151">
+      <strong>お客様への送信控え</strong><br>送信先: ${customerRecipients.map(escAddr).join(", ")}<br>件名: ${escAddr(subject)}
+    </div>${html}`;
+    await Promise.all(
+      owners.map((owner) =>
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: `一棟貸ゲストハウス日靜 <${from}>`,
+            to: owner,
+            subject: `【送信控え】${subject}`,
+            html: copyHtml,
+          }),
+        }).catch(() => null),
+      ),
+    );
+  }
+  return delivered;
+}
+
+function escAddr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // オーナー通知の宛先（カンマ区切り）
