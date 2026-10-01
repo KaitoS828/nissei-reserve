@@ -84,6 +84,12 @@ export default async function LodgingTaxPage({
             公式Excel（申告書・月計表・納入書）
           </a>
           <a
+            href={`/admin/export/lodging-tax-eltax?${exportQs}`}
+            className="rounded-lg border border-cyan-600 bg-white px-3.5 py-2 text-sm font-medium text-cyan-800 transition hover:bg-cyan-50"
+          >
+            eLTAX用CSV
+          </a>
+          <a
             href={`/admin/export/lodging-tax?${exportQs}`}
             className="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-800 transition hover:bg-gray-100"
           >
@@ -154,6 +160,61 @@ export default async function LodgingTaxPage({
             </ul>
           </li>
         </ol>
+      </section>
+
+      {/* eLTAXで申告・納入する */}
+      <section className="rounded-2xl border border-cyan-300 bg-cyan-50/40 p-6 print:hidden">
+        <h2 className="font-semibold text-gray-900">eLTAXで申告・納入する（{period.label}分）</h2>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-900">
+          <li>上の <b>「eLTAX用CSV」</b>をダウンロードします（eLTAXが配布する「データ作成支援ソフト」と同じ形式です）。</li>
+          <li>
+            PCdesk Next の「手続き一覧」で <b>「【宿泊税】納入申告書_特例申告（定額）」</b>を選び、申告先は<b>北海道</b>にします。
+          </li>
+          <li>
+            宿泊税の申告手続きで、<b>データ作成支援ソフトで作ったCSVを読み込む</b>（CSV取込）を選び、ダウンロードしたCSVを指定します。
+            読み込めれば、下の表の数字が自動で入ります。
+          </li>
+          <li>特別徴収義務者・宿泊施設の情報、<b>指定番号 {facilityNo || "（登録情報に入力）"}</b> を確認し、内容を確認して<b>送信</b>します。</li>
+          <li>
+            送信後、PCdesk（Web版）の「納税メニュー」→「電子申告連動」→ 対象を選び →「納付情報発行依頼の確認・納付」で、
+            <b>¥{n(periodTotal)}</b> を納付します（ダイレクト納付・インターネットバンキング・ATM・クレジットカード）。
+          </li>
+          <li>終わったら、下の「申告・納入の記録」に提出日と納入日を入れます。</li>
+        </ol>
+        <p className="mt-3 text-sm text-gray-900">
+          期限は <b>{period.deadline(filingYear)}</b>。CSVが読み込めないときは、下の表の数字を、入力フォームに手で入れてください。
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[520px] border-collapse text-sm tabular-nums">
+            <thead>
+              <tr className="bg-white text-gray-900">
+                <th className="border border-gray-300 px-3 py-2 text-left">入力欄</th>
+                {months.map((m) => (
+                  <th key={`${m.year}-${m.month}`} className="border border-gray-300 px-3 py-2 text-right">{m.year}年{m.month}月</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TIERS.map((t) => (
+                <tr key={t.key} className="bg-white">
+                  <td className="border border-gray-300 px-3 py-2">申告区分{t.key.slice(1)}：{t.label}（{t.tax}円）</td>
+                  {months.map((m) => (
+                    <td key={`${t.key}-${m.month}`} className="border border-gray-300 px-3 py-2 text-right">{n(m.sum[t.key])}泊</td>
+                  ))}
+                </tr>
+              ))}
+              <tr className="bg-white">
+                <td className="border border-gray-300 px-3 py-2">課税免除</td>
+                {months.map((m) => (
+                  <td key={`ex-${m.month}`} className="border border-gray-300 px-3 py-2 text-right">{n(m.sum.exempt)}泊</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-xs text-gray-700">
+          CSVの取り込みは、eLTAXの仕様に合わせて作っていますが、実際の PCdesk Next では未確認です。エラーが出たら、表の数字を手で入れてください。
+        </p>
       </section>
 
       {/* 特別徴収義務者の登録情報（公式Excelに入ります） */}
