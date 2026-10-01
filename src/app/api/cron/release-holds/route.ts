@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorizeCron } from "@/lib/cron-auth";
+import { withCronLog } from "@/lib/cron-log";
 import { releaseUnpaidHold, staleBefore } from "@/lib/hold";
 
 export const dynamic = "force-dynamic";
@@ -37,5 +38,6 @@ async function handle(req: NextRequest) {
   return NextResponse.json({ cutoff, checked: data?.length ?? 0, released });
 }
 
-export const GET = handle;
-export const POST = handle;
+const logged = withCronLog("release-holds", handle);
+export const GET = logged;
+export const POST = logged;
