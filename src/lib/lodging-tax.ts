@@ -82,10 +82,28 @@ export function sumMonth(days: DayRow[]) {
   return { ...totals, tax };
 }
 
-// 申告期間（12〜2月 / 3〜5月 / 6〜8月 / 9〜11月）と、その納期限（末日）
+// 納期限＝申告期限。対象期間の末日の翌日ではなく「末日」。末日が土日なら翌平日になる。
+// 12月末が期限のもの（9〜11月分）は、法令により翌年1月4日（土日なら翌平日）。祝日は考慮していないので、画面の注記で確認を促す。
+const WEEKDAY = ["日", "月", "火", "水", "木", "金", "土"];
+
+export function deadlineDate(year: number, month: number, day: number): Date {
+  const d = month === 12 ? new Date(Date.UTC(year + 1, 0, 4)) : new Date(Date.UTC(year, month - 1, day));
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1);
+  return d;
+}
+
+const fmt = (d: Date) => `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${WEEKDAY[d.getUTCDay()]}）`;
+
+// 払込年度は4月1日〜翌3月31日。納期限の属する年度（令和）
+export function paymentFiscalYear(year: number, month: number, day: number): number {
+  const d = deadlineDate(year, month, day);
+  const y = d.getUTCFullYear() - (d.getUTCMonth() < 3 ? 1 : 0);
+  return y - 2018;
+}
+
 export const PERIODS = [
-  { id: "1", label: "12月〜2月", months: [12, 1, 2], startYearOffset: -1, deadline: (y: number) => `${y}年3月31日` },
-  { id: "2", label: "3月〜5月", months: [3, 4, 5], startYearOffset: 0, deadline: (y: number) => `${y}年6月30日` },
-  { id: "3", label: "6月〜8月", months: [6, 7, 8], startYearOffset: 0, deadline: (y: number) => `${y}年9月30日` },
-  { id: "4", label: "9月〜11月", months: [9, 10, 11], startYearOffset: 0, deadline: (y: number) => `${y}年12月31日` },
+  { id: "1", label: "12月〜2月", months: [12, 1, 2], startYearOffset: -1, due: [3, 31], deadline: (y: number) => fmt(deadlineDate(y, 3, 31)), fiscal: (y: number) => paymentFiscalYear(y, 3, 31) },
+  { id: "2", label: "3月〜5月", months: [3, 4, 5], startYearOffset: 0, due: [6, 30], deadline: (y: number) => fmt(deadlineDate(y, 6, 30)), fiscal: (y: number) => paymentFiscalYear(y, 6, 30) },
+  { id: "3", label: "6月〜8月", months: [6, 7, 8], startYearOffset: 0, due: [9, 30], deadline: (y: number) => fmt(deadlineDate(y, 9, 30)), fiscal: (y: number) => paymentFiscalYear(y, 9, 30) },
+  { id: "4", label: "9月〜11月", months: [9, 10, 11], startYearOffset: 0, due: [12, 31], deadline: (y: number) => fmt(deadlineDate(y, 12, 31)), fiscal: (y: number) => paymentFiscalYear(y, 12, 31) },
 ] as const;

@@ -120,7 +120,10 @@ export default async function LodgingTaxPage({
       <section className="rounded-2xl border border-gray-300 bg-white p-6">
         <h2 className="font-semibold text-gray-900">宿泊税納入申告書（規則様式別記第2号）への転記用</h2>
         <p className="mt-1 text-sm text-gray-700">
-          対象期間 {period.label}分 ／ 申告期限・納入期限 <b>{period.deadline(filingYear)}</b>
+          対象期間 {period.label}分 ／ 申告期限・納入期限 <b>{period.deadline(filingYear)}</b> ／ 払込年度 <b>令和{period.fiscal(filingYear)}年度</b>
+        </p>
+        <p className="mt-1 text-xs text-gray-700">
+          期限の末日が土日の場合は翌平日です（祝日は反映していません）。12月末が期限のもの（9〜11月分）は、法令により翌年1月4日になります。
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-sm tabular-nums">
