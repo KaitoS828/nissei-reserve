@@ -107,3 +107,25 @@ export const PERIODS = [
   { id: "3", label: "6月〜8月", months: [6, 7, 8], startYearOffset: 0, due: [9, 30], deadline: (y: number) => fmt(deadlineDate(y, 9, 30)), fiscal: (y: number) => paymentFiscalYear(y, 9, 30) },
   { id: "4", label: "9月〜11月", months: [9, 10, 11], startYearOffset: 0, due: [12, 31], deadline: (y: number) => fmt(deadlineDate(y, 12, 31)), fiscal: (y: number) => paymentFiscalYear(y, 12, 31) },
 ] as const;
+
+// 申告期間の初日・末日。period.id==="1"（12〜2月）は、12月が申告年の前年になる。
+export function periodRange(p: (typeof PERIODS)[number], filingYear: number): { start: string; end: string } {
+  const first = p.months[0];
+  const last = p.months[p.months.length - 1];
+  const fy = p.id === "1" && first === 12 ? filingYear - 1 : filingYear;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { start: `${fy}-${pad(first)}-01`, end: `${filingYear}-${pad(last)}-${pad(daysInMonth(filingYear, last))}` };
+}
+
+// 今日までに終わった期間のうち、一番新しいもの（申告が必要な期間）
+export function latestEndedPeriod(today: string): { period: (typeof PERIODS)[number]; filingYear: number; start: string; end: string } {
+  const y = Number(today.slice(0, 4));
+  let best: { period: (typeof PERIODS)[number]; filingYear: number; start: string; end: string } | null = null;
+  for (const filingYear of [y - 1, y, y + 1]) {
+    for (const period of PERIODS) {
+      const r = periodRange(period, filingYear);
+      if (r.end < today && (!best || r.end > best.end)) best = { period, filingYear, ...r };
+    }
+  }
+  return best!;
+}

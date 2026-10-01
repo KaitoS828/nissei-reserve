@@ -6,6 +6,7 @@ import type { ReservationWithRefs, AdminLink } from "@/types/db";
 import { DashboardSections } from "./_components/DashboardSections";
 import { PinnedReservations } from "./_components/pins";
 import { QuickAddLink } from "./_components/QuickAddLink";
+import { latestEndedPeriod, deadlineDate } from "@/lib/lodging-tax";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,18 @@ export default async function DashboardPage() {
   }
   const guideSent = new Set(((deliveryRows.data ?? []) as { reservation_id: string }[]).map((d) => d.reservation_id));
 
+  // 宿泊税: 直近に終わった期間の申告・納入が済んでいなければ知らせる
+  const ended = latestEndedPeriod(today);
+  const { data: taxFiling } = await supabase
+    .from("lodging_tax_filings")
+    .select("filed_on, paid_on")
+    .eq("period_start", ended.start)
+    .maybeSingle();
+  const taxPending = !(taxFiling?.filed_on && taxFiling?.paid_on);
+  const [dueMonth, dueDay] = ended.period.due;
+  const dueDate = deadlineDate(ended.filingYear, dueMonth, dueDay).toISOString().slice(0, 10);
+  const daysLeft = Math.round((Date.parse(dueDate) - Date.parse(today)) / 86400000);
+
   type Task = { key: string; code: string; label: string; r: ReservationWithRefs };
   const tasks: Task[] = [];
   for (const r of soon) {
@@ -171,7 +184,7 @@ export default async function DashboardPage() {
 <>
       <section className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
         <h2 className="mb-3 font-semibold text-gray-900">要対応</h2>
-        {pendingList.length === 0 && tasks.length === 0 && (openInquiriesRes.count ?? 0) === 0 ? (
+        {pendingList.length === 0 && tasks.length === 0 && !taxPending && (openInquiriesRes.count ?? 0) === 0 ? (
           <p className="text-sm text-gray-700">対応が必要なものはありません</p>
         ) : (
           <ul className="space-y-2 text-sm">
@@ -180,6 +193,17 @@ export default async function DashboardPage() {
                 <Link href="/admin/reservations" className="font-medium text-amber-900 hover:underline">
                   未対応の問合せが {openInquiriesRes.count} 件あります →
                 </Link>
+              </li>
+            )}
+            {taxPending && (
+              <li className="flex flex-wrap items-center gap-2">
+                <span className="rounded bg-white px-2 py-0.5 text-xs font-bold text-amber-900">宿泊税</span>
+                <Link href={`/admin/lodging-tax?y=${ended.filingYear}&p=${ended.period.id}`} className="font-medium text-gray-900 hover:underline">
+                  {ended.period.label}分の申告・納入 {taxFiling?.filed_on ? "（納入が未記録）" : ""}
+                </Link>
+                <span className={daysLeft < 0 ? "font-bold text-red-700" : "text-gray-700"}>
+                  {daysLeft < 0 ? `期限（${dueDate}）を${-daysLeft}日過ぎています` : `期限 ${dueDate}（あと${daysLeft}日）`}
+                </span>
               </li>
             )}
             {tasks.map((t) => (

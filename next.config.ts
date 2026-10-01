@@ -22,6 +22,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // 親ディレクトリの lockfile を誤検出しないよう、トレースのルートを固定
   outputFileTracingRoot: root,
+  // 宿泊税の公式Excelひな形を、サーバーレス関数に同梱する
+  outputFileTracingIncludes: {
+    "/admin/export/lodging-tax-xlsx": ["./src/lib/templates/**"],
+  },
   // X-Powered-By を隠す（スタック露出を減らす）
   poweredByHeader: false,
   async headers() {
