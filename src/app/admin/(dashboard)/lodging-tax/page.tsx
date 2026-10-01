@@ -47,7 +47,7 @@ export default async function LodgingTaxPage({
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reservations")
-    .select("check_in, check_out, nights, num_guests, num_children, amount")
+    .select("check_in, check_out, nights, num_guests, num_children, tax_exempt_persons, amount")
     .in("status", ["confirmed", "checked_in", "checked_out"])
     .is("archived_at", null)
     .gt("check_out", startDate)
@@ -231,7 +231,7 @@ export default async function LodgingTaxPage({
         <ul className="list-disc space-y-1 pl-5">
           <li>対象の予約は、確定・滞在中・退室済で、金額が0円でないものです。キャンセル・ノーショー・集計対象外（アーカイブ）は含みません。</li>
           <li>1人1泊の宿泊料金は、予約金額 ÷ 泊数 ÷ 人数で求めます。予約金額は宿泊料金と清掃料金です（手引きでは、宿泊者の意思に関わりなく請求される清掃代は宿泊料金に含まれます）。飲食代や送迎料などが金額に入っている予約は、その分を除いて判定が必要です。</li>
-          <li>課税免除（修学旅行など）を予約に記録する項目は、まだありません。該当がある場合は、この表の数字を手で直してください。</li>
+          <li>課税免除（修学旅行など）は、予約の編集画面の「宿泊税の課税免除（人数）」に入れた人数が、免除の宿泊数として集計されます。免除の証明書（修学旅行等であることの証明書）は、北海道税務課のページからダウンロードして保管してください。</li>
           <li>OTA経由の予約は、宿泊税を販売価格に含める・現地で別に徴収する、のどちらでも、宿泊者から預かる税額は同じです。納入は宿の責任で行います。</li>
           <li>公式の納入申告書と納入書（3枚1組）は、北海道税務課のページからダウンロードして使います。eLTAX で申告する場合は、上の「転記用」の数字を入力してください。</li>
         </ul>

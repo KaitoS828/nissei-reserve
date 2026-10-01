@@ -164,6 +164,7 @@ export type Reservation = {
   nights: number;
   num_guests: number;
   num_children: number;
+  tax_exempt_persons: number;
   amount: number;
   status: ReservationStatus;
   payment_status: PaymentStatus;

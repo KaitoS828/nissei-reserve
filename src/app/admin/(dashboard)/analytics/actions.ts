@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auditLog } from "@/lib/audit";
 
-import { OTA_SOURCES } from "@/lib/ota-fee";
+import { OTA_SOURCES, STRIPE_SOURCE } from "@/lib/ota-fee";
 
 const PATH = "/admin/analytics";
 
@@ -351,7 +351,8 @@ export async function unarchiveReservationFromAnalytics(formData: FormData) {
 export async function saveOtaFeeRates(formData: FormData) {
   const supabase = createAdminClient();
   const rows: { source: string; rate: number; updated_at: string }[] = [];
-  for (const { source, label } of OTA_SOURCES) {
+  const entries: { source: string; label: string }[] = [...OTA_SOURCES, { source: STRIPE_SOURCE, label: "Stripe（このシステムのカード決済）" }];
+  for (const { source, label } of entries) {
     const raw = String(formData.get(source) ?? "").trim();
     if (raw === "") continue;
     const rate = Number(raw);

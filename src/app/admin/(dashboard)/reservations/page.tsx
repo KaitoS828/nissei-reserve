@@ -827,6 +827,11 @@ function ReservationCard({
                       <input type="number" name="num_guests" min={1} defaultValue={r.num_guests} className={field} />
                     </label>
                     <label className="space-y-1">
+                      <span className="text-xs text-gray-600">宿泊税の課税免除（人数）</span>
+                      <input type="number" name="tax_exempt_persons" min={0} max={r.num_guests} defaultValue={r.tax_exempt_persons ?? 0} className={field} />
+                      <span className="block text-[11px] text-gray-500">修学旅行など学校行事の参加者・引率者</span>
+                    </label>
+                    <label className="space-y-1">
                       <span className="text-xs text-gray-600">金額</span>
                       <input type="number" name="amount" min={0} defaultValue={r.amount} className={field} />
                     </label>

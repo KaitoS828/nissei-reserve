@@ -49,7 +49,7 @@ export default async function PaymentsPage({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">決済</h1>
-          <p className="mt-1 text-sm text-gray-600">カード決済履歴・返金</p>
+          <p className="mt-1 text-sm text-gray-700">このシステム（Stripe）で受け付けたカード決済の履歴・返金です。楽天Oyado・Airbnb など他の経路の決済は含みません。</p>
         </div>
         <a
           href="https://dashboard.stripe.com/acct_1TeG8bB3ojaPmd5j/dashboard"

@@ -13,6 +13,7 @@ export type TaxReservation = {
   nights: number;
   num_guests: number;
   num_children: number | null;
+  tax_exempt_persons?: number | null;
   amount: number;
 };
 
@@ -56,10 +57,12 @@ export function buildMonth(
     if (r.amount <= 0 || r.nights <= 0 || persons <= 0) continue;
     const perPersonNight = r.amount / r.nights / persons / (opts.taxIncluded ? 1.1 : 1);
     const tier = tierOf(perPersonNight);
+    const exempt = Math.min(Math.max(r.tax_exempt_persons ?? 0, 0), persons);
     for (let n = 0; n < r.nights; n++) {
       const row = byDate.get(addDays(r.check_in, n));
       if (!row) continue;
-      row[tier] += persons;
+      row[tier] += persons - exempt;
+      row.exempt += exempt;
       row.total += persons;
     }
   }

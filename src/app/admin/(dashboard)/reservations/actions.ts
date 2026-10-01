@@ -194,6 +194,7 @@ export async function updateReservation(formData: FormData) {
   const planId = String(formData.get("plan_id") ?? "") || null;
   const roomId = String(formData.get("room_id") ?? "") || null;
   const numGuests = Number(formData.get("num_guests") ?? 1);
+  const taxExemptPersons = Math.min(Math.max(Math.trunc(Number(formData.get("tax_exempt_persons") ?? 0)) || 0, 0), numGuests);
   const amount = Number(formData.get("amount") ?? 0);
   const source = String(formData.get("source") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
@@ -251,6 +252,7 @@ export async function updateReservation(formData: FormData) {
       check_in: checkIn,
       check_out: checkOut,
       num_guests: numGuests,
+      tax_exempt_persons: taxExemptPersons,
       amount,
       status,
       payment_status: paymentStatus,

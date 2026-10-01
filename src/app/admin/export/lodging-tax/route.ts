@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("reservations")
-    .select("check_in, check_out, nights, num_guests, num_children, amount")
+    .select("check_in, check_out, nights, num_guests, num_children, tax_exempt_persons, amount")
     .in("status", ["confirmed", "checked_in", "checked_out"])
     .is("archived_at", null)
     .gt("check_out", startDate)

@@ -29,7 +29,7 @@ const NAV = [
     group: "決済・集計",
     items: [
       { href: "/admin/analytics", label: "集計・分析" },
-      { href: "/admin/payments", label: "決済" },
+      { href: "/admin/payments", label: "決済（このシステムのみ）" },
       { href: "/admin/lodging-tax", label: "宿泊税" },
     ],
   },
