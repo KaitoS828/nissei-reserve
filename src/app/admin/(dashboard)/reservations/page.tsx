@@ -20,6 +20,7 @@ import {
   archiveReservation,
   issueDoorPinManually,
   revokeDoorPinManually,
+  cancelReservationByAdmin,
   sendBookingGuideEmail,
   sendReviewRequestEmail,
   sendCustomEmail,
@@ -33,6 +34,7 @@ import { PaymentLinkBanner } from "./PaymentLinkBanner";
 import { ReviewRequestGuide } from "./ReviewRequestGuide";
 import { CustomEmailForm } from "./CustomEmailForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { computeRefund } from "@/lib/cancel";
 import { GuestRegistry, type RegistryGuest } from "./GuestRegistry";
 import { bookingGuideSubject, bookingGuideText } from "@/lib/booking-guide";
 import { reviewRequestSubject, reviewRequestText } from "@/lib/review-request";
@@ -166,7 +168,7 @@ export default async function ReservationsPage({
     supabase.from("rooms").select("*").eq("is_active", true).order("name"),
     supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(500),
-    supabase.from("facility").select("check_in_time, check_out_time, phone").limit(1).maybeSingle(),
+    supabase.from("facility").select("check_in_time, check_out_time, phone, cancel_policy").limit(1).maybeSingle(),
   ]);
 
   let reservations = (resData ?? []) as ReservationWithRefs[];
@@ -513,6 +515,7 @@ export default async function ReservationsPage({
                 reviewRequest={reviewRequests.get(r.id) ?? null}
                 lastSentReviewAt={lastSentReview.get(r.id) ?? null}
                 registry={registry.get(r.id) ?? []}
+                cancelPolicy={(facility?.cancel_policy ?? null) as Record<string, number> | null}
               />
             </div>
           );
@@ -533,6 +536,7 @@ function ReservationCard({
   reviewRequest,
   lastSentReviewAt,
   registry,
+  cancelPolicy,
 }: {
   r: ReservationWithRefs;
   roomTypes: RoomType[];
@@ -544,6 +548,7 @@ function ReservationCard({
   reviewRequest: { subject: string; body: string } | null;
   lastSentReviewAt: string | null;
   registry: RegistryGuest[];
+  cancelPolicy: Record<string, number> | null;
 }) {
   const meta = statusMeta(r.status);
   // 発行済みの鍵だけ見せる。失効・取消済みのPINを出しても混乱するだけなので。
@@ -652,6 +657,58 @@ function ReservationCard({
                     </span>
                   </form>
                 )}
+
+                {/* 電話・LINE等でキャンセルを受けたときの処理。ポリシー通りの返金額を初期値に出し、
+                    病気・災害などは返金額を上げて減免できる。不泊は返金なしで記録する。 */}
+                {r.status !== "cancelled" && r.status !== "no_show" && r.status !== "checked_out" && (() => {
+                  const policy = computeRefund(r.amount, r.check_in, cancelPolicy);
+                  return (
+                    <form
+                      action={cancelReservationByAdmin}
+                      className="space-y-2 rounded-lg border border-red-200 bg-red-50/40 px-4 py-3"
+                    >
+                      <input type="hidden" name="id" value={r.id} />
+                      <p className="text-sm text-gray-700">
+                        キャンセル処理: チェックイン{policy.daysBefore >= 0 ? `${policy.daysBefore}日前` : "を経過"}
+                        ・ポリシー上のキャンセル料 {Math.round(policy.chargeRate * 100)}%（¥{policy.feeAmount.toLocaleString()}）
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-gray-600">返金額 ¥</span>
+                        <input
+                          type="number"
+                          name="refund_amount"
+                          min={0}
+                          max={r.amount}
+                          step={1}
+                          defaultValue={policy.refundAmount}
+                          className="w-28 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 outline-none focus:border-cyan-600"
+                        />
+                        <input
+                          type="text"
+                          name="reason"
+                          placeholder="理由・減免の根拠（例: 体調不良のため全額返金）"
+                          className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 outline-none focus:border-cyan-600"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <SubmitButton className="rounded-lg bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700">
+                          キャンセル確定
+                        </SubmitButton>
+                        <button
+                          type="submit"
+                          name="mode"
+                          value="no_show"
+                          className="rounded-lg border border-purple-300 px-3 py-1 text-sm text-purple-700 transition hover:bg-purple-50"
+                        >
+                          不泊として処理（返金なし）
+                        </button>
+                        <span className="text-xs text-gray-600">
+                          入力した返金額がStripeで即時に返金されます。取り消せません
+                        </span>
+                      </div>
+                    </form>
+                  );
+                })()}
 
                 {/* 決済が通れば webhook で自動発行される。現地精算や管理画面からの
                     代理予約は webhook を通らないので、ここから手動で出せるようにする。 */}
