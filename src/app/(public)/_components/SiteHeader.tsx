@@ -52,8 +52,8 @@ export function SiteHeader() {
               href={hrefOf(item)}
               className={
                 isActive(item)
-                  ? "font-medium text-brand-700"
-                  : "text-gray-500 transition hover:text-gray-800"
+                  ? "inline-block py-2 font-medium text-brand-700"
+                  : "inline-block py-2 text-gray-600 transition hover:text-gray-800"
               }
             >
               {t.nav[item.key]}

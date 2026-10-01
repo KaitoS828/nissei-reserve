@@ -25,7 +25,7 @@ export function SearchForm({ defaultValue }: { defaultValue: string }) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="氏名・メール・電話で検索"
-        className="w-64 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-cyan-600"
+        className="w-full rounded-lg sm:w-64 border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-cyan-600"
       />
       <button
         type="submit"

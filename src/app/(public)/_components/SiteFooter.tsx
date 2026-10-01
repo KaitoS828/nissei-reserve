@@ -13,20 +13,20 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-12 border-t border-gray-200 py-8 sm:mt-16 print:hidden">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 text-sm text-gray-500">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 text-sm text-gray-600">
         <span>{t.site.about}</span>
         <span className="text-gray-300">|</span>
-        <Link href={localePath(locale, "/reserve/lookup")} className="hover:text-gray-800">{t.nav.lookup}</Link>
+        <Link href={localePath(locale, "/reserve/lookup")} className="inline-block py-2 hover:text-gray-800">{t.nav.lookup}</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/faq" className="hover:text-gray-800">{t.site.faq}</Link>
+        <Link href="/faq" className="inline-block py-2 hover:text-gray-800">{t.site.faq}</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/terms" className="hover:text-gray-800">{t.site.terms}</Link>
+        <Link href="/terms" className="inline-block py-2 hover:text-gray-800">{t.site.terms}</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/privacy" className="hover:text-gray-800">{t.site.privacy}</Link>
+        <Link href="/privacy" className="inline-block py-2 hover:text-gray-800">{t.site.privacy}</Link>
         <span className="text-gray-300">|</span>
-        <a href={SITE.officialSiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-gray-800">{t.site.officialSite}</a>
+        <a href={SITE.officialSiteUrl} target="_blank" rel="noopener noreferrer" className="inline-block py-2 hover:text-gray-800">{t.site.officialSite}</a>
       </div>
-      <p className="mt-3 text-center text-xs text-gray-400">
+      <p className="mt-3 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} {t.site.name}
       </p>
     </footer>

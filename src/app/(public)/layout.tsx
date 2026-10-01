@@ -17,7 +17,7 @@ export default async function PublicLayout({
   const brandColor = resolveBrandColor((facility?.settings as Record<string, unknown> | null)?.brand_color);
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-serif">
+    <div className="touch-comfort min-h-screen bg-white text-gray-800 font-serif">
       <style dangerouslySetInnerHTML={{ __html: `:root{${brandColorCssVars(brandColor)}}` }} />
       {/* 宿泊施設としての構造化データ。検索結果に住所や設備が出るようにする */}
       <script

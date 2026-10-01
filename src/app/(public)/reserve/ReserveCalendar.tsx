@@ -166,7 +166,7 @@ export function ReserveCalendar({
   query.set("guests", String(guests));
 
   const navBtn =
-    "rounded-lg px-2 py-1.5 text-xs text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 whitespace-nowrap sm:px-2.5";
+    "inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg px-2 text-sm text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 whitespace-nowrap sm:px-2.5";
 
   return (
     <div className="space-y-4">

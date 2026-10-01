@@ -87,7 +87,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900 font-[family-name:var(--font-biz-ud)] md:flex-row">
+    <div className="touch-comfort flex min-h-screen flex-col bg-gray-50 text-gray-900 font-[family-name:var(--font-biz-ud)] md:flex-row">
       <AdminNav groups={sidebar} searchGroups={groups} />
 
       <div className="flex min-w-0 flex-1 flex-col">

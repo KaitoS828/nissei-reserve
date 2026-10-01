@@ -49,3 +49,15 @@ body {
     background: white;
   }
 }
+
+/* スマホでの操作性: 入力欄は16px以上（iOSでフォーカス時に画面が拡大されるのを防ぐ）、ボタン類は指で押せる高さにする。
+   管理画面と公開画面の最上位に .touch-comfort を付けて有効にする。 */
+@media (max-width: 767px) {
+  .touch-comfort :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]), select, textarea) {
+    font-size: 16px;
+    min-height: 2.5rem;
+  }
+  .touch-comfort :is(button, summary, [role="button"]) {
+    min-height: 2.5rem;
+  }
+}

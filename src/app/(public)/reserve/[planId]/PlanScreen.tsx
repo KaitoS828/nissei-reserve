@@ -77,7 +77,7 @@ export async function PlanScreen({
     <div className="space-y-6">
       <Link
         href={localePath(locale, "/reserve")}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+        className="inline-flex min-h-10 items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
       >
         {t.backHome}
       </Link>
