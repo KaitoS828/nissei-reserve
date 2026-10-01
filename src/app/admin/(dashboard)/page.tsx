@@ -5,6 +5,7 @@ import { formatCheckInTime } from "@/lib/reservations";
 import type { ReservationWithRefs, AdminLink } from "@/types/db";
 import { DashboardSections } from "./_components/DashboardSections";
 import { PinnedReservations } from "./_components/pins";
+import { QuickAddLink } from "./_components/QuickAddLink";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +110,7 @@ export default async function DashboardPage() {
       .select("*")
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
-      .limit(6),
+      .limit(12),
   ]);
 
   const checkIns = (checkInsRes.data ?? []) as ReservationWithRefs[];
@@ -304,9 +305,12 @@ export default async function DashboardPage() {
             <h2 className="font-medium text-gray-900">各種リンク・管理ショートカット</h2>
             <p className="text-xs text-gray-600">外部の管理画面やよく使うページへワンタッチでアクセスできます</p>
           </div>
-          <Link href="/admin/links" className="text-xs font-medium text-cyan-700 hover:underline">
-            リンク管理・追加 →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/links" className="text-xs font-medium text-cyan-700 hover:underline">
+              編集・削除 →
+            </Link>
+            <QuickAddLink />
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {links.map((link) => (

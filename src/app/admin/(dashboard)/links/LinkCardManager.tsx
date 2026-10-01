@@ -16,7 +16,7 @@ const CATEGORIES = [
   "その他",
 ];
 
-const PRESET_CATEGORIES = [
+export const PRESET_CATEGORIES = [
   "OTA・予約サイト",
   "決済・インフラ",
   "スマートロック・IoT",

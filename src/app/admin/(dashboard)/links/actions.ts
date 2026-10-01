@@ -54,6 +54,8 @@ export async function saveAdminLink(formData: FormData) {
 
   revalidatePath(PATH);
   revalidatePath("/admin");
+  // ダッシュボードから追加したときは、ダッシュボードに戻す
+  if (String(formData.get("return_to") ?? "") === "/admin") redirect("/admin");
   done(id ? "リンクを更新しました" : "リンクを追加しました");
 }
 
