@@ -62,7 +62,7 @@ export function DateField({
       </button>
 
       {open && (
-        <div className="absolute left-0 z-30 mt-1 w-64 rounded-xl border border-gray-300 bg-white p-3 shadow-xl">
+        <div className="absolute left-0 z-30 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-300 bg-white p-3 shadow-xl">
           <div className="mb-2 flex items-center justify-between">
             <button type="button" onClick={() => shiftMonth(-1)} className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100">←</button>
             <span className="text-sm font-medium text-gray-900">{year}年{month0 + 1}月</span>

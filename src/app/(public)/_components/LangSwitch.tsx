@@ -17,7 +17,7 @@ export function LangSwitch({ locale }: { locale: Locale }) {
     <Link
       href={altPath(pathname, to)}
       hrefLang={to}
-      className="shrink-0 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-600 transition hover:bg-gray-50"
+      className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-gray-300 px-3.5 text-xs text-gray-700 transition hover:bg-gray-50"
     >
       {dict(locale).common.switchLang}
     </Link>
