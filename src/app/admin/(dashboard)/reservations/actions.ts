@@ -21,6 +21,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReservationCode, canBook, IGNORE_BLOCKED_SOURCES } from "@/lib/reservations";
 import { eachNight, OCCUPYING_STATUSES } from "@/lib/availability";
 import { auditLog } from "@/lib/audit";
+import { computeRefund } from "@/lib/cancel";
 import { issueDoorPin, revokeDoorPin } from "@/lib/smart-lock";
 import { gcalCreateEvent, gcalDeleteEvent, gcalCreateBlockEvent } from "@/lib/gcal";
 import type { ReservationStatus, PaymentStatus } from "@/types/db";
@@ -365,6 +366,96 @@ export async function createPaymentLink(formData: FormData) {
 
   revalidatePath(PATH);
   redirect(`${PATH}?pay_url=${encodeURIComponent(shortUrl)}&pay_code=${encodeURIComponent(r.code)}`);
+}
+
+// 管理者によるキャンセル／不泊処理。返金額はポリシー通りの額が初期値で、減免のため上書きできる。
+// 不泊（mode=no_show）は返金せず、ステータスだけ no_show にして記録する。
+export async function cancelReservationByAdmin(formData: FormData) {
+  const id = String(formData.get("id"));
+  const noShow = String(formData.get("mode")) === "no_show";
+  const reason = String(formData.get("reason") ?? "").trim();
+  const supabase = createAdminClient();
+
+  const { data: resv } = await supabase
+    .from("reservations")
+    .select("id, code, check_in, amount, status, payment_status, gcal_event_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!resv) redirectError("予約が見つかりません");
+  if (resv!.status === "cancelled" || resv!.status === "no_show") redirectError("すでにキャンセル済みです");
+
+  const { data: facility } = await supabase.from("facility").select("cancel_policy").limit(1).single();
+  const policy = computeRefund(
+    resv!.amount,
+    resv!.check_in,
+    (facility?.cancel_policy ?? null) as Record<string, number> | null,
+  );
+
+  const requested = Math.trunc(Number(formData.get("refund_amount") ?? policy.refundAmount));
+  if (!noShow && (!Number.isFinite(requested) || requested < 0 || requested > resv!.amount)) {
+    redirectError("返金額は0円から予約金額の範囲で指定してください");
+  }
+  const refundAmount = noShow ? 0 : requested;
+
+  let refunded = 0;
+  if (refundAmount > 0) {
+    const { data: payment } = await supabase
+      .from("payments")
+      .select("id, amount, refunded_amount, stripe_payment_intent_id")
+      .eq("reservation_id", id)
+      .maybeSingle();
+    if (!payment?.stripe_payment_intent_id) {
+      redirectError("Stripe決済が紐づいていないため返金できません。返金額を0にして処理してください");
+    }
+    const remaining = payment!.amount - (payment!.refunded_amount ?? 0);
+    if (refundAmount > remaining) redirectError(`返金可能額（¥${remaining.toLocaleString()}）を超えています`);
+    try {
+      await getStripe().refunds.create({
+        payment_intent: payment!.stripe_payment_intent_id!,
+        amount: refundAmount,
+      });
+    } catch (e) {
+      redirectError(`Stripe返金に失敗しました: ${e instanceof Error ? e.message : ""}`);
+    }
+    refunded = (payment!.refunded_amount ?? 0) + refundAmount;
+    await supabase
+      .from("payments")
+      .update({
+        refunded_amount: refunded,
+        status: refunded >= payment!.amount ? "refunded" : "partially_refunded",
+      })
+      .eq("id", payment!.id);
+  }
+
+  const payStatus =
+    refundAmount >= resv!.amount ? "refunded" : refundAmount > 0 ? "partially_refunded" : resv!.payment_status;
+  await supabase
+    .from("reservations")
+    .update({
+      status: noShow ? "no_show" : "cancelled",
+      payment_status: payStatus,
+      cancel_category: noShow ? "不泊" : "管理者による処理",
+      cancel_reason: reason || null,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  const eventId = (resv as { gcal_event_id?: string | null }).gcal_event_id;
+  if (eventId) await gcalDeleteEvent(eventId).catch(() => {});
+  await revokeDoorPin(id).catch((e) => console.error("ドアPINの無効化に失敗:", e));
+
+  await auditLog(supabase, {
+    action: noShow ? "reservation.no_show" : "reservation.cancel",
+    entityType: "reservations",
+    entityId: id,
+    summary: `${resv!.code} を${noShow ? "不泊" : "キャンセル"}処理（返金 ¥${refundAmount.toLocaleString()}／ポリシー上の返金額 ¥${policy.refundAmount.toLocaleString()}）`,
+    metadata: { refundAmount, policyRefund: policy.refundAmount, reason },
+  });
+
+  revalidatePath(PATH);
+  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/payments");
+  redirect(PATH);
 }
 
 export async function archiveReservation(formData: FormData) {

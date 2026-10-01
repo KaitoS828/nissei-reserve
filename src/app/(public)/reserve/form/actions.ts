@@ -182,7 +182,7 @@ export async function startCheckout(formData: FormData) {
         },
       },
     ],
-    metadata: { reservation_id: resv.id, code: resv.code },
+    metadata: { reservation_id: resv.id, code: resv.code, policy_agreed_at: new Date().toISOString() },
     // 期限切れを Stripe に通知させて、掴んだ在庫を確実に解放する
     expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_WINDOW_MINUTES * 60,
     success_url: `${origin}${localePath(locale, "/reserve/complete")}?code=${resv.code}&token=${lookupToken}`,
