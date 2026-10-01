@@ -18,6 +18,7 @@ type Row = {
   check_out: string;
   nights: number;
   num_guests: number;
+  num_children: number | null;
   source: string | null;
   note: string | null;
   cancel_reason: string | null;
@@ -79,7 +80,7 @@ export default async function AnalyticsPage({
   const [{ data: resvData }, { data: costData, error: costError }, { count: roomCountRaw }, { data: rateData }, { data: payData }] = await Promise.all([
     supabase
       .from("reservations")
-      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, source, note, cancel_reason, archived_at, customers(last_name, first_name), room_types(name)")
+      .select("id, code, status, payment_status, amount, check_in, check_out, nights, num_guests, num_children, source, note, cancel_reason, archived_at, customers(last_name, first_name), room_types(name)")
       .order("check_in", { ascending: false }),
     supabase
       .from("operating_costs")
@@ -144,6 +145,10 @@ export default async function AnalyticsPage({
 
   const cancelled = byStatus("cancelled");
   const cancelRate = total ? Math.round((cancelled / total) * 100) : 0;
+  // 総宿泊人数: キャンセル・ノーショーを除いた予約の宿泊者の合計（大人＋子ども）。延べ人泊は人数×泊数。
+  const stayRows = rows.filter((r) => !["cancelled", "no_show"].includes(r.status));
+  const totalGuests = stayRows.reduce((s, r) => s + r.num_guests + (r.num_children ?? 0), 0);
+  const totalPersonNights = stayRows.reduce((s, r) => s + (r.num_guests + (r.num_children ?? 0)) * (r.nights ?? 0), 0);
   const totalNights = rows
     .filter((r) => !["cancelled", "no_show"].includes(r.status))
     .reduce((s, r) => s + (r.nights ?? 0), 0);
@@ -213,6 +218,12 @@ export default async function AnalyticsPage({
       value: `${total}件 / ${totalNights}泊`,
       color: "text-gray-900",
       sub: `キャンセル率: ${cancelRate}% (${cancelled}件)`,
+    },
+    {
+      label: "総宿泊人数",
+      value: `${totalGuests.toLocaleString()}名`,
+      color: "text-gray-900",
+      sub: `延べ ${totalPersonNights.toLocaleString()}人泊（人数×泊数）`,
     },
     {
       label: "稼働率",
@@ -309,7 +320,7 @@ export default async function AnalyticsPage({
       </div>
 
       {/* サマリーカード */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
           <div key={c.label} className="rounded-2xl border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-600">{c.label}</p>
