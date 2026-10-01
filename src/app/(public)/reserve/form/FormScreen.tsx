@@ -197,7 +197,7 @@ export async function FormScreen({
         </label>
 
         <div className="flex justify-center">
-          <SubmitButton pendingLabel={t.submitting} className="rounded-full bg-brand-600 px-12 py-3 font-medium text-white transition hover:bg-brand-500">
+          <SubmitButton pendingLabel={t.submitting} className="w-full rounded-full bg-brand-600 px-12 py-3.5 font-medium text-white transition hover:bg-brand-500 sm:w-auto">
             {t.submit}
           </SubmitButton>
         </div>
