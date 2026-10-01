@@ -75,9 +75,7 @@ export function AdminNav({ groups, searchGroups }: { groups: NavGroup[]; searchG
       {/* モバイル: 上部バー + ハンバーガー */}
       <div className="sticky top-0 z-30 flex items-center justify-between gap-1 border-b border-gray-200 bg-white px-4 py-3 md:hidden">
         <Link href="/admin" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="日靜" width={28} height={28} className="h-7 w-7" />
-          <span className="text-lg font-semibold text-gray-900">nissei</span>
-          <span className="ml-1 text-sm text-cyan-700">予約</span>
+          <Image src="/logo.png" alt="日靜" width={36} height={36} className="h-9 w-9" />
         </Link>
         <SearchTrigger className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-lg text-gray-600 transition hover:bg-gray-100">
           <span aria-hidden>🔍</span>
@@ -118,9 +116,7 @@ export function AdminNav({ groups, searchGroups }: { groups: NavGroup[]; searchG
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <span className="flex items-center gap-2">
-                <Image src="/logo.png" alt="日靜" width={28} height={28} className="h-7 w-7" />
-                <span className="text-lg font-semibold text-gray-900">nissei</span>
-                <span className="ml-1 text-sm text-cyan-700">予約</span>
+                <Image src="/logo.png" alt="日靜" width={36} height={36} className="h-9 w-9" />
               </span>
               <button
                 type="button"
@@ -153,9 +149,7 @@ export function AdminNav({ groups, searchGroups }: { groups: NavGroup[]; searchG
       <aside className="hidden shrink-0 flex-col border-r border-gray-200 bg-white md:sticky md:top-0 md:flex md:h-screen md:w-56">
         <div className="border-b border-gray-200 px-4 py-4">
           <Link href="/admin" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="日靜" width={28} height={28} className="h-7 w-7" />
-            <span className="text-lg font-semibold text-gray-900">nissei</span>
-            <span className="ml-1 text-sm text-cyan-700">予約</span>
+            <Image src="/logo.png" alt="日靜" width={36} height={36} className="h-9 w-9" />
           </Link>
         </div>
         <div className="flex-1 overflow-y-auto">{links}</div>
