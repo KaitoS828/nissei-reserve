@@ -23,6 +23,7 @@ const NAV = [
     items: [
       { href: "/admin/blocked", label: "予約不可" },
       { href: "/admin/ical", label: "iCal連携" },
+      { href: "/admin/cron", label: "自動実行" },
     ],
   },
   {

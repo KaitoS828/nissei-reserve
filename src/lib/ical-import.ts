@@ -157,3 +157,15 @@ export async function importAllIcalSources(): Promise<{ imported: number; errors
   return { imported, errors };
 }
 
+
+const STALE_HOURS = 24;
+
+export async function findStaleIcalSources(): Promise<string[]> {
+  const cutoff = new Date(Date.now() - STALE_HOURS * 3600_000).toISOString();
+  const { data } = await createAdminClient()
+    .from("ical_sources")
+    .select("name, last_synced_at")
+    .eq("is_active", true)
+    .or(`last_synced_at.is.null,last_synced_at.lt.${cutoff}`);
+  return (data ?? []).map((s) => s.name as string);
+}

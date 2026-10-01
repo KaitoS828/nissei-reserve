@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorizeCron } from "@/lib/cron-auth";
+import { withCronLog } from "@/lib/cron-log";
 import { sendEmail } from "@/lib/email";
 import { ensureSecretCode, registerUrl } from "@/lib/guest-registration";
 import { originFromHeaders } from "@/lib/booking-guide-server";
@@ -118,5 +119,6 @@ async function handle(req: NextRequest) {
 }
 
 // Vercel Cron は GET で叩く。外部cron・手動実行は POST を使う。
-export const GET = handle;
-export const POST = handle;
+const logged = withCronLog("reminders", handle);
+export const GET = logged;
+export const POST = logged;
