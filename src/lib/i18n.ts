@@ -206,7 +206,7 @@ type Dict = {
     addNext: string; submitAll: string; editLater: string;
     lastName: string; firstName: string; furiganaLast: string; furiganaFirst: string;
     furiganaLastHint: string; furiganaFirstHint: string;
-    prefecture: string; prefectureHint: string; addressRest: string; addressRestHint: string;
+    prefecture: string; addressRest: string;
     sameAsLead: string; progress: (done: number, total: number) => string;
     invalidUrl: string; done: string;
     errName: string; errAddress: string; errContact: string; errContactFormat: string;
@@ -421,8 +421,8 @@ const ja: Dict = {
     addNext: "＋ 次の人を登録する", submitAll: "この内容で登録する",
     lastName: "姓", firstName: "名", furiganaLast: "せい", furiganaFirst: "めい",
     furiganaLastHint: "例: やまだ", furiganaFirstHint: "例: たろう",
-    prefecture: "都道府県", prefectureHint: "例: 北海道",
-    addressRest: "市区町村・番地・建物名", addressRestHint: "例: 広尾郡広尾町西3条1-2",
+    prefecture: "都道府県",
+    addressRest: "市区町村・番地・建物名",
     sameAsLead: "住所・連絡先を代表者と同じにする",
     progress: (done, total) => `ご記入 ${done} / ${total} 名`,
     editLater: "あとからこのページを開き直せば、内容の修正もできます。",
@@ -657,8 +657,8 @@ const en: Dict = {
     addNext: "+ Add another guest", submitAll: "Submit",
     lastName: "Family name", firstName: "Given name", furiganaLast: "Family name (reading)", furiganaFirst: "Given name (reading)",
     furiganaLastHint: "e.g. Yamada", furiganaFirstHint: "e.g. Taro",
-    prefecture: "State / Province / Country", prefectureHint: "e.g. California, USA",
-    addressRest: "City, street and building", addressRestHint: "e.g. San Francisco, 1234 Market St",
+    prefecture: "State / Province / Country",
+    addressRest: "City, street and building",
     sameAsLead: "Use the lead guest's address and contact",
     progress: (done, total) => `${done} of ${total} guests entered`,
     editLater: "You can reopen this page later to correct your details.",

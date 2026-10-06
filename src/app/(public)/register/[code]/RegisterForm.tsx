@@ -247,7 +247,6 @@ export function RegisterForm({
               <input
                 name={`prefecture_${i}`}
                 defaultValue={ad[0]}
-                placeholder={t.prefectureHint}
                 className={cls(`prefecture_${i}`)}
               />
               <Err name={`prefecture_${i}`} />
@@ -258,7 +257,6 @@ export function RegisterForm({
               <input
                 name={`address_rest_${i}`}
                 defaultValue={ad[1]}
-                placeholder={t.addressRestHint}
                 className={cls(`address_rest_${i}`)}
               />
               <Err name={`address_rest_${i}`} />
