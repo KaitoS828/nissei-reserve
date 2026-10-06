@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { GENDERS } from "@/lib/guests";
+import { GENDERS, parseBirthDate } from "@/lib/guests";
 import { dict, type Locale } from "@/lib/i18n";
 import { SubmitButton } from "@/components/SubmitButton";
 import { submitGuestRegistration } from "./actions";
@@ -28,6 +28,17 @@ const ng = "border-red-400 bg-red-50";
 
 type Errors = Record<string, string>;
 
+const splitName = (v: string | null | undefined): [string, string] => {
+  const m = (v ?? "").trim().match(/^(\S+)[\s\u3000]+(.+)$/);
+  return m ? [m[1], m[2]] : [(v ?? "").trim(), ""];
+};
+
+const splitAddress = (v: string | null | undefined): [string, string] => {
+  const a = (v ?? "").trim();
+  const m = a.match(/^(北海道|東京都|京都府|大阪府|.{2,3}県)\s*(.*)$/);
+  return m ? [m[1], m[2]] : ["", a];
+};
+
 export function RegisterForm({
   secretCode,
   numGuests,
@@ -48,6 +59,7 @@ export function RegisterForm({
   const [pending, setPending] = useState<{ done: number } | null>(null);
   const bypassRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const [filled, setFilled] = useState(existing.filter((g) => g.full_name).length);
   const orders = Array.from({ length: visible }, (_, i) => i + 1);
   const find = (i: number) => existing.find((g) => g.guest_order === i);
   const maxGuests = Math.max(numGuests, existing.length) + 4;
@@ -63,23 +75,29 @@ export function RegisterForm({
     let filled = 0;
 
     for (const i of orders) {
-      const name = get(`full_name_${i}`);
-      const address = get(`address_${i}`);
+      const lastName = get(`last_name_${i}`);
+      const firstName = get(`first_name_${i}`);
+      const prefecture = get(`prefecture_${i}`);
+      const rest = get(`address_rest_${i}`);
       const contact = get(`contact_${i}`);
-      const any = name || address || contact;
+      const any = lastName || firstName || prefecture || rest || contact;
       if (!any) continue;
       filled += 1;
 
-      if (!name) next[`full_name_${i}`] = t.errName;
-      if (!address) next[`address_${i}`] = t.errAddress;
+      if (!lastName) next[`last_name_${i}`] = t.errName;
+      if (!firstName) next[`first_name_${i}`] = t.errName;
+      if (!prefecture) next[`prefecture_${i}`] = t.errAddress;
+      if (!rest) next[`address_rest_${i}`] = t.errAddress;
       if (!contact) {
         next[`contact_${i}`] = t.errContact;
       } else if (!/^[0-9+\-() 　]{8,}$/.test(contact) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact)) {
         next[`contact_${i}`] = t.errContactFormat;
       }
 
-      const birth = get(`birth_date_${i}`);
-      if (birth && new Date(birth) > new Date()) {
+      const birth = parseBirthDate(get(`birth_date_${i}`));
+      if (birth === null) {
+        next[`birth_date_${i}`] = t.errBirthFormat;
+      } else if (birth && new Date(birth) > new Date()) {
         next[`birth_date_${i}`] = t.errBirth;
       }
 
@@ -104,10 +122,21 @@ export function RegisterForm({
   function filledCount(form: HTMLFormElement): number {
     let n = 0;
     for (const i of orders) {
-      const v = (form.elements.namedItem(`full_name_${i}`) as HTMLInputElement | null)?.value.trim();
+      const v = (form.elements.namedItem(`last_name_${i}`) as HTMLInputElement | null)?.value.trim();
       if (v) n += 1;
     }
     return n;
+  }
+
+  function copyFromLead(i: number) {
+    const form = formRef.current;
+    if (!form) return;
+    for (const key of ["prefecture", "address_rest", "contact"]) {
+      const src = form.elements.namedItem(`${key}_1`) as HTMLInputElement | null;
+      const dst = form.elements.namedItem(`${key}_${i}`) as HTMLInputElement | null;
+      if (src && dst) dst.value = src.value;
+    }
+    setFilled(filledCount(form));
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -144,10 +173,24 @@ export function RegisterForm({
   const cls = (name: string) => `${field} ${errors[name] ? ng : ok}`;
 
   return (
-    <form ref={formRef} action={submitGuestRegistration} onSubmit={onSubmit} noValidate className="space-y-6">
+    <form ref={formRef} action={submitGuestRegistration} onSubmit={onSubmit}
+      onInput={(e) => setFilled(filledCount(e.currentTarget))}
+      noValidate
+      className="space-y-6"
+    >
       <input type="hidden" name="secret_code" value={secretCode} />
       <input type="hidden" name="guest_count" value={visible} />
       <input type="hidden" name="locale" value={locale} />
+
+      <div className="sticky top-0 z-10 -mx-1 space-y-1.5 bg-white/95 px-1 py-3 backdrop-blur">
+        <p className="text-sm font-medium text-gray-900">{t.progress(filled, numGuests)}</p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
+          <div
+            className="h-full rounded-full bg-brand-500 transition-all"
+            style={{ width: `${Math.min(100, (filled / Math.max(1, numGuests)) * 100)}%` }}
+          />
+        </div>
+      </div>
 
       {summary && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{summary}</p>
@@ -155,6 +198,9 @@ export function RegisterForm({
 
       {orders.map((i) => {
         const g = find(i);
+        const nm = splitName(g?.full_name);
+        const fn = splitName(g?.furigana);
+        const ad = splitAddress(g?.address);
         return (
           <fieldset
             key={i}
@@ -165,31 +211,57 @@ export function RegisterForm({
               {t.person} {i}{i === 1 ? t.representative : ""}
             </legend>
 
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-700">{t.lastName} <span className="text-red-500">*</span></span>
+                <input name={`last_name_${i}`} defaultValue={nm[0]} autoComplete="family-name" className={cls(`last_name_${i}`)} />
+                <Err name={`last_name_${i}`} />
+              </label>
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-700">{t.firstName} <span className="text-red-500">*</span></span>
+                <input name={`first_name_${i}`} defaultValue={nm[1]} autoComplete="given-name" className={cls(`first_name_${i}`)} />
+                <Err name={`first_name_${i}`} />
+              </label>
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-700">{t.furiganaLast}</span>
+                <input name={`furigana_last_${i}`} defaultValue={fn[0]} placeholder={t.furiganaLastHint} className={cls(`furigana_last_${i}`)} />
+              </label>
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-700">{t.furiganaFirst}</span>
+                <input name={`furigana_first_${i}`} defaultValue={fn[1]} placeholder={t.furiganaFirstHint} className={cls(`furigana_first_${i}`)} />
+              </label>
+            </div>
+
+            {i > 1 && (
+              <button
+                type="button"
+                onClick={() => copyFromLead(i)}
+                className="text-sm font-medium text-brand-700 underline underline-offset-2"
+              >
+                {t.sameAsLead}
+              </button>
+            )}
+
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">{t.fullName} <span className="text-red-500">*</span></span>
-              <input name={`full_name_${i}`} defaultValue={g?.full_name ?? ""} className={cls(`full_name_${i}`)} />
-              <Err name={`full_name_${i}`} />
+              <span className="text-sm text-gray-700">{t.prefecture} <span className="text-red-500">*</span></span>
+              <input
+                name={`prefecture_${i}`}
+                defaultValue={ad[0]}
+                placeholder={t.prefectureHint}
+                className={cls(`prefecture_${i}`)}
+              />
+              <Err name={`prefecture_${i}`} />
             </label>
 
             <label className="block space-y-1">
-              <span className="text-sm text-gray-700">{t.furigana}</span>
+              <span className="text-sm text-gray-700">{t.addressRest} <span className="text-red-500">*</span></span>
               <input
-                name={`furigana_${i}`}
-                defaultValue={g?.furigana ?? ""}
-                placeholder={t.furiganaHint}
-                className={cls(`furigana_${i}`)}
+                name={`address_rest_${i}`}
+                defaultValue={ad[1]}
+                placeholder={t.addressRestHint}
+                className={cls(`address_rest_${i}`)}
               />
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-sm text-gray-700">{t.address} <span className="text-red-500">*</span></span>
-              <input
-                name={`address_${i}`}
-                defaultValue={g?.address ?? ""}
-                placeholder={t.addressHint}
-                className={cls(`address_${i}`)}
-              />
-              <Err name={`address_${i}`} />
+              <Err name={`address_rest_${i}`} />
             </label>
 
             <label className="block space-y-1">
@@ -208,20 +280,22 @@ export function RegisterForm({
               <input name={`occupation_${i}`} defaultValue={g?.occupation ?? ""} className={cls(`occupation_${i}`)} />
             </label>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+              <label className="block min-w-0 space-y-1">
                 <span className="text-sm text-gray-700">{t.birthDate}</span>
                 <input
-                  type="date"
                   name={`birth_date_${i}`}
-                  defaultValue={g?.birth_date ?? ""}
+                  inputMode="numeric"
+                  autoComplete="bday"
+                  defaultValue={g?.birth_date?.replaceAll("-", "/") ?? ""}
+                  placeholder={t.birthHint}
                   className={cls(`birth_date_${i}`)}
                 />
                 <Err name={`birth_date_${i}`} />
               </label>
-              <label className="block space-y-1">
+              <label className="block min-w-0 space-y-1">
                 <span className="text-sm text-gray-700">{t.gender}</span>
-                <select name={`gender_${i}`} defaultValue={g?.gender ?? ""} className={cls(`gender_${i}`)}>
+                <select name={`gender_${i}`} defaultValue={g?.gender ?? ""} className={`${cls(`gender_${i}`)} h-[42px] min-w-0 bg-white`}>
                   <option value="">{t.noAnswer}</option>
                   {GENDERS.map((x) => (
                     <option key={x.value} value={x.value}>{x.label}</option>

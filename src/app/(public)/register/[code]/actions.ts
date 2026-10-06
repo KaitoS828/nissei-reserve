@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { uploadPassportImage } from "@/lib/passport-storage";
+import { parseBirthDate } from "@/lib/guests";
 import { dict, isLocale, type Locale } from "@/lib/i18n";
 
 const str = (formData: FormData, key: string) => String(formData.get(key) ?? "").trim();
@@ -39,15 +40,26 @@ export async function submitGuestRegistration(formData: FormData) {
   // 全員分をまとめて受け取る。1件でも不備があれば、何も保存せず入力画面に戻す。
   const rows: Record<string, unknown>[] = [];
   for (let i = 1; i <= count; i++) {
-    const fullName = str(formData, `full_name_${i}`);
-    const address = str(formData, `address_${i}`);
+    const lastName = str(formData, `last_name_${i}`);
+    const firstName = str(formData, `first_name_${i}`);
+    const prefecture = str(formData, `prefecture_${i}`);
+    const addressRest = str(formData, `address_rest_${i}`);
     const contact = str(formData, `contact_${i}`);
 
     // 後半の方をまだ入力していない場合は、そこまでを保存して終える
-    if (!fullName && !address && !contact) continue;
-    if (!fullName || !address || !contact) {
+    if (!lastName && !firstName && !prefecture && !addressRest && !contact) continue;
+    if (!lastName || !firstName || !prefecture || !addressRest || !contact) {
       back(code, `${t.person} ${i}: ${t.errName} / ${t.errAddress} / ${t.errContact}`, locale);
     }
+
+    const fullName = `${lastName} ${firstName}`;
+    const address = locale === "en" ? `${addressRest}, ${prefecture}` : `${prefecture}${addressRest}`;
+    const furigana = [str(formData, `furigana_last_${i}`), str(formData, `furigana_first_${i}`)]
+      .filter(Boolean)
+      .join(" ");
+
+    const birthDate = parseBirthDate(str(formData, `birth_date_${i}`));
+    if (birthDate === null) back(code, `${t.person} ${i}: ${t.errBirthFormat}`, locale);
 
     const isForeign = formData.get(`is_foreign_national_${i}`) === "on";
     const nationality = nullable(formData, `nationality_${i}`);
@@ -68,12 +80,12 @@ export async function submitGuestRegistration(formData: FormData) {
     rows.push({
       guest_order: i,
       full_name: fullName,
-      furigana: nullable(formData, `furigana_${i}`),
+      furigana: furigana || null,
       address,
       contact,
       occupation: nullable(formData, `occupation_${i}`),
       gender: nullable(formData, `gender_${i}`),
-      birth_date: nullable(formData, `birth_date_${i}`),
+      birth_date: birthDate || null,
       is_foreign_national: isForeign,
       nationality,
       passport_number: passportNumber,

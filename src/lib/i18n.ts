@@ -204,9 +204,13 @@ type Dict = {
     foreign: string; foreignNote: string; nationality: string; passportNo: string;
     passportImage: string; passportImageHint: string; alreadyUploaded: string;
     addNext: string; submitAll: string; editLater: string;
+    lastName: string; firstName: string; furiganaLast: string; furiganaFirst: string;
+    furiganaLastHint: string; furiganaFirstHint: string;
+    prefecture: string; prefectureHint: string; addressRest: string; addressRestHint: string;
+    sameAsLead: string; progress: (done: number, total: number) => string;
     invalidUrl: string; done: string;
     errName: string; errAddress: string; errContact: string; errContactFormat: string;
-    errBirth: string; errNationality: string; errPassportNo: string; errPassportImage: string;
+    errBirth: string; errBirthFormat: string; birthHint: string; errNationality: string; errPassportNo: string; errPassportImage: string;
     errFileSize: string; errAtLeastOne: string; errSummary: (n: number) => string;
     confirmTitle: string; confirmBody: (done: number, total: number) => string;
     confirmYes: (n: number) => string; confirmNo: string;
@@ -415,6 +419,12 @@ const ja: Dict = {
     passportImageHint: "顔写真のページを撮影したものをご添付ください（JPEG・PNG・WebP・PDF、10MBまで）。",
     alreadyUploaded: "すでに登録済みです。差し替える場合のみお選びください。",
     addNext: "＋ 次の人を登録する", submitAll: "この内容で登録する",
+    lastName: "姓", firstName: "名", furiganaLast: "せい", furiganaFirst: "めい",
+    furiganaLastHint: "例: やまだ", furiganaFirstHint: "例: たろう",
+    prefecture: "都道府県", prefectureHint: "例: 北海道",
+    addressRest: "市区町村・番地・建物名", addressRestHint: "例: 広尾郡広尾町西3条1-2",
+    sameAsLead: "住所・連絡先を代表者と同じにする",
+    progress: (done, total) => `ご記入 ${done} / ${total} 名`,
     editLater: "あとからこのページを開き直せば、内容の修正もできます。",
     invalidUrl: "このURLは無効です。お手数ですが宿までお問い合わせください。",
     done: "名分のご記入を受け付けました。ありがとうございました。",
@@ -422,6 +432,7 @@ const ja: Dict = {
     errContact: "ご連絡先をご記入ください",
     errContactFormat: "電話番号またはメールアドレスの形式でご記入ください",
     errBirth: "生年月日が未来の日付になっています",
+    errBirthFormat: "生年月日は 1990/01/15 のように数字で入力してください", birthHint: "例: 1990/01/15",
     errNationality: "国籍をご記入ください", errPassportNo: "旅券番号をご記入ください",
     errPassportImage: "旅券（パスポート）の写しをご添付ください",
     errFileSize: "ファイルサイズは10MBまでにしてください",
@@ -644,6 +655,12 @@ const en: Dict = {
     passportImageHint: "Please attach a photo of the page with your picture (JPEG, PNG, WebP or PDF, up to 10MB).",
     alreadyUploaded: "Already uploaded. Choose a file only if you want to replace it.",
     addNext: "+ Add another guest", submitAll: "Submit",
+    lastName: "Family name", firstName: "Given name", furiganaLast: "Family name (reading)", furiganaFirst: "Given name (reading)",
+    furiganaLastHint: "e.g. Yamada", furiganaFirstHint: "e.g. Taro",
+    prefecture: "State / Province / Country", prefectureHint: "e.g. California, USA",
+    addressRest: "City, street and building", addressRestHint: "e.g. San Francisco, 1234 Market St",
+    sameAsLead: "Use the lead guest's address and contact",
+    progress: (done, total) => `${done} of ${total} guests entered`,
     editLater: "You can reopen this page later to correct your details.",
     invalidUrl: "This link is not valid. Please contact us and we will help.",
     done: "guest(s) recorded. Thank you.",
@@ -651,6 +668,7 @@ const en: Dict = {
     errContact: "Please enter a contact",
     errContactFormat: "Please enter a valid phone number or email address",
     errBirth: "The date of birth is in the future",
+    errBirthFormat: "Please enter the date of birth like 1990/01/15", birthHint: "e.g. 1990/01/15",
     errNationality: "Please enter the nationality", errPassportNo: "Please enter the passport number",
     errPassportImage: "Please attach a copy of the passport",
     errFileSize: "The file must be 10MB or smaller",
